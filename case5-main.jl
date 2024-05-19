@@ -52,8 +52,8 @@ for iteration in max_iterations
     # My only concern here is that I dont know if we should start with i at 1 or 2
     # Since in class we didnt calculate P_1 since it was slack bus
     # I set it to 1 but I'm not sure
-    newP = findNewP(num_buses, bus_data, G, B)
-    newQ = findNewQ(num_buses, bus_data, G, B)
+    newP = findNewP(V, theta, G, B)
+    newQ = findNewQ(V, theta, G, B)
 
     # Calculate mismatches
     mismatchP = P - newP
@@ -88,3 +88,5 @@ if iteration == max_iterations
 end
 
 # TODO Print Solution
+display(V)
+display(theta)

@@ -54,13 +54,13 @@ function buildYMatrixV2(num_buses, branch_data)
 end
 
 
-function findNewP(num_buses, bus_data, G, B)
+function findNewP(V, theta, G, B)
     newP = zeros(num_buses)
     
     for i in 1:num_buses
         sp = 0.0
         for j in 1:num_buses
-            sp += bus_data[i]["vm"] * bus_data[j]["vm"] * (G[i, j] * cos(bus_data[i]["va"] - bus_data[j]["va"]) + B[i, j] * sin(bus_data[i]["va"] - bus_data[j]["va"]))
+            sp += V[i] * V[j] * (G[i, j] * cos(theta[i] - theta[j]) + B[i, j] * sin(theta[i] - theta[j]))
         end
         newP[i] = sp
     end
@@ -68,13 +68,13 @@ function findNewP(num_buses, bus_data, G, B)
 end
 
 
-function findNewQ(num_buses, bus_data, G, B)
+function findNewQ(V, theta, G, B)
     newQ = zeros(num_buses)
     
     for i in 1:num_buses
         sq = 0.0
         for j in 1:num_buses
-            sq += bus_data[i]["vm"] * bus_data[j]["vm"] * (G[i, j] * sin(bus_data[i]["va"] - bus_data[j]["va"]) - B[i, j] * cos(bus_data[i]["va"] - bus_data[j]["va"]))
+            sq += V[i] * V[j] * (G[i, j] * sin(theta[i] - theta[j]) - B[i, j] * cos(theta[i] - theta[j]))
         end
         newQ[i] = sq
     end
