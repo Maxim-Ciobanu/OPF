@@ -135,3 +135,38 @@ function fetchInitialTheta(bus_data)
     end
     return theta
 end
+
+function findSlackBusIndex(bus_data)
+    slack_bus_index = nothing
+    for (bus_id, bus) in bus_data
+        if bus["bus_type"] == 3
+            slack_bus_index = bus_id
+            break
+        end
+    end
+    return slack_bus_index
+end
+
+function calculateHMatrix(num_buses, slack_bus_index, V, theta, Q, G, B)
+    H = zeros(num_buses-1, num_buses-1)
+    k = 1
+    for i in 1:num_buses
+        if i == slack_bus_index
+            continue
+        end
+        l = 1
+        for j in 1:num_buses
+            if j == slack_bus_index
+                continue
+            end
+            if i == j
+                H[k, l] = -Q[k]-B[k, k]*(V[k]^2)
+            else
+                H[k, l] = V[k]*V[l]*(G[k,l]*sin(theta[k]-theta[l]) + B[k, l]*cos(theta[k]-theta[l]))
+            end
+            l += 1
+        end
+        k += 1
+    end
+    return H
+end
