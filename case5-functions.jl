@@ -147,8 +147,28 @@ function findSlackBusIndex(bus_data)
     return slack_bus_index
 end
 
-function calculateHMatrix(num_buses, slack_bus_index, V, theta, Q, G, B)
-    H = zeros(num_buses-1, num_buses-1)
+function findPQBuses(bus_data)
+    PQ_buses = []
+    for (bus_id, bus) in bus_data
+        if bus["bus_type"] == 1
+            push!(PQ_buses, bus_id)
+        end
+    end
+    return PQ_buses
+end
+
+function findPVBuses(bus_data)
+    PQ_buses = []
+    for (bus_id, bus) in bus_data
+        if bus["bus_type"] == 2
+            push!(PQ_buses, bus_id)
+        end
+    end
+    return PQ_buses
+end
+
+function calculateHMatrix(H_size, num_buses, slack_bus_index, V, theta, Q, G, B)
+    H = zeros(H_size)
     k = 1
     for i in 1:num_buses
         if i == slack_bus_index
@@ -169,4 +189,83 @@ function calculateHMatrix(num_buses, slack_bus_index, V, theta, Q, G, B)
         k += 1
     end
     return H
+end
+
+function calculateNMatrix(N_size, num_buses, PQ_buses, slack_bus_index, V, theta, P, G, B)
+    N = zeros(N_size)
+    k = 1
+    for i in 1:num_buses
+        if i == slack_bus_index
+            continue
+        end
+        l = 1
+        for j in 1:num_buses
+            if j == slack_bus_index || !(j in PQ_buses) # Skip non-PQ buses and the slack bus in columns
+                continue
+            end
+            if i == j
+                N[k, l] = P[k]+G[k, k]*(V[k]^2)
+            else
+                N[k, l] = V[k]*V[l] * (G[k, l] * cos(theta[k] - theta[l]) + B[k, l] * sin(theta[k] - theta[l]))
+            end
+            l += 1
+        end
+        k += 1
+    end
+    return N
+end
+
+function calculateJMatrix(J_size, num_buses, slack_bus_index, V, theta, P, G, B)
+    J = zeros(J_size)
+    k = 1
+    for i in 1:num_buses
+        if i == slack_bus_index || !(i in PQ_buses)
+            continue
+        end
+        l = 1
+        for j in 1:num_buses
+            if j == slack_bus_index
+                continue
+            end
+            if i == j
+                J[k, l] = P[k]-G[k, k]*(V[k]^2)
+            else
+                J[k, l] = V[k]*V[l] * (-G[k, l] * cos(theta[k] - theta[l]) - B[k, l] * sin(theta[k] - theta[l]))
+            end
+            l += 1
+        end
+        k += 1
+    end
+    return J
+end
+
+function calculateLMatrix(L_size, num_buses, PQ_buses, slack_bus_index, V, theta, Q, G, B)
+    L = zeros(L_size)
+    k = 1
+    for i in 1:num_buses
+        if i == slack_bus_index || !(i in PQ_buses)
+            continue
+        end
+        l = 1
+        for j in 1:num_buses
+            if j == slack_bus_index || !(j in PQ_buses)
+                continue
+            end
+            if i == j
+                L[k, l] = Q[k] - B[k, k] * (V[k]^2)
+            else
+                L[k, l] = V[k] * V[l] * (G[k, l] * sin(theta[k] - theta[l]) - B[k, l] * cos(theta[k] - theta[l]))
+            end
+            l += 1
+        end
+        k += 1
+    end
+    return L
+end
+
+function calculateJacobian(H, N, J, L)
+    top = hcat(H, N)
+    bottom = hcat(J, L)
+    Jacobian = vcat(top, bottom)
+    return Jacobian
 end
