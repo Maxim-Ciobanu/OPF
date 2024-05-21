@@ -72,3 +72,7 @@ println("Final Voltage Angles (Thetas):")
 for i in keys(local_ref[:bus])
     println("Bus $i: $(value(va[i]))")
 end
+
+
+# 24r 1.7315160e+04 2.92e+00 1.59e-03  -7.0 1.21e-01    -  8.44e-01 1.00e+00f  1
+# 1.7479897e+04 1.33e-15 1.57e-13  -8.6 2.03e-05    -  1.00e+00 1.00e+00f  1
