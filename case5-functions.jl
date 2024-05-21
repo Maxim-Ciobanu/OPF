@@ -280,3 +280,38 @@ function calculateJacobian(H, N, J, L)
     Jacobian = vcat(top, bottom)
     return Jacobian
 end
+
+function findMismatchMatrix(mismatchP, mismatchQ, num_buses)
+    P = []
+    Q = []
+    for i in 1:num_buses + 1
+        if bus_data[i]["bus_type"] == 2
+            push!(P, mismatchP[i])
+        end
+        if bus_data[i]["bus_type"] == 1
+            push!(P, mismatchP[i])
+            push!(Q, mismatchQ[i])
+        end
+    end
+    return vcat(P, Q)
+end
+
+function findIncrementMatrix(mismatchMatrix, Jacobian)
+    return inv(Jacobian) * mismatchMatrix
+end
+
+function updateTheta(theta, incrementMatrix)
+    newTheta = zeros(length(theta))
+    for i in 1:num_buses
+        newTheta[i] = theta[i] + incrementMatrix[i]
+    end  
+    return newTheta
+end
+
+function updateV(V, incrementMatrix)
+    newV = zeros(length(V))
+    for i in 1:num_buses
+        newV[i] = V[i] + incrementMatrix[i]
+    end
+    return newV
+end

@@ -159,3 +159,17 @@ display(Jacobian)
 # # TODO Print Solution
 # display(V)
 # display(theta)
+
+
+# Testing new functions
+newP = findNewP(V, theta, G, B)
+newQ = findNewQ(V, theta, G, B)
+mismatchP = P - newP
+mismatchQ = Q - newQ
+
+mismatchMat = findMismatchMatrix(mismatchP, mismatchQ, num_non_slack_buses)
+
+incrementMatrix = findIncrementMatrix(mismatchMat, Jacobian)
+
+newTheta = updateTheta(theta, incrementMatrix)
+newV = updateV(V, incrementMatrix)
