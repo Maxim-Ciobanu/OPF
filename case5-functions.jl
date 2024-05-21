@@ -205,6 +205,7 @@ function calculateMismatches(num_buses, P, Q, slack_bus_index, newP, newQ)
 end
 
 
+
 function calculateHMatrix(H_size, num_buses, slack_bus_index, V, theta, Q, G, B)
     H = zeros(H_size)
     k = 1

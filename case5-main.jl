@@ -117,16 +117,46 @@ for iteration in 1:max_iterations
 
     # TODO Update variables dont forget to update P and Q with newP and newQ
     for i in 1:num_buses
-        theta[i] += search[i]
+        if i != slack_bus_index
+            theta[i] += search[i]
+        end
     end
 
+    # for i in 1:num_buses
+    #     if i != slack_bus_index
+    #         theta[i] += search[i]
+    #         # Ensure theta stays within -360 and 360
+    #         if theta[i] > 360
+    #             theta[i] -= 360
+    #         elseif theta[i] < -360
+    #             theta[i] += 360
+    #         end
+    #     end
+    # end
+
+
     # Update V for PQ buses
-    V[PQ_buses] += search[num_non_slack_buses+1:end]
+    V[2] += search[2]
+
+
+    # Ensure V[3] stays within realistic bounds
+    if V[2] < 0.9
+        V[2] = 0.9
+    elseif V[2] > 1.1
+        V[2] = 1.1
+    end
+
 
     # Update P and Q with new values
     global P = newP
     global Q = newQ
-    
+
+    # for (index, qg) in enumerate(Q)
+    #     if gen_data[index] != nothing
+    #         global Q[index] = max(min(Q[index], gen_data[index]["qmax"]), gen_data[index]["qmin"])
+    #     end
+    # end
+
     println("V")
     display(V)
     println()
