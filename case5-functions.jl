@@ -34,19 +34,19 @@ function buildYMatrixV2(num_buses, branch_data)
         t_bus = branch_data[branch]["t_bus"]
         r = branch_data[branch]["br_r"]
         x = branch_data[branch]["br_x"]
-    
+        y = 1 / (r + im*x) # admittance
         # If we want to include b uncomment this code
         # *****
-        # b_fr = branch_data[branch]["b_fr"]
-        # b_to = branch_data[branch]["b_to"]
-        # b = b_fr + b_to  # Sum of b_fr and b_to for total susceptance
-        # Y_bus[f_bus, f_bus] += y + im*b/2
-        # Y_bus[t_bus, t_bus] += y + im*b/2
+         b_fr = branch_data[branch]["b_fr"]
+         b_to = branch_data[branch]["b_to"]
+         b = b_fr + b_to  # Sum of b_fr and b_to for total susceptance
+         Y_bus[f_bus, f_bus] += y + im*b/2
+         Y_bus[t_bus, t_bus] += y + im*b/2
         # *****
     
-        y = 1 / (r + im*x) # admittance
-        Y_bus[f_bus, f_bus] += y # If using b comment this line out
-        Y_bus[t_bus, t_bus] += y # If using b comment this line out
+        
+        # Y_bus[f_bus, f_bus] += y # If using b comment this line out
+        # Y_bus[t_bus, t_bus] += y # If using b comment this line out
         Y_bus[f_bus, t_bus] -= y
         Y_bus[t_bus, f_bus] -= y
     end
@@ -155,6 +155,17 @@ function findSlackBusIndex(bus_data)
         end
     end
     return slack_bus_index
+end
+
+function nonSlackBuses(bus_data)
+    num = 0
+    num_buses = length(bus_data)
+    for i in 1:num_buses
+        if bus_data[i]["bus_type"] != 1
+            num += 1
+        end
+    end
+    return num
 end
 
 function findPQBuses(bus_data)

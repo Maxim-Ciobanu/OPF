@@ -26,7 +26,7 @@ num_gens = length(gen_data)
 slack_bus_index = findSlackBusIndex(bus_data)
 
 # Determine the sizes of the H, N, J, and L Matrices
-num_non_slack_buses = num_buses - 1  # Buses excluding the slack bus
+num_non_slack_buses = nonSlackBuses(bus_data)  # Buses excluding the slack bus
 PQ_buses = findPQBuses(bus_data)
 num_PQ_buses = length(PQ_buses)
 PV_buses = findPVBuses(bus_data)
@@ -45,7 +45,7 @@ N_size = (num_non_slack_buses, num_PQ_buses)
 L_size = (num_PQ_buses, num_PQ_buses)
 
 # populate admittance matrix
-yMatrix = buildYMatrixV1(num_buses, branch_data)
+yMatrix = buildYMatrixV2(num_buses, branch_data)
 
 # Seperate admittance matrix into real and imaginary parts
 G = real(yMatrix)
