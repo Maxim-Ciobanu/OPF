@@ -67,3 +67,8 @@ end
 
 optimize!(model)
 println("The solver termination status is $(termination_status(model))")
+
+println("Final Voltage Angles (Thetas):")
+for i in keys(local_ref[:bus])
+    println("Bus $i: $(value(va[i]))")
+end

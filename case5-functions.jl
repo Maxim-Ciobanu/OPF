@@ -54,10 +54,15 @@ function buildYMatrixV2(num_buses, branch_data)
 end
 
 
-function findNewP(V, theta, G, B)
+function findNewP(V, theta, G, B, slack_bus_index)
+    num_buses = length(V)
     newP = zeros(num_buses)
     
     for i in 1:num_buses
+        # Skip calculations for the slack bus
+        if i == slack_bus_index
+            continue
+        end
         sp = 0.0
         for j in 1:num_buses
             sp += V[i] * V[j] * (G[i, j] * cos(theta[i] - theta[j]) + B[i, j] * sin(theta[i] - theta[j]))
@@ -67,11 +72,15 @@ function findNewP(V, theta, G, B)
     return newP
 end
 
-
-function findNewQ(V, theta, G, B)
+function findNewQ(V, theta, G, B, slack_bus_index)
+    num_buses = length(V)
     newQ = zeros(num_buses)
     
     for i in 1:num_buses
+        # Skip calculations for the slack bus
+        if i == slack_bus_index
+            continue
+        end
         sq = 0.0
         for j in 1:num_buses
             sq += V[i] * V[j] * (G[i, j] * sin(theta[i] - theta[j]) - B[i, j] * cos(theta[i] - theta[j]))
@@ -80,6 +89,7 @@ function findNewQ(V, theta, G, B)
     end
     return newQ
 end
+
 
 
 function calculateP(num_buses, gen_data, load_data)
@@ -178,6 +188,24 @@ function findPVBuses(bus_data)
     return PQ_buses
 end
 
+function calculateMismatches(num_buses, P, Q, slack_bus_index, newP, newQ)
+    mismatches = zeros(num_buses)
+    k = 1
+    for i in 1:num_buses
+        if i != slack_bus_index
+            mismatches[k] = P[i] - newP[i]
+            k += 1
+        end
+    end
+    
+    # writing 2 termporarily it is suposed to be Pq bus index
+    mismatches[end] = Q[2] - newQ[2]
+
+    return mismatches
+end
+
+
+
 function calculateHMatrix(H_size, num_buses, slack_bus_index, V, theta, Q, G, B)
     H = zeros(H_size)
     k = 1
@@ -191,9 +219,9 @@ function calculateHMatrix(H_size, num_buses, slack_bus_index, V, theta, Q, G, B)
                 continue
             end
             if i == j
-                H[k, l] = -Q[k]-B[k, k]*(V[k]^2)
+                H[k, l] = -Q[i]-B[i, i]*(V[i]^2)
             else
-                H[k, l] = V[k]*V[l]*(G[k,l]*sin(theta[k]-theta[l]) + B[k, l]*cos(theta[k]-theta[l]))
+                H[k, l] = V[i]*V[j]*(G[i, j]*sin(theta[i]-theta[j]) + B[i, j]*cos(theta[i]-theta[j]))
             end
             l += 1
         end
@@ -215,9 +243,9 @@ function calculateNMatrix(N_size, num_buses, PQ_buses, slack_bus_index, V, theta
                 continue
             end
             if i == j
-                N[k, l] = P[k]+G[k, k]*(V[k]^2)
+                N[k, l] = P[i]+G[i, i]*(V[i]^2)
             else
-                N[k, l] = V[k]*V[l] * (G[k, l] * cos(theta[k] - theta[l]) + B[k, l] * sin(theta[k] - theta[l]))
+                N[k, l] = V[i]*V[j] * (G[i, j] * cos(theta[i] - theta[j]) + B[i, j] * sin(theta[i] - theta[j]))
             end
             l += 1
         end
@@ -239,9 +267,9 @@ function calculateJMatrix(J_size, num_buses, slack_bus_index, V, theta, P, G, B)
                 continue
             end
             if i == j
-                J[k, l] = P[k]-G[k, k]*(V[k]^2)
+                J[k, l] = P[i]-G[i, i]*(V[i]^2)
             else
-                J[k, l] = V[k]*V[l] * (-G[k, l] * cos(theta[k] - theta[l]) - B[k, l] * sin(theta[k] - theta[l]))
+                J[k, l] = V[i]*V[j] * (-G[i, j] * cos(theta[i] - theta[j]) - B[i, j] * sin(theta[i] - theta[j]))
             end
             l += 1
         end
@@ -263,9 +291,9 @@ function calculateLMatrix(L_size, num_buses, PQ_buses, slack_bus_index, V, theta
                 continue
             end
             if i == j
-                L[k, l] = Q[k] - B[k, k] * (V[k]^2)
+                L[k, l] = Q[i] - B[i, i] * (V[i]^2)
             else
-                L[k, l] = V[k] * V[l] * (G[k, l] * sin(theta[k] - theta[l]) - B[k, l] * cos(theta[k] - theta[l]))
+                L[k, l] = V[i] * V[j] * (G[i, j] * sin(theta[i] - theta[j]) - B[i, j] * cos(theta[i] - theta[j]))
             end
             l += 1
         end

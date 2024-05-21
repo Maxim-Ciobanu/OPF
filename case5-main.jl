@@ -60,105 +60,119 @@ Q = calculateQ(num_buses, gen_data, load_data)
 V = fetchInitialV(bus_data)
 theta = fetchInitialTheta(bus_data)
 
+tolerance = 0.001
+max_iterations = 1000
 
 
+iteration = 1
+for iteration in 1:max_iterations
 
-# TODO Calculate H matrix
-# The H matrix is the size of number of unknown thetas.
-# Which is the number of busses that are not slack (PV + PQ busses)
-# For this case we only have one slack bus so we can just subtract 1 from num_busses
-# We might want to make this different if we want it to work with cases that cave more than one slack bus
-H = calculateHMatrix(H_size, num_buses, slack_bus_index, V, theta, Q, G, B) # Seems right but IDK
+    # Compute new P and Q values
+    # My only concern here is that I dont know if we should start with i at 1 or 2
+    # Since in class we didnt calculate P_1 since it was slack bus
+    # I set it to 1 but I'm not sure
+    newP = findNewP(V, theta, G, B, slack_bus_index)
+    newQ = findNewQ(V, theta, G, B, slack_bus_index)
 
-# TODO Calculate N matrix
-N = calculateNMatrix(N_size, num_buses, PQ_buses, slack_bus_index, V, theta, P, G, B)
+    # Calculate mismatches
+    mismatches = calculateMismatches(num_buses, P, Q, slack_bus_index, newP, newQ)
+    println("iteration: $iteration")
+    println()
+    println("norm of mismatches")
+    println(norm(mismatches))
+    println()
 
-# TODO Calculate J matrix
-J = calculateJMatrix(J_size, num_buses, slack_bus_index, V, theta, P, G, B)
-
-# TODO Calculate L
-L = calculateLMatrix(L_size, num_buses, PQ_buses, slack_bus_index, V, theta, Q, G, B)
-
-# TODO Calculate Jacobian matrix
-Jacobian = calculateJacobian(H, N, J, L)
-display(Jacobian)
-
-
-# TODO Calculate the search vector
-
-# TODO Update variables dont forget to update P and Q with newP and newQ
+    # Check for convergence based on mismatches
+    if norm(mismatches) < tolerance
+        println("Convergence achieved after $iteration iterations.")
+        break
+    end
 
 
+    # TODO Calculate H matrix
+    # The H matrix is the size of number of unknown thetas.
+    # Which is the number of busses that are not slack (PV + PQ busses)
+    # For this case we only have one slack bus so we can just subtract 1 from num_busses
+    # We might want to make this different if we want it to work with cases that cave more than one slack bus
+    H = calculateHMatrix(H_size, num_buses, slack_bus_index, V, theta, Q, G, B) # Seems right but IDK
+
+    # TODO Calculate N matrix``
+    N = calculateNMatrix(N_size, num_buses, PQ_buses, slack_bus_index, V, theta, P, G, B)
+
+    # TODO Calculate J matrix
+    J = calculateJMatrix(J_size, num_buses, slack_bus_index, V, theta, P, G, B)
+
+    # TODO Calculate L
+    L = calculateLMatrix(L_size, num_buses, PQ_buses, slack_bus_index, V, theta, Q, G, B)
+
+    # TODO Calculate Jacobian matrix
+    Jacobian = calculateJacobian(H, N, J, L)
+    println("Jacobian")
+    display(Jacobian)
+    println()
 
 
+    # TODO Calculate the search vector
+    search = inv(Jacobian) * mismatches
+
+    # TODO Update variables dont forget to update P and Q with newP and newQ
+    for i in 1:num_buses
+        if i != slack_bus_index
+            theta[i] += search[i]
+        end
+    end
+
+    # for i in 1:num_buses
+    #     if i != slack_bus_index
+    #         theta[i] += search[i]
+    #         # Ensure theta stays within -360 and 360
+    #         if theta[i] > 360
+    #             theta[i] -= 360
+    #         elseif theta[i] < -360
+    #             theta[i] += 360
+    #         end
+    #     end
+    # end
 
 
+    # Update V for PQ buses
+    V[2] += search[2]
 
 
+    # Ensure V[3] stays within realistic bounds
+    if V[2] < 0.9
+        V[2] = 0.9
+    elseif V[2] > 1.1
+        V[2] = 1.1
+    end
 
 
+    # Update P and Q with new values
+    global P = newP
+    global Q = newQ
 
+    # for (index, qg) in enumerate(Q)
+    #     if gen_data[index] != nothing
+    #         global Q[index] = max(min(Q[index], gen_data[index]["qmax"]), gen_data[index]["qmin"])
+    #     end
+    # end
 
-# The followig loop is for the completed code so we cant test stuff on it.
-# I comented out and whonce we finished the Jacobian calculations we can uncoment it.
+    println("V")
+    display(V)
+    println()
+    println("theta")
+    display(theta)
+    println()
+    println()
+end
 
+if iteration == max_iterations+1
+    println("Max iterations reached without convergence.")
+end
 
-
-# tolerance = 0.0000001
-# max_iterations = 100000
-
-
-# iteration = 1
-# for iteration in max_iterations 
-
-#     # Compute new P and Q values
-#     # My only concern here is that I dont know if we should start with i at 1 or 2
-#     # Since in class we didnt calculate P_1 since it was slack bus
-#     # I set it to 1 but I'm not sure
-#     newP = findNewP(V, theta, G, B)
-#     newQ = findNewQ(V, theta, G, B)
-
-#     # Calculate mismatches
-#     mismatchP = P - newP
-#     mismatchQ = Q - newQ
-
-#     mismatches = [mismatchP; mismatchQ]
-
-#     # Check for convergence based on mismatches
-#     if norm(mismatches) < tolerance
-#         println("Convergence achieved after $iteration iterations.")
-#         break
-#     end
-
-#     # TODO Initialize H matrix
-#     # The H matrix is the size of number of unknown thetas.
-#     # Which is the number of busses that are not slack (PV + PQ busses)
-#     # For this case we only have one slack bus so we can just subtract 1 from num_busses
-#     # We might want to make this different if we want it to work with cases that cave more than one slack bus
-#     H = calculateHMatrix(num_buses, slack_bus_index, V, theta, Q, G, B)
-
-
-#     # TODO Initialize N matrix
-
-#     # TODO Initialize J matrix
-
-#     # TODO Calculate L
-
-#     # TODO Initialize Jacobian matrix
-
-#     # TODO Calculate the search vector
-
-#     # TODO Update variables
-
-# end
-
-# if iteration == max_iterations
-#     println("Max iterations reached without convergence.")
-# end
-
-# # TODO Print Solution
-# display(V)
-# display(theta)
+# TODO Print Solution
+display(V)
+display(theta)
 
 
 # Testing new functions
