@@ -60,32 +60,28 @@ function findNewP(V, theta, G, B, slack_bus_index)
     
     for i in 1:num_buses
         # Skip calculations for the slack bus
-        if i == slack_bus_index
-            continue
+        if i != slack_bus_index
+            for j in 1:num_buses
+                newP[i] = newP[i] + V[i] * V[j] * (G[i, j] * cos(theta[i] - theta[j]) + B[i, j] * sin(theta[i] - theta[j]))
+            end
         end
-        sp = 0.0
-        for j in 1:num_buses
-            sp += V[i] * V[j] * (G[i, j] * cos(theta[i] - theta[j]) + B[i, j] * sin(theta[i] - theta[j]))
-        end
-        newP[i] = sp
     end
     return newP
 end
 
-function findNewQ(V, theta, G, B, slack_bus_index)
+function findNewQ(V, theta, G, B, slack_bus_index, gen_data)
     num_buses = length(V)
     newQ = zeros(num_buses)
-    
+
     for i in 1:num_buses
         # Skip calculations for the slack bus
-        if i == slack_bus_index
-            continue
+        if i != slack_bus_index
+            for j in 1:num_buses
+                newQ[i] = newQ[i] + V[i] * V[j] * (G[i, j] * sin(theta[i] - theta[j]) - B[i, j] * cos(theta[i] - theta[j]))
+            end
+            # Clamping data
+            newQ[i] = clamp(newQ[i], gen_data[i]["qmin"], gen_data[i]["qmax"])
         end
-        sq = 0.0
-        for j in 1:num_buses
-            sq += V[i] * V[j] * (G[i, j] * sin(theta[i] - theta[j]) - B[i, j] * cos(theta[i] - theta[j]))
-        end
-        newQ[i] = sq
     end
     return newQ
 end
@@ -107,7 +103,7 @@ function calculateP(num_buses, gen_data, load_data)
         index = gen_data[i]["gen_bus"]
         pg[index] += gen_data[i]["pg"]
     end
-    return pg .-pd
+    return pg-pd
 end
 
 function calculateQ(num_buses, gen_data, load_data)
@@ -125,7 +121,7 @@ function calculateQ(num_buses, gen_data, load_data)
         index = gen_data[i]["gen_bus"]
         qg[index] += gen_data[i]["qg"]
     end
-    return qg .-qd
+    return qg-qd
 end
 
 function fetchInitialV(bus_data)
@@ -187,24 +183,6 @@ function findPVBuses(bus_data)
     end
     return PQ_buses
 end
-
-function calculateMismatches(num_buses, P, Q, slack_bus_index, newP, newQ)
-    mismatches = zeros(num_buses)
-    k = 1
-    for i in 1:num_buses
-        if i != slack_bus_index
-            mismatches[k] = P[i] - newP[i]
-            k += 1
-        end
-    end
-    
-    # writing 2 termporarily it is suposed to be Pq bus index
-    mismatches[end] = Q[2] - newQ[2]
-
-    return mismatches
-end
-
-
 
 function calculateHMatrix(H_size, num_buses, slack_bus_index, V, theta, Q, G, B)
     H = zeros(H_size)
@@ -342,4 +320,88 @@ function updateV(V, incrementMatrix)
         newV[i] = V[i] + incrementMatrix[i]
     end
     return newV
+end
+
+
+function findBusType(bus_data)
+    num_buses = length(bus_data)
+    bus_type = zeros(Int, num_buses)
+    for i in 1:num_buses
+        bus_type[i] = bus_data[i]["bus_type"]
+    end
+    return bus_type
+end
+
+
+
+function calculateMismatches(num_buses, P_spec, Q_spec, bus_type, P_calc, Q_calc)
+    # Initialize mismatch vectors
+    deltaP = zeros(num_buses)  # Mismatch in active power
+    deltaQ = zeros(num_buses)  # Mismatch in reactive power
+    
+    # Calculate mismatches for PQ and PV buses
+    for i in 1:num_buses
+        if bus_type[i] != 3  # Slack bus has no mismatch calculation
+            deltaP[i] = P_spec[i] - P_calc[i]
+            if bus_type[i] == 1  # Only PQ buses have Q mismatch calculated
+                deltaQ[i] = Q_spec[i] - Q_calc[i]
+            end
+        end
+    end
+    
+    # Collect all mismatches
+    # First, collect all deltaP for PV and PQ buses, then all deltaQ for PQ buses
+    mismatches = []
+    # Collect deltaP for PV and PQ buses
+    for i in 1:num_buses
+        if bus_type[i] == 2  # PV
+            push!(mismatches, deltaP[i])
+        end
+    end
+
+    for i in 1:num_buses
+        if  bus_type[i] == 1  # PQ
+            push!(mismatches, deltaP[i])
+        end
+    end
+    
+    # Collect deltaQ for PQ buses
+    for i in 1:num_buses
+        if bus_type[i] == 1  # PQ
+            push!(mismatches, deltaQ[i])
+        end
+    end
+    
+    return mismatches
+end
+
+function clampVoltageMagnitudes(V, bus_data)
+    n = length(V)  # Number of buses
+    for i in 1:n
+        V[i] = clamp(V[i], bus_data[i]["vmin"], bus_data[i]["vmax"])
+    end
+    return V
+end
+
+function updateVoltages(theta, V, search, bus_type)
+    n = length(theta)  # Total number of buses
+    angle_idx = 1  # Initialize index for voltage angles in the search vector
+
+    # Update voltage angles for all buses except slack
+    for i in 1:n
+        if bus_type[i] != 3  # Slack bus does not update
+            theta[i] += search[angle_idx]
+            angle_idx += 1
+        end
+    end
+
+    # Update voltage magnitudes for PQ buses
+    for i in 1:n
+        if bus_type[i] == 1  # Only PQ buses update voltage magnitudes
+            V[i] += search[angle_idx]
+            angle_idx += 1
+        end
+    end
+    
+    return theta, V
 end

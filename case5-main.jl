@@ -23,6 +23,8 @@ num_branches = length(branch_data)
 num_loads = length(load_data)
 num_gens = length(gen_data)
 
+bus_type = findBusType(bus_data)
+
 slack_bus_index = findSlackBusIndex(bus_data)
 
 # Determine the sizes of the H, N, J, and L Matrices
@@ -60,7 +62,12 @@ Q = calculateQ(num_buses, gen_data, load_data)
 V = fetchInitialV(bus_data)
 theta = fetchInitialTheta(bus_data)
 
-tolerance = 0.001
+
+
+
+
+
+tolerance = 0.01
 max_iterations = 1000
 
 
@@ -72,10 +79,10 @@ for iteration in 1:max_iterations
     # Since in class we didnt calculate P_1 since it was slack bus
     # I set it to 1 but I'm not sure
     newP = findNewP(V, theta, G, B, slack_bus_index)
-    newQ = findNewQ(V, theta, G, B, slack_bus_index)
-
+    newQ = findNewQ(V, theta, G, B, slack_bus_index, gen_data)
+    
     # Calculate mismatches
-    mismatches = calculateMismatches(num_buses, P, Q, slack_bus_index, newP, newQ)
+    mismatches = calculateMismatches(num_buses, P, Q, bus_type, newP, newQ)
     println("iteration: $iteration")
     println()
     println("norm of mismatches")
@@ -111,51 +118,18 @@ for iteration in 1:max_iterations
     display(Jacobian)
     println()
 
-
     # TODO Calculate the search vector
     search = inv(Jacobian) * mismatches
 
+
+
     # TODO Update variables dont forget to update P and Q with newP and newQ
-    for i in 1:num_buses
-        if i != slack_bus_index
-            theta[i] += search[i]
-        end
-    end
+    global theta, V = updateVoltages(theta, V, search, bus_type)
 
-    # for i in 1:num_buses
-    #     if i != slack_bus_index
-    #         theta[i] += search[i]
-    #         # Ensure theta stays within -360 and 360
-    #         if theta[i] > 360
-    #             theta[i] -= 360
-    #         elseif theta[i] < -360
-    #             theta[i] += 360
-    #         end
-    #     end
-    # end
+    global V = clampVoltageMagnitudes(V, bus_data)
 
-
-    # Update V for PQ buses
-    V[2] += search[2]
-
-
-    # Ensure V[3] stays within realistic bounds
-    if V[2] < 0.9
-        V[2] = 0.9
-    elseif V[2] > 1.1
-        V[2] = 1.1
-    end
-
-
-    # Update P and Q with new values
     global P = newP
     global Q = newQ
-
-    # for (index, qg) in enumerate(Q)
-    #     if gen_data[index] != nothing
-    #         global Q[index] = max(min(Q[index], gen_data[index]["qmax"]), gen_data[index]["qmin"])
-    #     end
-    # end
 
     println("V")
     display(V)
@@ -166,7 +140,7 @@ for iteration in 1:max_iterations
     println()
 end
 
-if iteration == max_iterations+1
+if iteration >= max_iterations
     println("Max iterations reached without convergence.")
 end
 
