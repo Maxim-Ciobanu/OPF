@@ -108,12 +108,12 @@ for iteration in 1:max_iterations
     theta[3] += search[2]
     V[3] += search[3] * V[3]
 
-    # # Ensure V[3] stays within realistic bounds
-    # if V[3] < 0.9
-    #     V[3] = 0.9
-    # elseif V[3] > 1.1
-    #     V[3] = 1.1
-    # end
+    # Ensure V[3] stays within realistic bounds
+    if V[3] < 0.9
+        V[3] = 0.9
+    elseif V[3] > 1.1
+        V[3] = 1.1
+    end
     
     # Ensure reactive power limits for Bus-2
     if new_q[2] < Q2_min

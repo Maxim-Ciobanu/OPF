@@ -72,16 +72,16 @@ end
 function findNewQ(V, theta, G, B, slack_bus_index, gen_data)
     num_buses = length(V)
     newQ = zeros(num_buses)
-
-    for i in 1:num_buses
+    num_gens = length(gen_data)
+    for i in 1:num_gens
         # Skip calculations for the slack bus
-        if i != slack_bus_index
+        # if i != slack_bus_index
             for j in 1:num_buses
                 newQ[i] = newQ[i] + V[i] * V[j] * (G[i, j] * sin(theta[i] - theta[j]) - B[i, j] * cos(theta[i] - theta[j]))
             end
             # Clamping data
             newQ[i] = clamp(newQ[i], gen_data[i]["qmin"], gen_data[i]["qmax"])
-        end
+        # end
     end
     return newQ
 end

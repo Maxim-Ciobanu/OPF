@@ -73,6 +73,8 @@ max_iterations = 1000
 
 iteration = 1
 for iteration in 1:max_iterations
+    display(P)
+    display(Q)
 
     # Compute new P and Q values
     # My only concern here is that I dont know if we should start with i at 1 or 2
@@ -81,20 +83,29 @@ for iteration in 1:max_iterations
     newP = findNewP(V, theta, G, B, slack_bus_index)
     newQ = findNewQ(V, theta, G, B, slack_bus_index, gen_data)
     
+    println()
+    println()
+    println()
+    println()
+    display(newP)
+    display(newQ)
+    println()
+    println()
+    println()
+
     # Calculate mismatches
     mismatches = calculateMismatches(num_buses, P, Q, bus_type, newP, newQ)
     println("iteration: $iteration")
     println()
     println("norm of mismatches")
-    println(norm(mismatches))
+    println(maximum(abs.(mismatches)))
     println()
 
     # Check for convergence based on mismatches
-    if norm(mismatches) < tolerance
+    if maximum(abs.(mismatches)) < tolerance
         println("Convergence achieved after $iteration iterations.")
         break
     end
-
 
     # TODO Calculate H matrix
     # The H matrix is the size of number of unknown thetas.
@@ -121,9 +132,7 @@ for iteration in 1:max_iterations
     # TODO Calculate the search vector
     search = inv(Jacobian) * mismatches
 
-
-
-    # TODO Update variables dont forget to update P and Q with newP and newQ
+    # TODO Update variables
     global theta, V = updateVoltages(theta, V, search, bus_type)
 
     global V = clampVoltageMagnitudes(V, bus_data)
