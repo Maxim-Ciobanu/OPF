@@ -3,7 +3,7 @@ using Ipopt
 using JuMP
 const PM = PowerModels
 
-file_path = "case3.m"
+file_path = "case5.m"
 
 #a function to deal with two different time variables (done by gpt using Sajad's code)
 function run_optimization(data)
@@ -62,7 +62,7 @@ function run_optimization(data)
     end
 
     optimize!(model)
-    return JuMP.value.(pg)
+    return JuMP.value.(pg), objective_value(model)
 end
 
 # Time 1 optimization
@@ -70,7 +70,11 @@ data_time1 = PowerModels.parse_file(file_path)
 PowerModels.standardize_cost_terms!(data_time1, order=2)
 PowerModels.calc_thermal_limits!(data_time1)
 
-pg_time1 = run_optimization(data_time1)
+# Define cost variables
+# cost1 = Ref(0.0)
+cost2 = Ref(0.0)
+
+pg_time1, cost1 = run_optimization(data_time1)
 println("Time 1 generator outputs: ", pg_time1)
 
 # Time 2 optimization with 3% increased demand
@@ -80,7 +84,7 @@ for (bus_id, load) in data_time2["load"]
     data_time2["load"][bus_id]["pd"] *= 1.03
 end
 
-pg_time2 = run_optimization(data_time2)
+pg_time2, cost2= run_optimization(data_time2)
 println("Time 2 generator outputs: ", pg_time2)
 
 #was having trouble with dynamic vectors and the push function
@@ -88,7 +92,7 @@ println("Time 2 generator outputs: ", pg_time2)
 val_vec = []
 
 #vector for inside the norm
-for i in 1:2
+for i in 1:5
     val = (pg_time2[i] - pg_time1[i])
     push!(val_vec, val)
 end
@@ -96,11 +100,14 @@ end
 
 println("The difference between the times: ", val_vec)
 
-#TO DO: Find norm then multiply with cost of 7
+ramping = 0.0
+for i in length(val_vec)
+    global ramping += abs(val_vec[i])
+end
 
-rampingCost = (abs(val_vec[1]) + abs(val_vec[2])) * 7
-println(rampingCost)
-cost1 = 5782.032042428794
-cost2 = 6144.282071214266
 
-totalCost = cost1 + cost2 + rampingCost
+println("Total cost with ramping: ")
+println(cost1 + cost2 + ramping*7)
+
+
+
