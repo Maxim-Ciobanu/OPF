@@ -3,7 +3,7 @@ using Ipopt
 using JuMP
 const PM = PowerModels
 
-file_path = "case5.m"
+file_path = "./Cases/case5.m"
 
 #a function to deal with two different time variables (done by gpt using Sajad's code)
 function run_optimization(data)
