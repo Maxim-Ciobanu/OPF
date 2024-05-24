@@ -83,18 +83,24 @@ end
 pg_time2 = run_optimization(data_time2)
 println("Time 2 generator outputs: ", pg_time2)
 
-var = "val"
-
 #was having trouble with dynamic vectors and the push function
 #had to hard code the values
-val_vec = Vector{Float64}([0,0])
+val_vec = []
 
 #vector for inside the norm
 for i in 1:2
     val = (pg_time2[i] - pg_time1[i])
-    val_vec[i] = val
+    push!(val_vec, val)
 end
+
 
 println("The difference between the times: ", val_vec)
 
 #TO DO: Find norm then multiply with cost of 7
+
+rampingCost = (abs(val_vec[1]) + abs(val_vec[2])) * 7
+println(rampingCost)
+cost1 = 5782.032042428794
+cost2 = 6144.282071214266
+
+totalCost = cost1 + cost2 + rampingCost
