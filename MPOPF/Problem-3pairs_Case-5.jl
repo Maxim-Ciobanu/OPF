@@ -200,6 +200,16 @@ end
 display(cost_vector)
 x = collect(1:50)
 
-plot(x, cost_vector)
+# Create the plot
+plot_data = scatter(x=x, y=cost_vector, mode="lines+markers", name="Cost")
+
+# Create layout
+layout = Layout(title="Cost vs Epsilon",
+                xaxis_title="Iteration",
+                yaxis_title="Cost")
+
+# Combine the data and layout into a plot
+plt = plot(plot_data, layout)
+display(plt)
 
 println("Minimum Cost in neighbourhood: ", minimum(cost_vector))
