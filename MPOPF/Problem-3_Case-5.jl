@@ -119,6 +119,8 @@ function run_optimization_changes(data, pgChange, epsilon, ind)
 
     @variable(model, ref[:gen][i]["pmin"] <= pg[i in keys(ref[:gen])] <= ref[:gen][i]["pmax"])
 
+    @constraint(model, pg[ind] == pgChange[ind] + epsilon)
+
     @variable(model, -ref[:branch][l]["rate_a"] <= p[(l,i,j) in ref[:arcs_from]] <= ref[:branch][l]["rate_a"])
 
     p_expr = Dict([((l,i,j), 1.0*p[(l,i,j)]) for (l,i,j) in ref[:arcs_from]])
@@ -165,8 +167,6 @@ function run_optimization_changes(data, pgChange, epsilon, ind)
         @constraint(model, va_fr - va_to >= branch["angmin"])
     end
 
-    @constraint(model, pg[ind] == pgChange[ind] + epsilon)
-
 
     optimize!(model)
     return  JuMP.value.(pg), objective_value(model)
@@ -174,7 +174,7 @@ end
 
 cost_vector = []
 for i in 1:size
-    epsilon = 0.1
+    epsilon = 0.5
     global ramping = 0.0
     for j in 1:2
         pg_change1, cost_after_change1 = run_optimization_changes(data_time1, pg_time1, epsilon, i)
@@ -190,10 +190,7 @@ for i in 1:size
 
         epsilon *= -1
         push!(cost_vector, cost_after_change1 + cost_after_change2 + ramping*7)
+        ramping = 0.0
     end
 end
 
-display(cost_vector)
-
-x = [1,2,3,4,5,6,7,8,9,10]
-plot(x, cost_vector)
