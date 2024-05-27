@@ -169,21 +169,31 @@ function run_optimization_changes(data, pgChange, epsilon, ind)
 
 
     optimize!(model)
-    return  objective_value(model)
+    return  JuMP.value.(pg), objective_value(model)
 end
 
 cost_vector = []
 for i in 1:size
     epsilon = 0.1
+    global ramping = 0.0
     for j in 1:2
-        cost_after_change = run_optimization_changes(data_time1, pg_time1, epsilon, i)
-        
+        pg_change1, cost_after_change1 = run_optimization_changes(data_time1, pg_time1, epsilon, i)
+        pg_change2, cost_after_change2 = run_optimization_changes(data_time2, pg_time2, epsilon, i)
+        diff_vec = []
+        for i in 1:size
+            diff = abs(pg_change2[i] - pg_change1[i])
+            push!(diff_vec, diff)
+        end
+        for i in 1:size
+            global ramping += diff_vec[i]
+        end
+
         epsilon *= -1
-        push!(cost_vector, cost_after_change)
+        push!(cost_vector, cost_after_change1 + cost_after_change2 + ramping*7)
     end
 end
 
 display(cost_vector)
 
 x = [1,2,3,4,5,6,7,8,9,10]
-plot(x, cost_vector,)
+plot(x, cost_vector)
