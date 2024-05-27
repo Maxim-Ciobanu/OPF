@@ -110,7 +110,7 @@ println()
 
 
 
-function run_optimization_changes(data, pgChange, epsilon, ind)
+function run_optimization_changes(data, pgChange, epsilon, ind1, ind2)
     ref = PowerModels.build_ref(data)[:it][:pm][:nw][0]
 
     model = JuMP.Model(Ipopt.Optimizer)
@@ -119,7 +119,8 @@ function run_optimization_changes(data, pgChange, epsilon, ind)
 
     @variable(model, ref[:gen][i]["pmin"] <= pg[i in keys(ref[:gen])] <= ref[:gen][i]["pmax"])
 
-    @constraint(model, pg[ind] == pgChange[ind] + epsilon)
+    @constraint(model, pg[ind1] == pgChange[ind1] + epsilon)
+    @constraint(model, pg[ind2] == pgChange[ind2] + epsilon)
 
     @variable(model, -ref[:branch][l]["rate_a"] <= p[(l,i,j) in ref[:arcs_from]] <= ref[:branch][l]["rate_a"])
 
@@ -174,53 +175,41 @@ end
 
 cost_vector = []
 for i in 1:size
-    epsilon = 0.5
+    epsilon = 0.1
     global ramping = 0.0
-    for j in 1:2
-        pg_change1, cost_after_change1 = run_optimization_changes(data_time1, pg_time1, epsilon, i)
-        pg_change2, cost_after_change2 = run_optimization_changes(data_time2, pg_time2, epsilon, i)
-        diff_vec = []
-        for k in 1:size
-            diff = abs(pg_change2[k] - pg_change1[k])
-            push!(diff_vec, diff)
-        end
-        for k in 1:size
-            global ramping += diff_vec[k]
-        end
+    for j in 1:size
+        for d in 1:2
+            pg_change1, cost_after_change1 = run_optimization_changes(data_time1, pg_time1, epsilon, i, j)
+            pg_change2, cost_after_change2 = run_optimization_changes(data_time2, pg_time2, epsilon, i, j)
+            diff_vec = []
+            for k in 1:size
+                diff = abs(pg_change2[k] - pg_change1[k])
+                push!(diff_vec, diff)
+            end
+            for k in 1:size
+                global ramping += diff_vec[k]
+            end
 
-        epsilon *= -1
-        push!(cost_vector, cost_after_change1 + cost_after_change2 + ramping*7)
-        ramping = 0.0
+            epsilon *= -1
+            push!(cost_vector, cost_after_change1 + cost_after_change2 + ramping*7)
+            ramping = 0.0
+        end
     end
 end
 
 display(cost_vector)
+x = collect(1:50)
 
-using PlotlyJS
+# Create the plot
+plot_data = scatter(x=x, y=cost_vector, mode="lines+markers", name="Cost")
 
-# Names of the variables
-bar_names = ["Pg1", "Pg2", "Pg3", "Pg4", "Pg5"]
+# Create layout
+layout = Layout(title="Cost vs Epsilon",
+                xaxis_title="Iteration",
+                yaxis_title="Cost")
 
-# Setup x-axis labels for grouped bars
-x_blue = [1, 3, 5, 7, 9]  # Positions for blue bars
-x_red = [2, 4, 6, 8, 10]  # Positions for red bars
+# Combine the data and layout into a plot
+plt = plot(plot_data, layout)
+display(plt)
 
-trace1 = bar(x=bar_names, y=[cost_vector[1], cost_vector[3], cost_vector[5], cost_vector[7], cost_vector[9]], name="Plus epsilon", marker_color="blue")
-trace2 = bar(x=bar_names, y=[cost_vector[2], cost_vector[4], cost_vector[6], cost_vector[8], cost_vector[10]], name="Minus epsilon", marker_color="red")
-
-layout = Layout(
-    title="Change in cost for each Pg with epsilon change",
-    xaxis_title="Variables",
-    yaxis_title="Total Cost",
-    barmode="group",
-
-)
-
-my_plot = plot([trace1, trace2], layout)
-
-
-trace3 = scatter(x=bar_names, y=[cost_vector[1], cost_vector[3], cost_vector[5], cost_vector[7], cost_vector[9]], name="Plus epsilon", marker_color="blue")
-trace4 = scatter(x=bar_names, y=[cost_vector[2], cost_vector[4], cost_vector[6], cost_vector[8], cost_vector[10]], name="Minus epsilon", marker_color="red")
-
-
-my_plot2 = plot([trace3, trace4], layout)
+println("Minimum Cost in neighbourhood: ", minimum(cost_vector))
