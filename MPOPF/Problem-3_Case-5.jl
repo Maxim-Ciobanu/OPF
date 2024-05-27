@@ -195,5 +195,31 @@ end
 
 display(cost_vector)
 
-x = [1,2,3,4,5,6,7,8,9,10]
-plot(x, cost_vector)
+using PlotlyJS
+
+# Names of the variables
+bar_names = ["Pg1", "Pg2", "Pg3", "Pg4", "Pg5"]
+
+# Setup x-axis labels for grouped bars
+x_blue = [1, 3, 5, 7, 9]  # Positions for blue bars
+x_red = [2, 4, 6, 8, 10]  # Positions for red bars
+
+trace1 = bar(x=bar_names, y=[cost_vector[1], cost_vector[3], cost_vector[5], cost_vector[7], cost_vector[9]], name="Plus epsilon", marker_color="blue")
+trace2 = bar(x=bar_names, y=[cost_vector[2], cost_vector[4], cost_vector[6], cost_vector[8], cost_vector[10]], name="Minus epsilon", marker_color="red")
+
+layout = Layout(
+    title="Change in cost for each Pg with epsilon change",
+    xaxis_title="Variables",
+    yaxis_title="Total Cost",
+    barmode="group",
+
+)
+
+my_plot = plot([trace1, trace2], layout)
+
+
+trace3 = scatter(x=bar_names, y=[cost_vector[1], cost_vector[3], cost_vector[5], cost_vector[7], cost_vector[9]], name="Plus epsilon", marker_color="blue")
+trace4 = scatter(x=bar_names, y=[cost_vector[2], cost_vector[4], cost_vector[6], cost_vector[8], cost_vector[10]], name="Minus epsilon", marker_color="red")
+
+
+my_plot2 = plot([trace3, trace4], layout)
