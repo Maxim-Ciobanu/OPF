@@ -174,7 +174,7 @@ end
 
 cost_vector = []
 for i in 1:size
-    epsilon = 0.5
+    epsilon = 0.2
     global ramping = 0.0
     for j in 1:2
         pg_change1, cost_after_change1 = run_optimization_changes(data_time1, pg_time1, epsilon, i)
@@ -195,32 +195,3 @@ for i in 1:size
 end
 
 display(cost_vector)
-
-using PlotlyJS
-
-# Names of the variables
-bar_names = ["Pg1", "Pg2", "Pg3", "Pg4", "Pg5"]
-
-# Setup x-axis labels for grouped bars
-x_blue = [1, 3, 5, 7, 9]  # Positions for blue bars
-x_red = [2, 4, 6, 8, 10]  # Positions for red bars
-
-trace1 = bar(x=bar_names, y=[cost_vector[1], cost_vector[3], cost_vector[5], cost_vector[7], cost_vector[9]], name="Plus epsilon", marker_color="blue")
-trace2 = bar(x=bar_names, y=[cost_vector[2], cost_vector[4], cost_vector[6], cost_vector[8], cost_vector[10]], name="Minus epsilon", marker_color="red")
-
-layout = Layout(
-    title="Change in cost for each Pg with epsilon change",
-    xaxis_title="Variables",
-    yaxis_title="Total Cost",
-    barmode="group",
-
-)
-
-my_plot = plot([trace1, trace2], layout)
-
-
-trace3 = scatter(x=bar_names, y=[cost_vector[1], cost_vector[3], cost_vector[5], cost_vector[7], cost_vector[9]], name="Plus epsilon", marker_color="blue")
-trace4 = scatter(x=bar_names, y=[cost_vector[2], cost_vector[4], cost_vector[6], cost_vector[8], cost_vector[10]], name="Minus epsilon", marker_color="red")
-
-
-my_plot2 = plot([trace3, trace4], layout)

@@ -103,7 +103,8 @@ end
 
 
 println("Total cost with ramping: ")
-println(cost1 + cost2 + ramping*7)
+TotalCost = cost1 + cost2 + ramping*7 # So that I can use this in the plot-results file
+println(TotalCost)
 
 
 

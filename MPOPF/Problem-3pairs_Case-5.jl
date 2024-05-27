@@ -198,13 +198,15 @@ for i in 1:size
 end
 
 display(cost_vector)
+
+
 x = collect(1:50)
 
 # Create the plot
 plot_data = scatter(x=x, y=cost_vector, mode="lines+markers", name="Cost")
 
 # Create layout
-layout = Layout(title="Cost vs Epsilon",
+layout = Layout(title="Change in Cost for Pairs of Variables. Epsilon = 0.1",
                 xaxis_title="Iteration",
                 yaxis_title="Cost")
 
