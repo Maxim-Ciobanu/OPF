@@ -168,14 +168,18 @@ function run_optimization_changes(data, pgChange, epsilon, ind1, ind2)
         @constraint(model, va_fr - va_to >= branch["angmin"])
     end
 
-
     optimize!(model)
+
+    global status = termination_status(model)
+        
     return  JuMP.value.(pg), objective_value(model)
 end
 
+global status = nothing
+
 cost_vector = []
 for i in 1:size
-    epsilon = 0.1
+    epsilon = 1
     global ramping = 0.0
     for j in 1:size
         for d in 1:2
@@ -215,3 +219,4 @@ plt = plot(plot_data, layout)
 display(plt)
 
 println("Minimum Cost in neighbourhood: ", minimum(cost_vector))
+println("The solution is $status")
