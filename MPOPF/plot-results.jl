@@ -12,13 +12,17 @@ single_trace_scatter_red = scatter(x=bar_names, y=[cost_vector[2], cost_vector[4
 add_trace!(Combined_Plot, single_trace_scatter_blue, row=1, col=1)
 add_trace!(Combined_Plot, single_trace_scatter_red, row=1, col=1)
 
-include("Problem-3pairs_Case-5.jl")
+include("Testing-Problem-3pairs_Case-5.jl")
 
-pair_trace_scatter_blue = scatter(x=plotting_x, y=cost_vector[1:2:end], mode="lines+markers", marker_color="blue", showlegend=false)
-pair_trace_scatter_red = scatter(x=plotting_x, y=cost_vector[2:2:end], mode="lines+markers", marker_color="red", showlegend=false)
+pp_pair_trace_scatter = scatter(x=plotting_x, y=cost_vector_pairs_plus_plus, mode="lines+markers", name="i+epsilon, j+epsilon", marker_color="green")
+pm_pair_trace_scatter = scatter(x=plotting_x, y=cost_vector_pairs_plus_minus, mode="lines+markers", name="i+epsilon, j-epsilon", marker_color="#FF4162")
+mp_pair_trace_scatter = scatter(x=plotting_x, y=cost_vector_pairs_minus_plus, mode="lines+markers", name="i-epsilon, j+epsilon", marker_color="orange")
+mm_pair_trace_scatter = scatter(x=plotting_x, y=cost_vector_pairs_minus_minus, mode="lines+markers", name="i-epsilon, j-epsilon", marker_color="black")
 
-add_trace!(Combined_Plot, pair_trace_scatter_blue, row=1, col=2)
-add_trace!(Combined_Plot, pair_trace_scatter_red, row=1, col=2)
+add_trace!(Combined_Plot, pp_pair_trace_scatter, row=1, col=2)
+add_trace!(Combined_Plot, pm_pair_trace_scatter, row=1, col=2)
+add_trace!(Combined_Plot, mp_pair_trace_scatter, row=1, col=2)
+add_trace!(Combined_Plot, mm_pair_trace_scatter, row=1, col=2)
 
 # Adding axis labels and title
 relayout!(Combined_Plot, title="Local Search for minimum Cost with Epsilon of 0.1",

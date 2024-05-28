@@ -43,7 +43,7 @@ global status = nothing
 
 plotting_x = [] # Used for the x axis when plotting later
 
-cost_vector = []
+cost_vector_pairs = []
 for i in 1:size
     epsilon = 0.2
     global ramping = 0.0
@@ -62,19 +62,19 @@ for i in 1:size
             end
 
             epsilon *= -1
-            push!(cost_vector, cost_after_change1 + cost_after_change2 + ramping*7)
+            push!(cost_vector_pairs, cost_after_change1 + cost_after_change2 + ramping*7)
             ramping = 0.0
         end
     end
 end
 
-display(cost_vector)
+display(cost_vector_pairs)
 
 # # Initialize x axis
-# x = collect(1:length(cost_vector))
+# x = collect(1:length(cost_vector_pairs))
 
 # # Create the plot
-# plot_data = scatter(x=x, y=cost_vector, mode="lines+markers", name="Cost")
+# plot_data = scatter(x=x, y=cost_vector_pairs, mode="lines+markers", name="Cost")
 
 # # Create layout
 # layout = Layout(title="Change in Cost for Pairs of Variables. Epsilon = 0.1",
@@ -85,5 +85,5 @@ display(cost_vector)
 # plt = plot(plot_data, layout)
 # display(plt)
 println("Initial optimal cost: ", cost1 + cost2 + initialRamping*7)
-println("Lowest cost in neighbourhood after changes: ", minimum(cost_vector))
+println("Lowest cost in neighbourhood after changes: ", minimum(cost_vector_pairs))
 println("The solution is $status")
