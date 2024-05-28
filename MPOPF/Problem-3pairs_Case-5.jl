@@ -1,7 +1,6 @@
 using PowerModels, PlotlyJS
 using Ipopt
 using JuMP
-const PM = PowerModels
 
 file_path = "./Cases/case5.m"
 
@@ -173,11 +172,14 @@ function run_optimization_changes(data, pgChange, epsilon, ind1, ind2)
     return  JuMP.value.(pg), objective_value(model)
 end
 
+plotting_x = [] # Used for the x axis when plotting later
+
 cost_vector = []
 for i in 1:size
     epsilon = 0.1
     global ramping = 0.0
     for j in 1:size
+        push!(plotting_x, "Pg"*string(i)*string(j))
         for d in 1:2
             pg_change1, cost_after_change1 = run_optimization_changes(data_time1, pg_time1, epsilon, i, j)
             pg_change2, cost_after_change2 = run_optimization_changes(data_time2, pg_time2, epsilon, i, j)
@@ -198,20 +200,3 @@ for i in 1:size
 end
 
 display(cost_vector)
-
-
-x = collect(1:50)
-
-# Create the plot
-plot_data = scatter(x=x, y=cost_vector, mode="lines+markers", name="Cost")
-
-# Create layout
-layout = Layout(title="Change in Cost for Pairs of Variables. Epsilon = 0.1",
-                xaxis_title="Iteration",
-                yaxis_title="Cost")
-
-# Combine the data and layout into a plot
-plt = plot(plot_data, layout)
-display(plt)
-
-println("Minimum Cost in neighbourhood: ", minimum(cost_vector))
