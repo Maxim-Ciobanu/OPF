@@ -38,11 +38,14 @@ end
 
 global status = nothing
 
+plotting_x = [] # Used for the x axis when plotting later
+
 cost_vector = []
 for i in 1:size
     global epsilon = 0.2
     global ramping = 0.0
     for j in 1:size
+        push!(plotting_x, "Pg"*string(i)*string(j))
         for d in 1:2
             pg_change1, cost_after_change1 = run_optimization_changes2(data_time1, pg_time1, epsilon, i, j)
             pg_change2, cost_after_change2 = run_optimization_changes2(data_time2, pg_time2, epsilon, i, j)
@@ -64,20 +67,20 @@ end
 
 display(cost_vector)
 
-# Initialize x axis
-x = collect(1:length(cost_vector))
+# # Initialize x axis
+# x = collect(1:length(cost_vector))
 
-# Create the plot
-plot_data = scatter(x=x, y=cost_vector, mode="lines+markers", name="Cost")
+# # Create the plot
+# plot_data = scatter(x=x, y=cost_vector, mode="lines+markers", name="Cost")
 
-# Create layout
-layout = Layout(title="Change in Cost for Pairs of Variables. Epsilon = $epsilon",
-                xaxis_title="Iteration",
-                yaxis_title="Cost")
+# # Create layout
+# layout = Layout(title="Change in Cost for Pairs of Variables. Epsilon = 0.1",
+#                 xaxis_title="Iteration",
+#                 yaxis_title="Cost")
 
-# Combine the data and layout into a plot
-plt = plot(plot_data, layout)
-display(plt)
+# # Combine the data and layout into a plot
+# plt = plot(plot_data, layout)
+# display(plt)
 println("Initial optimal cost: ", cost1 + cost2 + initialRamping*7)
 println("Lowest cost in neighbourhood after changes: ", minimum(cost_vector))
 println("The solution is $status")

@@ -1,7 +1,6 @@
 using PowerModels, PlotlyJS
 using Ipopt
 using JuMP
-const PM = PowerModels
 
 file_path = "./Cases/case5.m"
 
@@ -38,7 +37,7 @@ global status = nothing
 
 cost_vector = []
 for i in 1:size
-    epsilon = 0.2
+    epsilon = 0.1
     global ramping = 0.0
     for j in 1:2
         pg_change1, cost_after_change1 = run_optimization_changes1(data_time1, pg_time1, epsilon, i)
