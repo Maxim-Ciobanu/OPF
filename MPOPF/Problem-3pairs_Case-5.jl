@@ -13,7 +13,6 @@ PowerModels.standardize_cost_terms!(data_time1, order=2)
 PowerModels.calc_thermal_limits!(data_time1)
 
 pg_time1, cost1 = run_optimization(data_time1)
-println("Time 1 generator outputs: ", pg_time1)
 
 # Time 2 optimization with 3% increased demand
 data_time2 = deepcopy(data_time1) # Make a copy of the original data
@@ -23,8 +22,6 @@ for (bus_id, load) in data_time2["load"]
 end
 
 pg_time2, cost2= run_optimization(data_time2)
-println("Time 2 generator outputs: ", pg_time2)
-
 
 val_vec = []
 size = length(pg_time1)
@@ -43,7 +40,7 @@ global status = nothing
 
 cost_vector = []
 for i in 1:size
-    epsilon = 0.2
+    global epsilon = 0.2
     global ramping = 0.0
     for j in 1:size
         for d in 1:2
@@ -74,7 +71,7 @@ x = collect(1:length(cost_vector))
 plot_data = scatter(x=x, y=cost_vector, mode="lines+markers", name="Cost")
 
 # Create layout
-layout = Layout(title="Change in Cost for Pairs of Variables. Epsilon = 0.1",
+layout = Layout(title="Change in Cost for Pairs of Variables. Epsilon = $epsilon",
                 xaxis_title="Iteration",
                 yaxis_title="Cost")
 
