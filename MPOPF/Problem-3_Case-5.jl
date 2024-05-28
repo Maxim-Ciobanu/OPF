@@ -2,6 +2,8 @@ using PowerModels, PlotlyJS
 using Ipopt
 using JuMP
 
+include("functions.jl")
+
 file_path = "./Cases/case5.m"
 
 # Time 1 optimization
