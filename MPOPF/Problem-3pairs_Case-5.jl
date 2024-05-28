@@ -70,20 +70,20 @@ end
 
 display(cost_vector)
 
-# Initialize x axis
-x = collect(1:length(cost_vector))
+# # Initialize x axis
+# x = collect(1:length(cost_vector))
 
-# Create the plot
-plot_data = scatter(x=x, y=cost_vector, mode="lines+markers", name="Cost")
+# # Create the plot
+# plot_data = scatter(x=x, y=cost_vector, mode="lines+markers", name="Cost")
 
-# Create layout
-layout = Layout(title="Change in Cost for Pairs of Variables. Epsilon = 0.1",
-                xaxis_title="Iteration",
-                yaxis_title="Cost")
+# # Create layout
+# layout = Layout(title="Change in Cost for Pairs of Variables. Epsilon = 0.1",
+#                 xaxis_title="Iteration",
+#                 yaxis_title="Cost")
 
-# Combine the data and layout into a plot
-plt = plot(plot_data, layout)
-display(plt)
+# # Combine the data and layout into a plot
+# plt = plot(plot_data, layout)
+# display(plt)
 println("Initial optimal cost: ", cost1 + cost2 + initialRamping*7)
 println("Lowest cost in neighbourhood after changes: ", minimum(cost_vector))
 println("The solution is $status")
