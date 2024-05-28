@@ -2,6 +2,8 @@ using PowerModels, PlotlyJS
 using Ipopt
 using JuMP
 
+include("functions.jl")
+
 file_path = "./Cases/case5.m"
 
 # Time 1 optimization
@@ -10,7 +12,6 @@ PowerModels.standardize_cost_terms!(data_time1, order=2)
 PowerModels.calc_thermal_limits!(data_time1)
 
 pg_time1, cost1 = run_optimization(data_time1)
-println("Time 1 generator outputs: ", pg_time1)
 
 # Time 2 optimization with 3% increased demand
 data_time2 = deepcopy(data_time1) # Make a copy of the original data
@@ -20,7 +21,6 @@ for (bus_id, load) in data_time2["load"]
 end
 
 pg_time2, cost2= run_optimization(data_time2)
-println("Time 2 generator outputs: ", pg_time2)
 
 val_vec = []
 size = length(pg_time1)
