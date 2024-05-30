@@ -41,17 +41,15 @@ ramping_cost = 7
 @variable(model, -360 <= theta[b in 1:bus_length, t in 1:T] <= 360, start = 0)
 
 # Adjust demand for each T (increase by 3%)
-# @variable(model, load[t in 1:T, l in 1:load_length] == load_data[l]["pd"])
 # Initialize adjusted_demand as a dictionary
-adjusted_demand = Dict{Int, Vector{Float64}}()
+# adjusted_demand = Dict{Int, Vector{Float64}}()
 
-# Adjust demand for each time period (not used yet, trying to get right answer w/o changing demand first)
-for t in 1:T
-    adjusted_demand[t] = Float64[]  # Initialize an empty vector for each time period
-    for i in 1:load_length
-        push!(adjusted_demand[t], load_data[i]["pd"] * (1 + 0.03 * (t - 1)))
-    end
-end
+# for t in 1:T
+    # adjusted_demand[t] = Float64[]  # Initialize an empty vector for each time period
+    # for i in 1:load_length
+        # push!(adjusted_demand[t], load_data[i]["pd"] * (1 + 0.03 * (t - 1)))
+    # end
+# end
 
 # Dont know if we need this but doesnt seem to affect solution
 # Extract ramp rates (assuming you have added them in the case file)
@@ -70,7 +68,7 @@ end
 p_expr = Dict([((l,i,j), 1.0*p[(l,i,j)]) for (l,i,j) in ref[:arcs_from]])
 p_expr = merge(p_expr, Dict([((l,j,i), -1.0*p[(l,i,j)]) for (l,i,j) in ref[:arcs_from]]))
 
-increase = 1.0
+# increase = 1.0
 for t in 1:T
     for (i,bus) in ref[:bus]
         # Build a list of the loads and shunt elements connected to the bus i
@@ -81,11 +79,11 @@ for t in 1:T
         @constraint(model,
             sum(p_expr[a] for a in ref[:bus_arcs][i]) ==    
             sum(pg[t, g] for g in ref[:bus_gens][i] for t in 1:T) -  # Note the double loop over t and g
-            sum(load["pd"] * increase for load in bus_loads) -                 
+            sum(load["pd"] for load in bus_loads) -       # Maybe add * increase here               
             sum(shunt["gs"] for shunt in bus_shunts)*1.0^2          
         )
     end
-    global increase += 0.03
+    # global increase += 0.03
 end
 
 # Branch power flow physics and limit constraints
@@ -126,5 +124,8 @@ optimize!(model)
 println("Optimal Cost: ", objective_value(model))
 
 pgValues = JuMP.value.(pg)
-
+thetaValues = JuMP.value.(theta)
+println("Pg values: ")
 display(pgValues)
+println("Theta values: ")
+display(value.(theta))
