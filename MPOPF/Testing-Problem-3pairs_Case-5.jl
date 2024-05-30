@@ -5,7 +5,7 @@ const PM = PowerModels
 
 include("functions.jl")
 
-file_path = "./Cases/case5.m"
+file_path = "../Cases/case5.m"
 
 # Time 1 optimization
 data_time1 = PowerModels.parse_file(file_path)
@@ -50,19 +50,30 @@ for i in 1:size
     global ramping = 0.0
     for j in 1:size
         push!(plotting_x, "Pg"*string(i)*string(j))
+        println("**************************************************")
+        println("Pg"*string(i)*string(j))
+        println("**************************************************")
         for b in 1:4
             if b == 1
                 pg_change1, cost_after_change1 = run_optimization_changes3(data_time1, pg_time1, epsilon1, epsilon1, i, j)
+                println(status)
                 pg_change2, cost_after_change2 = run_optimization_changes3(data_time2, pg_time2, epsilon1, epsilon1, i, j)
+                println(status)
             elseif b == 2
                 pg_change1, cost_after_change1 = run_optimization_changes3(data_time1, pg_time1, epsilon1, epsilon2, i, j)
+                println(status)
                 pg_change2, cost_after_change2 = run_optimization_changes3(data_time2, pg_time2, epsilon1, epsilon2, i, j)
+                println(status)
             elseif b == 3
                 pg_change1, cost_after_change1 = run_optimization_changes3(data_time1, pg_time1, epsilon2, epsilon1, i, j)
+                println(status)
                 pg_change2, cost_after_change2 = run_optimization_changes3(data_time2, pg_time2, epsilon2, epsilon1, i, j)
+                println(status)
             elseif b == 4
                 pg_change1, cost_after_change1 = run_optimization_changes3(data_time1, pg_time1, epsilon2, epsilon2, i, j)
+                println(status)
                 pg_change2, cost_after_change2 = run_optimization_changes3(data_time2, pg_time2, epsilon2, epsilon2, i, j)
+                println(status)
             end
             
             diff_vec = []
@@ -83,12 +94,19 @@ for i in 1:size
             elseif b == 4
                 push!(cost_vector_pairs_minus_minus, cost_after_change1 + cost_after_change2 + ramping*7)
             end
-
+            println(cost_after_change1 + cost_after_change2 + ramping*7)
+            println("**************************************************")
+            println()
             ramping = 0.0
         end
+        println()
+        println()
+        println()
     end    
 end
-
+i = 1
+j = 1
+println("Pg"*string(i)*string(j))
 
 smallest_value = minimum([cost_vector_pairs_plus_plus; cost_vector_pairs_plus_minus; cost_vector_pairs_minus_plus; cost_vector_pairs_minus_minus])
 
