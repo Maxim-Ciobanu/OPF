@@ -1,7 +1,7 @@
 using PowerModels, Ipopt, JuMP
 const PM = PowerModels
 
-file_path = "case5.m"
+file_path = "./Cases/case5.m"
 
 data = PowerModels.parse_file(file_path)
 PowerModels.standardize_cost_terms!(data, order=2)
@@ -12,10 +12,12 @@ ref = PowerModels.build_ref(data)[:it][:pm][:nw][0]
 bus_data = ref[:bus]
 gen_data = ref[:gen]
 branch_data = ref[:branch]
+load_data = ref[:load]
 
 gen_length = length(gen_data)
 bus_length = length(bus_data)
 branch_length = length(branch_data)
+load_length = length(load_data)
 
 
 # Create model
@@ -29,6 +31,8 @@ T = 2
 # Set a ramping cost
 ramping_cost = 7
 
+@variable(model, va[i in keys(ref[:bus])])
+
 # Define variables
 # Sets variables for each 1 -> T with upper and lower bounds
 # PGtg where t = T and i = gen, PG21 is the first gen of second t
@@ -36,9 +40,26 @@ ramping_cost = 7
 @variable(model, gen_data[g]["pmin"] <= pg[t in 1:T, g in 1:gen_length] <= gen_data[g]["pmax"])
 @variable(model, -360 <= theta[b in 1:bus_length, t in 1:T] <= 360, start = 0)
 
+# Adjust demand for each T (increase by 3%)
+# @variable(model, load[t in 1:T, l in 1:load_length] == load_data[l]["pd"])
+# Initialize adjusted_demand as a dictionary
+adjusted_demand = Dict{Int, Vector{Float64}}()
+
+# Adjust demand for each time period (not used yet, trying to get right answer w/o changing demand first)
+for t in 1:T
+    adjusted_demand[t] = Float64[]  # Initialize an empty vector for each time period
+    for i in 1:load_length
+        push!(adjusted_demand[t], load_data[i]["pd"] * (1 + 0.03 * (t - 1)))
+    end
+end
+
+# Dont know if we need this but doesnt seem to affect solution
+# Extract ramp rates (assuming you have added them in the case file)
+# max_ramp_up = [gen_data[i]["ramp_agc"] for i in 1:gen_length]
+# max_ramp_down = [gen_data[i]["ramp_10"] for i in 1:gen_length]
+
 
 # Stuff below is from Sajads notebook
-@variable(model, va[i in keys(ref[:bus])])
 
 for (i,bus) in bus_data
     @constraint(model, va[i] == 0)
@@ -49,18 +70,22 @@ end
 p_expr = Dict([((l,i,j), 1.0*p[(l,i,j)]) for (l,i,j) in ref[:arcs_from]])
 p_expr = merge(p_expr, Dict([((l,j,i), -1.0*p[(l,i,j)]) for (l,i,j) in ref[:arcs_from]]))
 
-for (i,bus) in ref[:bus]
-    # Build a list of the loads and shunt elements connected to the bus i
-    bus_loads = [ref[:load][l] for l in ref[:bus_loads][i]]
-    bus_shunts = [ref[:shunt][s] for s in ref[:bus_shunts][i]]
+increase = 1.0
+for t in 1:T
+    for (i,bus) in ref[:bus]
+        # Build a list of the loads and shunt elements connected to the bus i
+        bus_loads = [ref[:load][l] for l in ref[:bus_loads][i]]
+        bus_shunts = [ref[:shunt][s] for s in ref[:bus_shunts][i]]
 
-    # Active power balance at node i
-    @constraint(model,
-        sum(p_expr[a] for a in ref[:bus_arcs][i]) ==    
-        sum(pg[g] for g in ref[:bus_gens][i]) -                 # sum of active power generation at bus i -
-        sum(load["pd"] for load in bus_loads) -                 # sum of active load consumption at bus i -
-        sum(shunt["gs"] for shunt in bus_shunts)*1.0^2          # sum of active shunt element injections at bus i
-    )
+        # Active power balance at node i
+        @constraint(model,
+            sum(p_expr[a] for a in ref[:bus_arcs][i]) ==    
+            sum(pg[t, g] for g in ref[:bus_gens][i] for t in 1:T) -  # Note the double loop over t and g
+            sum(load["pd"] * increase for load in bus_loads) -                 
+            sum(shunt["gs"] for shunt in bus_shunts)*1.0^2          
+        )
+    end
+    global increase += 0.03
 end
 
 # Branch power flow physics and limit constraints
@@ -99,3 +124,7 @@ end
 
 optimize!(model)
 println("Optimal Cost: ", objective_value(model))
+
+pgValues = JuMP.value.(pg)
+
+display(pgValues)
