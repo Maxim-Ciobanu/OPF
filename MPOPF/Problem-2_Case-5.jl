@@ -1,4 +1,4 @@
-using PowerModels, Ipopt, JuMP
+using PowerModels, Gurobi, JuMP
 const PM = PowerModels
 
 file_path = "./Cases/case5.m"
@@ -21,9 +21,9 @@ load_length = length(load_data)
 
 
 # Create model
-model = JuMP.Model(Ipopt.Optimizer)
+model = JuMP.Model(Gurobi.Optimizer)
 # Set print level 
-set_optimizer_attribute(model, "print_level", 5)
+# set_optimizer_attribute(model, "print_level", 5)
 
 # Time periods
 T = 2
@@ -75,7 +75,8 @@ for t in 1:T
     p_expr[t] = merge(p_expr[t], Dict([((l, j, i), -1.0 * p[t, (l, i, j)]) for (l, i, j) in ref[:arcs_from]]))
 end
 
-# increase = 1.0
+factor = [1, 1.03]
+
 for t in 1:T
     for (i,bus) in ref[:bus]
         # Build a list of the loads and shunt elements connected to the bus i
@@ -86,11 +87,10 @@ for t in 1:T
         @constraint(model,
             sum(p_expr[t][a] for a in ref[:bus_arcs][i]) ==    
             sum(pg[t, g] for g in ref[:bus_gens][i]) -  # Note the double loop over t and g
-            sum(load["pd"] for load in bus_loads) -       # Maybe add * increase here               
+            sum(load["pd"] * factor[t] for load in bus_loads) -       # Maybe add * increase here               
             sum(shunt["gs"] for shunt in bus_shunts)*1.0^2          
         )
     end
-    # global increase += 0.03
 
 
 # Branch power flow physics and limit constraints
@@ -120,18 +120,18 @@ end
 # Minimum sum of cost for each T and ramping between T's
 # Cost function: c1[i] * pg[i]^2 + c2[i] * pg[i] + c3[i]
 # Ramping function: |pg t+1,1 - pg t,1| * ramping_cost for each i for each t - 1
-@objective(model, Min,
-    sum(gen_data[i]["cost"][1] * pg[t, i]^2 + gen_data[i]["cost"][2] * pg[t, i] + gen_data[i]["cost"][3]
-        for t in 1:T, i in 1:gen_length) +
-    sum(ramping_cost * abs((pg[t + 1, i] - pg[t, i]))
-        for t in 1:T-1, i in 1:gen_length)
-)
+
 
 #compute ramping up and down
 @variable(model, ramp_up[t in 2:T, g in keys(ref[:gen])] >= 0)
 @variable(model, ramp_down[t in 2:T, g in keys(ref[:gen])] >= 0)
+
+
+@objective(model, Min,
 sum(sum(ref[:gen][g]["cost"][1]*pg[t,g]^2 + ref[:gen][g]["cost"][2]*pg[t,g] + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T) +
-sum(ramp_cost_per_mw[g] * (ramp_up[t, g] + ramp_down[t, g]) for g in keys(ref[:gen]) for t in 2:T)
+sum(ramping_cost * (ramp_up[t, g] + ramp_down[t, g]) for g in keys(ref[:gen]) for t in 2:T)
+
+)
 
 for g in keys(ref[:gen])
     for t in 2:T
@@ -143,9 +143,3 @@ end
 optimize!(model)
 println("Optimal Cost: ", objective_value(model))
 
-pgValues = JuMP.value.(pg)
-thetaValues = JuMP.value.(theta)
-println("Pg values: ")
-display(pgValues)
-println("Theta values: ")
-display(value.(theta))

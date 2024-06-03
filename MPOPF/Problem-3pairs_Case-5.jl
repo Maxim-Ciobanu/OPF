@@ -36,13 +36,10 @@ for i in 1:size
     global initialRamping += abs(val_vec[i])
 end
 
-global status = nothing
-
-plotting_x = [] # Used for the x axis when plotting later
 
 cost_vector_pairs = []
 for i in 1:size
-    global epsilon = 0.2
+    global epsilon = 0.1
     global ramping = 0.0
     for j in 1:size
         push!(plotting_x, "Pg"*string(i)*string(j))
@@ -83,4 +80,3 @@ display(cost_vector_pairs)
 # display(plt)
 println("Initial optimal cost: ", cost1 + cost2 + initialRamping*7)
 println("Lowest cost in neighbourhood after changes: ", minimum(cost_vector_pairs))
-println("The solution is $status")
