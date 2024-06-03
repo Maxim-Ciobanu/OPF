@@ -31,14 +31,14 @@ T = 2
 # Set a ramping cost
 ramping_cost = 7
 
-@variable(model, va[i in keys(ref[:bus])])
+@variable(model, va[t in 1:T, i in keys(ref[:bus])])
 
 # Define variables
 # Sets variables for each 1 -> T with upper and lower bounds
 # PGtg where t = T and i = gen, PG21 is the first gen of second t
 # Likewise for theta
 @variable(model, gen_data[g]["pmin"] <= pg[t in 1:T, g in 1:gen_length] <= gen_data[g]["pmax"])
-@variable(model, -360 <= theta[b in 1:bus_length, t in 1:T] <= 360, start = 0)
+@variable(model, -360 <= theta[t in 1:T, b in 1:bus_length] <= 360, start = 0)
 
 # Adjust demand for each T (increase by 3%)
 # Initialize adjusted_demand as a dictionary
@@ -58,15 +58,22 @@ ramping_cost = 7
 
 
 # Stuff below is from Sajads notebook
-
-for (i,bus) in bus_data
-    @constraint(model, va[i] == 0)
+for t in 1:T
+    for (i,bus) in ref[:ref_buses]
+        @constraint(model, va[t,i] == 0)
+    end
 end
+@variable(model, -ref[:branch][l]["rate_a"] <= p[1:T,(l,i,j) in ref[:arcs_from]] <= ref[:branch][l]["rate_a"])
 
-@variable(model, -ref[:branch][l]["rate_a"] <= p[(l,i,j) in ref[:arcs_from]] <= ref[:branch][l]["rate_a"])
-
-p_expr = Dict([((l,i,j), 1.0*p[(l,i,j)]) for (l,i,j) in ref[:arcs_from]])
-p_expr = merge(p_expr, Dict([((l,j,i), -1.0*p[(l,i,j)]) for (l,i,j) in ref[:arcs_from]]))
+p_expr = Dict()
+for t in 1:T
+    p_expr[t] = Dict()
+end
+# Iterate over each time period
+for t in 1:T
+    p_expr[t] = Dict([((l, i, j), 1.0 * p[t, (l, i, j)]) for (l, i, j) in ref[:arcs_from]])
+    p_expr[t] = merge(p_expr[t], Dict([((l, j, i), -1.0 * p[t, (l, i, j)]) for (l, i, j) in ref[:arcs_from]]))
+end
 
 # increase = 1.0
 for t in 1:T
@@ -77,37 +84,37 @@ for t in 1:T
 
         # Active power balance at node i
         @constraint(model,
-            sum(p_expr[a] for a in ref[:bus_arcs][i]) ==    
-            sum(pg[t, g] for g in ref[:bus_gens][i] for t in 1:T) -  # Note the double loop over t and g
+            sum(p_expr[t][a] for a in ref[:bus_arcs][i]) ==    
+            sum(pg[t, g] for g in ref[:bus_gens][i]) -  # Note the double loop over t and g
             sum(load["pd"] for load in bus_loads) -       # Maybe add * increase here               
             sum(shunt["gs"] for shunt in bus_shunts)*1.0^2          
         )
     end
     # global increase += 0.03
-end
+
 
 # Branch power flow physics and limit constraints
-for (i,branch) in ref[:branch]
-    # Build the from variable id of the i-th branch, which is a tuple given by (branch id, from bus, to bus)
-    f_idx = (i, branch["f_bus"], branch["t_bus"])
+    for (i,branch) in ref[:branch]
+        # Build the from variable id of the i-th branch, which is a tuple given by (branch id, from bus, to bus)
+        f_idx = (i, branch["f_bus"], branch["t_bus"])
 
-    p_fr = p[f_idx]                     # p_fr is a reference to the optimization variable p[f_idx]
+        p_fr = p[t,f_idx]                     # p_fr is a reference to the optimization variable p[f_idx]
 
-    va_fr = va[branch["f_bus"]]         # va_fr is a reference to the optimization variable va on the from side of the branch
-    va_to = va[branch["t_bus"]]         # va_fr is a reference to the optimization variable va on the to side of the branch
+        va_fr = va[t,branch["f_bus"]]         # va_fr is a reference to the optimization variable va on the from side of the branch
+        va_to = va[t,branch["t_bus"]]         # va_fr is a reference to the optimization variable va on the to side of the branch
 
-    # Compute the branch parameters and transformer ratios from the data
-    g, b = PowerModels.calc_branch_y(branch)
+        # Compute the branch parameters and transformer ratios from the data
+        g, b = PowerModels.calc_branch_y(branch)
 
-    # DC Power Flow Constraint
-    @constraint(model, p_fr == -b*(va_fr - va_to))
-   
-    # Voltage angle difference limit
-    @constraint(model, va_fr - va_to <= branch["angmax"])
-    @constraint(model, va_fr - va_to >= branch["angmin"])
+        # DC Power Flow Constraint
+        @constraint(model, p_fr == -b*(va_fr - va_to))
+    
+        # Voltage angle difference limit
+        @constraint(model, va_fr - va_to <= branch["angmax"])
+        @constraint(model, va_fr - va_to >= branch["angmin"])
+    end
+
 end
-
-
 
 # Objective function
 # Minimum sum of cost for each T and ramping between T's
