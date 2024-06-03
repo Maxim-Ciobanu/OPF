@@ -127,6 +127,19 @@ end
         for t in 1:T-1, i in 1:gen_length)
 )
 
+#compute ramping up and down
+@variable(model, ramp_up[t in 2:T, g in keys(ref[:gen])] >= 0)
+@variable(model, ramp_down[t in 2:T, g in keys(ref[:gen])] >= 0)
+sum(sum(ref[:gen][g]["cost"][1]*pg[t,g]^2 + ref[:gen][g]["cost"][2]*pg[t,g] + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T) +
+sum(ramp_cost_per_mw[g] * (ramp_up[t, g] + ramp_down[t, g]) for g in keys(ref[:gen]) for t in 2:T)
+
+for g in keys(ref[:gen])
+    for t in 2:T
+        @constraint(model, ramp_up[t, g] >= pg[t, g] - pg[t-1, g])
+        @constraint(model, ramp_down[t, g] >= pg[t-1, g] - pg[t, g])
+    end
+end
+
 optimize!(model)
 println("Optimal Cost: ", objective_value(model))
 
