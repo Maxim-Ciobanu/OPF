@@ -22,8 +22,6 @@ load_length = length(load_data)
 
 # Create model
 model = JuMP.Model(Gurobi.Optimizer)
-# Set print level 
-# set_optimizer_attribute(model, "print_level", 5)
 
 # Time periods
 T = 24
@@ -35,27 +33,9 @@ ramping_cost = 7
 
 # Define variables
 # Sets variables for each 1 -> T with upper and lower bounds
-# PGtg where t = T and i = gen, PG21 is the first gen of second t
-# Likewise for theta
+
 @variable(model, gen_data[g]["pmin"] <= pg[t in 1:T, g in 1:gen_length] <= gen_data[g]["pmax"])
 @variable(model, -360 <= theta[t in 1:T, b in 1:bus_length] <= 360, start = 0)
-
-# Adjust demand for each T (increase by 3%)
-# Initialize adjusted_demand as a dictionary
-# adjusted_demand = Dict{Int, Vector{Float64}}()
-
-# for t in 1:T
-    # adjusted_demand[t] = Float64[]  # Initialize an empty vector for each time period
-    # for i in 1:load_length
-        # push!(adjusted_demand[t], load_data[i]["pd"] * (1 + 0.03 * (t - 1)))
-    # end
-# end
-
-# Dont know if we need this but doesnt seem to affect solution
-# Extract ramp rates (assuming you have added them in the case file)
-# max_ramp_up = [gen_data[i]["ramp_agc"] for i in 1:gen_length]
-# max_ramp_down = [gen_data[i]["ramp_10"] for i in 1:gen_length]
-
 
 # Stuff below is from Sajads notebook
 for t in 1:T
@@ -95,8 +75,7 @@ for t in 1:T
         )
     end
 
-
-# Branch power flow physics and limit constraints
+    # Branch power flow physics and limit constraints
     for (i,branch) in ref[:branch]
         # Build the from variable id of the i-th branch, which is a tuple given by (branch id, from bus, to bus)
         f_idx = (i, branch["f_bus"], branch["t_bus"])
@@ -116,14 +95,7 @@ for t in 1:T
         @constraint(model, va_fr - va_to <= branch["angmax"])
         @constraint(model, va_fr - va_to >= branch["angmin"])
     end
-
 end
-
-# Objective function
-# Minimum sum of cost for each T and ramping between T's
-# Cost function: c1[i] * pg[i]^2 + c2[i] * pg[i] + c3[i]
-# Ramping function: |pg t+1,1 - pg t,1| * ramping_cost for each i for each t - 1
-
 
 #compute ramping up and down
 @variable(model, ramp_up[t in 2:T, g in keys(ref[:gen])] >= 0)

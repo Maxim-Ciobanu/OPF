@@ -35,17 +35,17 @@ initialRamping = 0.0
 for i in 1:size
     global initialRamping += abs(val_vec[i])
 end
-
+plotting_x = [] # Used for the x axis when plotting later
 
 cost_vector_pairs = []
 for i in 1:size
-    global epsilon = 0.1
+    global epsilon = 0.2
     global ramping = 0.0
     for j in 1:size
         push!(plotting_x, "Pg"*string(i)*string(j))
         for d in 1:2
-            pg_change1, cost_after_change1 = run_optimization_changes2(data_time1, pg_time1, epsilon, i, j)
-            pg_change2, cost_after_change2 = run_optimization_changes2(data_time2, pg_time2, epsilon, i, j)
+            pg_change1, cost_after_change1, status1 = run_optimization_changes2(data_time1, pg_time1, epsilon, i, j)
+            pg_change2, cost_after_change2, status2 = run_optimization_changes2(data_time2, pg_time2, epsilon, i, j)
             diff_vec = []
             for k in 1:size
                 diff = abs(pg_change2[k] - pg_change1[k])
@@ -54,10 +54,19 @@ for i in 1:size
             for k in 1:size
                 global ramping += diff_vec[k]
             end
+            println(status1)
+            println(status2)
+            if (status1 == 1 && status2 == 1)
+                overall_status = "LOCALLY_SOLVED"
+                push!(cost_vector_pairs, (cost_after_change1 + cost_after_change2 + ramping*7, overall_status))
 
-            epsilon *= -1
-            push!(cost_vector_pairs, cost_after_change1 + cost_after_change2 + ramping*7)
+            else
+                overall_status = "LOCALLY_INFEASIBLE"
+                push!(cost_vector_pairs, (cost_after_change1 + cost_after_change2 + ramping*7, overall_status))
+
+            end
             ramping = 0.0
+            epsilon *= -1
         end
     end
 end
@@ -79,4 +88,11 @@ display(cost_vector_pairs)
 # plt = plot(plot_data, layout)
 # display(plt)
 println("Initial optimal cost: ", cost1 + cost2 + initialRamping*7)
-println("Lowest cost in neighbourhood after changes: ", minimum(cost_vector_pairs))
+
+# Filter the vector to keep only the pairs that are "LOCALLY_SOLVED"
+solved_pairs = filter(x -> x[2] == "LOCALLY_SOLVED", cost_vector_pairs)
+
+# Display the result
+println("Lowest cost in neighbourhood after changes: ", minimum(solved_pairs))
+
+
