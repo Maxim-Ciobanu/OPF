@@ -26,7 +26,7 @@ model = JuMP.Model(Gurobi.Optimizer)
 # set_optimizer_attribute(model, "print_level", 5)
 
 # Time periods
-T = 2
+T = 24
 
 # Set a ramping cost
 ramping_cost = 7
@@ -75,7 +75,10 @@ for t in 1:T
     p_expr[t] = merge(p_expr[t], Dict([((l, j, i), -1.0 * p[t, (l, i, j)]) for (l, i, j) in ref[:arcs_from]]))
 end
 
-factor = [1, 1.03]
+# Create a random vector two multiply loads by for each T
+factor = [1]
+random_vector = 0.9 .+ 0.2 .* rand(T-1)
+factor = vcat(factor, random_vector)
 
 for t in 1:T
     for (i,bus) in ref[:bus]
