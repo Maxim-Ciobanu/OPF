@@ -1,4 +1,4 @@
-using PowerModels, Gurobi, JuMP
+using PowerModels, Gurobi, JuMP, JLD2
 const PM = PowerModels
 
 file_path = "./Cases/case5.m"
@@ -57,7 +57,7 @@ end
 
 # Create a random vector two multiply loads by for each T
 factor = [1]
-random_vector = 0.9 .+ 0.2 .* rand(T-1)
+random_vector = 0.975 .+ 0.05 .* rand(T-1)
 factor = vcat(factor, random_vector)
 
 for t in 1:T
@@ -118,6 +118,5 @@ end
 optimize!(model)
 println("Optimal Cost: ", objective_value(model))
 
-pg_values = JuMP.value.(pg)
-
-
+initial_pg_values = JuMP.value.(pg)
+@save "./Attachments/saved_data.jld2" initial_pg_values
