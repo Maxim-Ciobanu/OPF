@@ -18,28 +18,37 @@ single_trace_scatter_red = scatter(x=bar_names, y=[cost_vector[2], cost_vector[4
 # add_trace!(Combined_Plot, single_trace_scatter_blue, row=1, col=2)
 # add_trace!(Combined_Plot, single_trace_scatter_red, row=1, col=2)
 
-include("Testing-Problem-3pairs_Case-5.jl")
+include("Plotting-Problem-3pairs_Case-5.jl")
 
-pp_pair_trace_scatter = scatter(x=plotting_x, y=cost_vector_pairs_plus_plus, mode="lines+markers", name="i+epsilon, j+epsilon", marker_color="green", xaxis="x3", yaxis="y3")
-pm_pair_trace_scatter = scatter(x=plotting_x, y=cost_vector_pairs_plus_minus, mode="lines+markers", name="i+epsilon, j-epsilon", marker_color="#FF4162", xaxis="x3", yaxis="y3")
-mp_pair_trace_scatter = scatter(x=plotting_x, y=cost_vector_pairs_minus_plus, mode="lines+markers", name="i-epsilon, j+epsilon", marker_color="orange", xaxis="x3", yaxis="y3")
-mm_pair_trace_scatter = scatter(x=plotting_x, y=cost_vector_pairs_minus_minus, mode="lines+markers", name="i-epsilon, j-epsilon", marker_color="black", xaxis="x3", yaxis="y3")
+# pp_pair_trace_scatter = scatter(x=plotting_x, y=[pair[1] for pair in cost_vector_pairs_plus_plus], mode="lines+markers", name="i+epsilon, j+epsilon", marker_color="green", xaxis="x3", yaxis="y3")
+# pm_pair_trace_scatter = scatter(x=plotting_x, y=[pair[1] for pair in cost_vector_pairs_plus_minus], mode="lines+markers", name="i+epsilon, j-epsilon", marker_color="#FF4162", xaxis="x3", yaxis="y3")
+# mp_pair_trace_scatter = scatter(x=plotting_x, y=[pair[1] for pair in cost_vector_pairs_minus_plus], mode="lines+markers", name="i-epsilon, j+epsilon", marker_color="orange", xaxis="x3", yaxis="y3")
+# mm_pair_trace_scatter = scatter(x=plotting_x, y=[pair[1] for pair in cost_vector_pairs_minus_minus], mode="lines+markers", name="i-epsilon, j-epsilon", marker_color="black", xaxis="x3", yaxis="y3")
 
+pp_y_values = [pair[2] != "LOCALLY_INFEASIBLE" ? pair[1] : missing for pair in cost_vector_pairs_plus_plus]
+pp_pair_trace_scatter = scatter(x=plotting_x, y=pp_y_values, mode="lines+markers", name="i+epsilon, j+epsilon", marker_color="green", xaxis="x3", yaxis="y3")
+
+pm_y_values = [pair[2] != "LOCALLY_INFEASIBLE" ? pair[1] : missing for pair in cost_vector_pairs_plus_minus]
+pm_pair_trace_scatter = scatter(x=plotting_x, y=pm_y_values, mode="lines+markers", name="i+epsilon, j-epsilon", marker_color="#FF4162", xaxis="x3", yaxis="y3")
+
+mp_y_values = [pair[2] != "LOCALLY_INFEASIBLE" ? pair[1] : missing for pair in cost_vector_pairs_minus_plus]
+mp_pair_trace_scatter = scatter(x=plotting_x, y=mp_y_values, mode="lines+markers", name="i-epsilon, j+epsilon", marker_color="orange", xaxis="x3", yaxis="y3")
+
+mm_y_values = [pair[2] != "LOCALLY_INFEASIBLE" ? pair[1] : missing for pair in cost_vector_pairs_minus_minus]
+mm_pair_trace_scatter = scatter(x=plotting_x, y=mm_y_values, mode="lines+markers", name="i-epsilon, j-epsilon", marker_color="black", xaxis="x3", yaxis="y3")
 
 # add_trace!(Combined_Plot, pp_pair_trace_scatter, row=1, col=3)
 # add_trace!(Combined_Plot, pm_pair_trace_scatter, row=1, col=3)
 # add_trace!(Combined_Plot, mp_pair_trace_scatter, row=1, col=3)
 # add_trace!(Combined_Plot, mm_pair_trace_scatter, row=1, col=3)
 
-
-
 # Find minimum values and their indices
 min_value_blue, min_index_blue = findmin([cost_vector[1], cost_vector[3], cost_vector[5], cost_vector[7], cost_vector[9]])
 min_value_red, min_index_red = findmin([cost_vector[2], cost_vector[4], cost_vector[6], cost_vector[8], cost_vector[10]])
-min_value_pp, min_index_pp = findmin(cost_vector_pairs_plus_plus)
-min_value_pm, min_index_pm = findmin(cost_vector_pairs_plus_minus)
-min_value_mp, min_index_mp = findmin(cost_vector_pairs_minus_plus)
-min_value_mm, min_index_mm = findmin(cost_vector_pairs_minus_minus)
+min_value_pp, min_index_pp = findmin(skipmissing(pp_y_values))
+min_value_pm, min_index_pm = findmin(skipmissing(pm_y_values))
+min_value_mp, min_index_mp = findmin(skipmissing(mp_y_values))
+min_value_mm, min_index_mm = findmin(skipmissing(mm_y_values))
 
 # Find the minimum between min_value_blue and min_value_red
 min_value_single, min_index_single = findmin([min_value_blue, min_value_red])
@@ -129,16 +138,15 @@ annotations=[
         opacity=0.8
     )
 ]
-
 # Determine the maximum y-value across all data
 max_y = maximum([
     TotalCost,
     cost_vector[1], cost_vector[3], cost_vector[5], cost_vector[7], cost_vector[9],
     cost_vector[2], cost_vector[4], cost_vector[6], cost_vector[8], cost_vector[10],
-    maximum(cost_vector_pairs_plus_plus), 
-    maximum(cost_vector_pairs_plus_minus), 
-    maximum(cost_vector_pairs_minus_plus), 
-    maximum(cost_vector_pairs_minus_minus)
+    maximum(cost_vector_pairs_plus_plus[1][1]), 
+    maximum(cost_vector_pairs_plus_minus[1][1]), 
+    maximum(cost_vector_pairs_minus_plus[1][1]), 
+    maximum(cost_vector_pairs_minus_minus[1][1])
 ]) + 500
 
 # Determine the minimum y-value across all data
@@ -146,10 +154,10 @@ min_y = minimum([
     TotalCost,
     cost_vector[1], cost_vector[3], cost_vector[5], cost_vector[7], cost_vector[9],
     cost_vector[2], cost_vector[4], cost_vector[6], cost_vector[8], cost_vector[10],
-    minimum(cost_vector_pairs_plus_plus), 
-    minimum(cost_vector_pairs_plus_minus), 
-    minimum(cost_vector_pairs_minus_plus), 
-    minimum(cost_vector_pairs_minus_minus)
+    minimum(cost_vector_pairs_plus_plus[1][1]), 
+    minimum(cost_vector_pairs_plus_minus[1][1]), 
+    minimum(cost_vector_pairs_minus_plus[1][1]), 
+    minimum(cost_vector_pairs_minus_minus[1][1])
 ]) - 500
 
 Combined_Plot = plot(
