@@ -201,6 +201,7 @@ function run_optimization_changes3(data, pgChange, epsilon1, epsilon2, ind1, ind
 
     @constraint(model, pg[ind1] == pgChange[ind1] + epsilon1)
     @constraint(model, pg[ind2] == pgChange[ind2] + epsilon2)
+    @constraint(model, [i in keys(ref[:gen])], pg[i] >= 0)
 
     @variable(model, -ref[:branch][l]["rate_a"] <= p[(l,i,j) in ref[:arcs_from]] <= ref[:branch][l]["rate_a"])
 
@@ -249,10 +250,13 @@ function run_optimization_changes3(data, pgChange, epsilon1, epsilon2, ind1, ind
     end
 
     optimize!(model)
-
-    global status = termination_status(model)
-        
-    return  JuMP.value.(pg), objective_value(model)
+    status = termination_status(model)
+    statusString = string(status)
+    statusNum = 1
+    if statusString == "LOCALLY_INFEASIBLE"
+        statusNum = 2
+    end
+    return  JuMP.value.(pg), objective_value(model), statusNum
 end
 
 function run_MPOPF_local_search(data, new_pg, epsilon, t, i)

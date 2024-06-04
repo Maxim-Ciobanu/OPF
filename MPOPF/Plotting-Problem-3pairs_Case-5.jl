@@ -5,7 +5,7 @@ const PM = PowerModels
 
 include("functions.jl")
 
-file_path = "../Cases/case5.m"
+file_path = "./Cases/case5.m"
 
 # Time 1 optimization
 data_time1 = PowerModels.parse_file(file_path)
@@ -55,25 +55,17 @@ for i in 1:size
         println("**************************************************")
         for b in 1:4
             if b == 1
-                pg_change1, cost_after_change1 = run_optimization_changes3(data_time1, pg_time1, epsilon1, epsilon1, i, j)
-                println(status)
-                pg_change2, cost_after_change2 = run_optimization_changes3(data_time2, pg_time2, epsilon1, epsilon1, i, j)
-                println(status)
+                pg_change1, cost_after_change1, status1 = run_optimization_changes3(data_time1, pg_time1, epsilon1, epsilon1, i, j)
+                pg_change2, cost_after_change2, status2 = run_optimization_changes3(data_time2, pg_time2, epsilon1, epsilon1, i, j)
             elseif b == 2
-                pg_change1, cost_after_change1 = run_optimization_changes3(data_time1, pg_time1, epsilon1, epsilon2, i, j)
-                println(status)
-                pg_change2, cost_after_change2 = run_optimization_changes3(data_time2, pg_time2, epsilon1, epsilon2, i, j)
-                println(status)
+                pg_change1, cost_after_change1, status1 = run_optimization_changes3(data_time1, pg_time1, epsilon1, epsilon2, i, j)
+                pg_change2, cost_after_change2, status2 = run_optimization_changes3(data_time2, pg_time2, epsilon1, epsilon2, i, j)
             elseif b == 3
-                pg_change1, cost_after_change1 = run_optimization_changes3(data_time1, pg_time1, epsilon2, epsilon1, i, j)
-                println(status)
-                pg_change2, cost_after_change2 = run_optimization_changes3(data_time2, pg_time2, epsilon2, epsilon1, i, j)
-                println(status)
+                pg_change1, cost_after_change1, status1 = run_optimization_changes3(data_time1, pg_time1, epsilon2, epsilon1, i, j)
+                pg_change2, cost_after_change2, status2 = run_optimization_changes3(data_time2, pg_time2, epsilon2, epsilon1, i, j)
             elseif b == 4
-                pg_change1, cost_after_change1 = run_optimization_changes3(data_time1, pg_time1, epsilon2, epsilon2, i, j)
-                println(status)
-                pg_change2, cost_after_change2 = run_optimization_changes3(data_time2, pg_time2, epsilon2, epsilon2, i, j)
-                println(status)
+                pg_change1, cost_after_change1, status1 = run_optimization_changes3(data_time1, pg_time1, epsilon2, epsilon2, i, j)
+                pg_change2, cost_after_change2, status2 = run_optimization_changes3(data_time2, pg_time2, epsilon2, epsilon2, i, j)
             end
             
             diff_vec = []
@@ -85,16 +77,23 @@ for i in 1:size
                 global ramping += diff_vec[k]
             end
 
-            if b == 1
-                push!(cost_vector_pairs_plus_plus, cost_after_change1 + cost_after_change2 + ramping*7)
-            elseif b == 2
-                push!(cost_vector_pairs_plus_minus, cost_after_change1 + cost_after_change2 + ramping*7)
-            elseif b == 3
-                push!(cost_vector_pairs_minus_plus, cost_after_change1 + cost_after_change2 + ramping*7)
-            elseif b == 4
-                push!(cost_vector_pairs_minus_minus, cost_after_change1 + cost_after_change2 + ramping*7)
+            overall_status = ""
+            if (status1 == 1 && status2 == 1)
+                overall_status = "LOCALLY_SOLVED"
+            else
+                overall_status = "LOCALLY_INFEASIBLE"
             end
-            println(cost_after_change1 + cost_after_change2 + ramping*7)
+
+            if b == 1
+                push!(cost_vector_pairs_plus_plus, (cost_after_change1 + cost_after_change2 + ramping*7, overall_status))
+            elseif b == 2
+                push!(cost_vector_pairs_plus_minus, (cost_after_change1 + cost_after_change2 + ramping*7, overall_status))
+            elseif b == 3
+                push!(cost_vector_pairs_minus_plus, (cost_after_change1 + cost_after_change2 + ramping*7, overall_status))
+            elseif b == 4
+                push!(cost_vector_pairs_minus_minus, (cost_after_change1 + cost_after_change2 + ramping*7, overall_status))
+            end
+            println((cost_after_change1 + cost_after_change2 + ramping*7, overall_status))
             println("**************************************************")
             println()
             ramping = 0.0
@@ -104,12 +103,8 @@ for i in 1:size
         println()
     end    
 end
-i = 1
-j = 1
-println("Pg"*string(i)*string(j))
 
 smallest_value = minimum([cost_vector_pairs_plus_plus; cost_vector_pairs_plus_minus; cost_vector_pairs_minus_plus; cost_vector_pairs_minus_minus])
 
 println("Initial optimal cost: ", cost1 + cost2 + initialRamping*7)
 println("Lowest cost in neighbourhood after changes: ", smallest_value)
-println("The solution is $status")
