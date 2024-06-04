@@ -94,5 +94,3 @@ solved_pairs = filter(x -> x[2] == "LOCALLY_SOLVED", cost_vector_pairs)
 
 # Display the result
 println("Lowest cost in neighbourhood after changes: ", minimum(solved_pairs))
-
-
