@@ -1,7 +1,7 @@
 using PowerModels, Gurobi, JuMP, JLD2
 const PM = PowerModels
 
-file_path = "./Cases/case5.m"
+file_path = "./Cases/case300.m"
 
 data = PowerModels.parse_file(file_path)
 PowerModels.standardize_cost_terms!(data, order=2)
@@ -116,7 +116,9 @@ for g in keys(ref[:gen])
 end
 
 optimize!(model)
-println("Optimal Cost: ", objective_value(model))
+optimal_cost = objective_value(model)
+println("Optimal Cost: ")
+show(optimal_cost)
 
 initial_pg_values = JuMP.value.(pg)
 @save "./Attachments/saved_data.jld2" initial_pg_values

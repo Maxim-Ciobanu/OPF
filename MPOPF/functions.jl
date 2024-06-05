@@ -259,7 +259,7 @@ function run_optimization_changes3(data, pgChange, epsilon1, epsilon2, ind1, ind
     return  JuMP.value.(pg), objective_value(model), statusNum
 end
 
-function run_MPOPF_local_search(solver, data, new_pg, epsilon, t, i)
+function run_MPOPF_local_search(solver, data, new_pg, epsilon, x, y)
     # Initialize variables
     ref = PowerModels.build_ref(data)[:it][:pm][:nw][0]
     bus_data = ref[:bus]
@@ -288,8 +288,8 @@ function run_MPOPF_local_search(solver, data, new_pg, epsilon, t, i)
     # Sets variables for each 1 -> T with upper and lower bounds
 
     @variable(model, gen_data[g]["pmin"] <= pg[t in 1:T, g in 1:gen_length] <= gen_data[g]["pmax"], start = new_pg[t, g])
-    @constraint(model, pg[t, i] == pg[t, i] + epsilon)
-    @constraint(model, pg[t, i + 1] == pg[t, i + 1] - epsilon)
+    @constraint(model, pg[x, y] == pg[x, y] + epsilon)
+    #@constraint(model, pg[t, i + 1] == pg[t, i + 1] - epsilon)
     
     @variable(model, -360 <= theta[t in 1:T, b in 1:bus_length] <= 360, start = 0)
 
