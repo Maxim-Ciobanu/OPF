@@ -22,12 +22,3 @@ t = 1
 i = 1
 test = run_MPOPF_local_search(solver, data, initial_pg_values, epsilon, x, y)
 display(value.(test))
-#test = value.(test)
-#=
-test2 = run_MPOPF_local_search(data, test, epsilon, t, i)
-value.(test)
-=#
-println("T: ", t)
-println("i: ", i)
-initial_pg_values[1,1]
-# Changing one generator (pg[1,1])
