@@ -184,4 +184,5 @@ relayout!(Combined_Plot, title="Local Search for minimum Cost with Epsilon of 0.
 
 display(Combined_Plot)
 
-savefig(Combined_Plot, "index.html")
+# For updating GitHub Pages
+# savefig(Combined_Plot, "index.html")
