@@ -286,13 +286,14 @@ function run_MPOPF_local_search(solver, data, new_pg, epsilon, x, y)
 
     # Define variables
     # Sets variables for each 1 -> T with upper and lower bounds
-
-    @variable(model, gen_data[g]["pmin"] <= pg[t in 1:T, g in 1:gen_length] <= gen_data[g]["pmax"], start = new_pg[t, g])
-    @constraint(model, pg[x, y] == pg[x, y] + epsilon)
-    #@constraint(model, pg[t, i + 1] == pg[t, i + 1] - epsilon)
-    
+    @variable(model, gen_data[g]["pmin"] <= pg[t in 1:T, g in 1:gen_length] <= gen_data[g]["pmax"], start = value(new_pg[t,g]))
+    @constraint(model, pg .>= 0)
     @variable(model, -360 <= theta[t in 1:T, b in 1:bus_length] <= 360, start = 0)
 
+    # Cannot add epsilon to any pg without getting infeasible solution
+    # Even handpicking a value > 5
+    @constraint(model, pg[x,y] == pg[x,y] + epsilon)
+    
     # Stuff below is from Sajads notebook
     for t in 1:T
         for (i,bus) in ref[:ref_buses]

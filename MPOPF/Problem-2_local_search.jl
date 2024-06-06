@@ -13,12 +13,12 @@ PowerModels.calc_thermal_limits!(data)
 @load "./Attachments/saved_data.jld2" initial_pg_values
 
 # Use random epsilon with range 0.005 - 0.025
-epsilon = 100 #-0.001 #-(0.025 + (0.005 - 0.025) * rand())
+epsilon = -0.01 #-(0.025 + (0.005 - 0.025) * rand())
 
 # Solver to be used 
 solver = Ipopt
 
 t = 1
-i = 1
-test = run_MPOPF_local_search(solver, data, initial_pg_values, epsilon, x, y)
+i = 63
+test = run_MPOPF_local_search(solver, data, initial_pg_values, epsilon, t, i)
 display(value.(test))
