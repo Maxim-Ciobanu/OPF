@@ -1,7 +1,6 @@
 using PowerModels, PlotlyJS
 using Ipopt
 using JuMP
-const PM = PowerModels
 
 include("functions.jl")
 
