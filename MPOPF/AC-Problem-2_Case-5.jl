@@ -24,7 +24,7 @@ load_length = length(load_data)
 model = JuMP.Model(Ipopt.Optimizer) # Use Ipopt for AC-OPF
 
 # Time periods
-T = 1
+T = 24
 
 # Set a ramping cost
 ramping_cost = 7
