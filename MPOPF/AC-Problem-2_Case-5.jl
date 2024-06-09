@@ -52,25 +52,30 @@ end
 @variable(model, -ref[:branch][l]["rate_a"] <= p[1:T,(l,i,j) in ref[:arcs]] <= ref[:branch][l]["rate_a"])
 @variable(model, -ref[:branch][l]["rate_a"] <= q[1:T,(l,i,j) in ref[:arcs]] <= ref[:branch][l]["rate_a"])
 
-p_expr = Dict()
-for t in 1:T
-    p_expr[t] = Dict()
-end
-# Iterate over each time period
-for t in 1:T
-    p_expr[t] = Dict([((l, i, j), 1.0 * p[t, (l, i, j)]) for (l, i, j) in ref[:arcs]])
-    p_expr[t] = merge(p_expr[t], Dict([((l, j, i), -1.0 * p[t, (l, i, j)]) for (l, i, j) in ref[:arcs]]))
-end
+# ---------------------------------------------
+# For some Reason if we use p_expr 
+# we get the wrong anser will investigate
+# ---------------------------------------------
+# p_expr = Dict()
+# for t in 1:T
+#     p_expr[t] = Dict()
+# end
+# # Iterate over each time period
+# for t in 1:T
+#     p_expr[t] = Dict([((l, i, j), 1.0 * p[t, (l, i, j)]) for (l, i, j) in ref[:arcs]])
+#     p_expr[t] = merge(p_expr[t], Dict([((l, j, i), -1.0 * p[t, (l, i, j)]) for (l, i, j) in ref[:arcs]]))
+# end
 
-q_expr = Dict()
-for t in 1:T
-    q_expr[t] = Dict()
-end
-# Iterate over each time period
-for t in 1:T
-    q_expr[t] = Dict([((l, i, j), 1.0 * q[t, (l, i, j)]) for (l, i, j) in ref[:arcs]])
-    q_expr[t] = merge(q_expr[t], Dict([((l, j, i), -1.0 * q[t, (l, i, j)]) for (l, i, j) in ref[:arcs]]))
-end
+# q_expr = Dict()
+# for t in 1:T
+#     q_expr[t] = Dict()
+# end
+# # Iterate over each time period
+# for t in 1:T
+#     q_expr[t] = Dict([((l, i, j), 1.0 * q[t, (l, i, j)]) for (l, i, j) in ref[:arcs]])
+#     q_expr[t] = merge(q_expr[t], Dict([((l, j, i), -1.0 * q[t, (l, i, j)]) for (l, i, j) in ref[:arcs]]))
+# end
+# ---------------------------------------------
 
 # Create a random vector two multiply loads by for each T
 factor = [1]
@@ -84,15 +89,16 @@ for t in 1:T
         bus_shunts = [ref[:shunt][s] for s in ref[:bus_shunts][i]]
 
         # Active power balance at node i
+
         @constraint(model,
-            sum(p_expr[t][a] for a in ref[:bus_arcs][i]) ==    
+            sum(p[t,a] for a in ref[:bus_arcs][i]) ==    
             sum(pg[t, g] for g in ref[:bus_gens][i]) -  # Note the double loop over t and g
             sum(load["pd"] * factor[t] for load in bus_loads) -       # Maybe add * increase here               
             sum(shunt["gs"] for shunt in bus_shunts)*vm[t,i]^2         
         )
 
         @constraint(model,
-            sum(q_expr[t][a] for a in ref[:bus_arcs][i]) ==    
+            sum(q[t,a] for a in ref[:bus_arcs][i]) ==    
             sum(qg[t, g] for g in ref[:bus_gens][i]) -  # Note the double loop over t and g
             sum(load["qd"] * factor[t] for load in bus_loads) +       # Maybe add * increase here               
             sum(shunt["bs"] for shunt in bus_shunts)*vm[t,i]^2         
@@ -131,19 +137,20 @@ for t in 1:T
         b_to = branch["b_to"]
 
         # From side of the branch flow
-        JuMP.@constraint(model, p_fr ==  (g+g_fr)/ttm*vm_fr^2 + (-g*tr+b*ti)/ttm*(vm_fr*vm_to*cos(va_fr-va_to)) + (-b*tr-g*ti)/ttm*(vm_fr*vm_to*sin(va_fr-va_to)) )
-        JuMP.@constraint(model, q_fr == -(b+b_fr)/ttm*vm_fr^2 - (-b*tr-g*ti)/ttm*(vm_fr*vm_to*cos(va_fr-va_to)) + (-g*tr+b*ti)/ttm*(vm_fr*vm_to*sin(va_fr-va_to)) )
+        @constraint(model, p_fr ==  (g+g_fr)/ttm*vm_fr^2 + (-g*tr+b*ti)/ttm*(vm_fr*vm_to*cos(va_fr-va_to)) + (-b*tr-g*ti)/ttm*(vm_fr*vm_to*sin(va_fr-va_to)) )
+        @constraint(model, q_fr == -(b+b_fr)/ttm*vm_fr^2 - (-b*tr-g*ti)/ttm*(vm_fr*vm_to*cos(va_fr-va_to)) + (-g*tr+b*ti)/ttm*(vm_fr*vm_to*sin(va_fr-va_to)) )
 
         # To side of the branch flow
-        JuMP.@constraint(model, p_to ==  (g+g_to)*vm_to^2 + (-g*tr-b*ti)/ttm*(vm_to*vm_fr*cos(va_to-va_fr)) + (-b*tr+g*ti)/ttm*(vm_to*vm_fr*sin(va_to-va_fr)) )
-        JuMP.@constraint(model, q_to == -(b+b_to)*vm_to^2 - (-b*tr+g*ti)/ttm*(vm_to*vm_fr*cos(va_to-va_fr)) + (-g*tr-b*ti)/ttm*(vm_to*vm_fr*sin(va_to-va_fr)) )
+        @constraint(model, p_to ==  (g+g_to)*vm_to^2 + (-g*tr-b*ti)/ttm*(vm_to*vm_fr*cos(va_to-va_fr)) + (-b*tr+g*ti)/ttm*(vm_to*vm_fr*sin(va_to-va_fr)) )
+        @constraint(model, q_to == -(b+b_to)*vm_to^2 - (-b*tr+g*ti)/ttm*(vm_to*vm_fr*cos(va_to-va_fr)) + (-g*tr-b*ti)/ttm*(vm_to*vm_fr*sin(va_to-va_fr)) )
     
         # Voltage angle difference limit
-        JuMP.@constraint(model, branch["angmin"] <= va_fr - va_to <= branch["angmax"])
+        @constraint(model, va_fr - va_to <= branch["angmax"])
+        @constraint(model, va_fr - va_to >= branch["angmin"])
 
         # Apparent power limit, from side and to side
-        JuMP.@constraint(model, p_fr^2 + q_fr^2 <= branch["rate_a"]^2)
-        JuMP.@constraint(model, p_to^2 + q_to^2 <= branch["rate_a"]^2)
+        @constraint(model, p_fr^2 + q_fr^2 <= branch["rate_a"]^2)
+        @constraint(model, p_to^2 + q_to^2 <= branch["rate_a"]^2)
     end
 end
 
@@ -155,7 +162,6 @@ end
 @objective(model, Min,
 sum(sum(ref[:gen][g]["cost"][1]*pg[t,g]^2 + ref[:gen][g]["cost"][2]*pg[t,g] + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T) +
 sum(ramping_cost * (ramp_up[t, g] + ramp_down[t, g]) for g in keys(ref[:gen]) for t in 2:T)
-
 )
 
 for g in keys(ref[:gen])
@@ -173,10 +179,6 @@ show(optimal_cost)
 initial_pg_values = JuMP.value.(pg)
 # @save "./Attachments/saved_data.jld2" AC-initial_pg_values
 
-# With Online AC Solver: 1.7551891e+04
-# with this solver T = 1: 1.7058384e+04
-# If we run T = 1 for DC: 17479.896769813677
+# Link to code I folowed: https://github.com/lanl-ansi/rosetta-opf/blob/main/jump.jl
 
-# Helo there I am verrry woried abut speling
-# Link to code I actually folowed: https://github.com/lanl-ansi/rosetta-opf/blob/main/jump.jl
-# Link to code I should have followed: https://github.com/lanl-ansi/PowerModelsAnnex.jl/blob/master/src/model/ac-opf.jl
+# Answer is consistent with Matpower graph when switched to AC: https://matpower.app/
