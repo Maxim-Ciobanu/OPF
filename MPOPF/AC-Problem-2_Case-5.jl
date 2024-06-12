@@ -176,8 +176,8 @@ optimal_cost = objective_value(model)
 println("Optimal Cost: ")
 show(optimal_cost)
 
-initial_pg_values = JuMP.value.(pg)
-# @save "./Attachments/saved_data.jld2" AC-initial_pg_values
+AC_initial_pg_values = JuMP.value.(pg)
+# @save "./Attachments/AC_initial_pg_values.jld2" AC_initial_pg_values
 
 # Link to code I folowed: https://github.com/lanl-ansi/rosetta-opf/blob/main/jump.jl
 
