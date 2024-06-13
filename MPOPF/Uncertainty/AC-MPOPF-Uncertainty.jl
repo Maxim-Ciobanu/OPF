@@ -1,7 +1,7 @@
 using PowerModels, Ipopt, Gurobi, JuMP, JLD2
 const PM = PowerModels
 
-file_path = "./Cases/case5.m"
+file_path = "././Cases/case5.m"
 
 data = PowerModels.parse_file(file_path)
 PowerModels.standardize_cost_terms!(data, order=2)
@@ -19,29 +19,45 @@ bus_length = length(bus_data)
 branch_length = length(branch_data)
 load_length = length(load_data)
 
-
-# Create model
-model = JuMP.Model(Ipopt.Optimizer) # Use Ipopt for AC-OPF
-
 # Time periods
-T = 24
+T = 1
+
+# Create a random vector two multiply loads by for each T
+factor = [1]
+random_vector = [0.975, 0.98, 1.01, 1.015, 1.025, 0.99, 0.975, 1.03, 0.975, 0.98, 1.01, 1.015, 1.025, 0.99, 0.975, 1.03, 0.975, 0.98, 1.01, 1.015, 1.025, 0.99, 0.975]
+factor = vcat(factor, random_vector)
 
 # Set a ramping cost
 ramping_cost = 7
 
-
-
+# Create model
+model = JuMP.Model(Ipopt.Optimizer) # Use Ipopt for AC-OPF
 
 @variable(model, va[t in 1:T, i in keys(ref[:bus])])
 @variable(model, ref[:bus][i]["vmin"] <= vm[t in 1:T, i in keys(ref[:bus])] <= ref[:bus][i]["vmax"], start=1.0)
-
-# Define variables
-# Sets variables for each 1 -> T with upper and lower bounds
-
 @variable(model, ref[:gen][i]["pmin"] <= pg[t in 1:T, i in keys(ref[:gen])] <= ref[:gen][i]["pmax"])
 @variable(model, ref[:gen][i]["qmin"] <= qg[t in 1:T, i in keys(ref[:gen])] <= ref[:gen][i]["qmax"])
+@variable(model, -ref[:branch][l]["rate_a"] <= p[1:T,(l,i,j) in ref[:arcs]] <= ref[:branch][l]["rate_a"])
+@variable(model, -ref[:branch][l]["rate_a"] <= q[1:T,(l,i,j) in ref[:arcs]] <= ref[:branch][l]["rate_a"])
 
-# @variable(model, -360 <= theta[t in 1:T, b in 1:bus_length] <= 360, start = 0)
+# Ramping Up and Ramping Down
+@variable(model, ramp_up[t in 2:T, g in keys(ref[:gen])] >= 0)
+@variable(model, ramp_down[t in 2:T, g in keys(ref[:gen])] >= 0)
+
+
+# Possible scenarios for loads in the next time period
+load_scenarios_factors = Dict( # 2 scenarios for 3 load factors
+    1 => Dict(1 => 1.03, 2 => 1.03, 3 => 1.03), # 3% increase
+    2 => Dict(1 => 0.95, 2 => 0.95, 3 => 0.95)  # 5% decrease
+)
+
+
+# Objective function with ramping costs
+@objective(model, Min,
+sum(sum(ref[:gen][g]["cost"][1]*pg[t,g]^2 + ref[:gen][g]["cost"][2]*pg[t,g] + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T) +
+sum(ramping_cost * (ramp_up[t, g] + ramp_down[t, g]) for g in keys(ref[:gen]) for t in 2:T)
+)
+
 
 # Stuff below is from Sajads notebook
 for t in 1:T
@@ -49,38 +65,6 @@ for t in 1:T
         @constraint(model, va[t,i] == 0)
     end
 end
-@variable(model, -ref[:branch][l]["rate_a"] <= p[1:T,(l,i,j) in ref[:arcs]] <= ref[:branch][l]["rate_a"])
-@variable(model, -ref[:branch][l]["rate_a"] <= q[1:T,(l,i,j) in ref[:arcs]] <= ref[:branch][l]["rate_a"])
-
-# ---------------------------------------------
-# For some Reason if we use p_expr 
-# we get the wrong anser will investigate
-# ---------------------------------------------
-# p_expr = Dict()
-# for t in 1:T
-#     p_expr[t] = Dict()
-# end
-# # Iterate over each time period
-# for t in 1:T
-#     p_expr[t] = Dict([((l, i, j), 1.0 * p[t, (l, i, j)]) for (l, i, j) in ref[:arcs]])
-#     p_expr[t] = merge(p_expr[t], Dict([((l, j, i), -1.0 * p[t, (l, i, j)]) for (l, i, j) in ref[:arcs]]))
-# end
-
-# q_expr = Dict()
-# for t in 1:T
-#     q_expr[t] = Dict()
-# end
-# # Iterate over each time period
-# for t in 1:T
-#     q_expr[t] = Dict([((l, i, j), 1.0 * q[t, (l, i, j)]) for (l, i, j) in ref[:arcs]])
-#     q_expr[t] = merge(q_expr[t], Dict([((l, j, i), -1.0 * q[t, (l, i, j)]) for (l, i, j) in ref[:arcs]]))
-# end
-# ---------------------------------------------
-
-# Create a random vector two multiply loads by for each T
-factor = [1]
-random_vector = [0.975, 0.98, 1.01, 1.015, 1.025, 0.99, 0.975, 1.03, 0.975, 0.98, 1.01, 1.015, 1.025, 0.99, 0.975, 1.03, 0.975, 0.98, 1.01, 1.015, 1.025, 0.99, 0.975]
-factor = vcat(factor, random_vector)
 
 for t in 1:T
     for (i,bus) in ref[:bus]
@@ -89,7 +73,6 @@ for t in 1:T
         bus_shunts = [ref[:shunt][s] for s in ref[:bus_shunts][i]]
 
         # Active power balance at node i
-
         @constraint(model,
             sum(p[t,a] for a in ref[:bus_arcs][i]) ==    
             sum(pg[t, g] for g in ref[:bus_gens][i]) -  # Note the double loop over t and g
@@ -116,17 +99,13 @@ for t in 1:T
         p_fr = p[t,f_idx]                     # p_fr is a reference to the optimization variable p[f_idx]
         q_fr = q[t,f_idx]
 
-
         va_fr = va[t,branch["f_bus"]]         # va_fr is a reference to the optimization variable va on the from side of the branch
         va_to = va[t,branch["t_bus"]]         # va_fr is a reference to the optimization variable va on the to side of the branch
-
         vm_fr = vm[t,branch["f_bus"]]
         vm_to = vm[t,branch["t_bus"]]
 
-
         # Compute the branch parameters and transformer ratios from the data
         g, b = PowerModels.calc_branch_y(branch)
-
         tr, ti = PowerModels.calc_branch_t(branch)
         ttm = tr^2 + ti^2
         
@@ -154,16 +133,6 @@ for t in 1:T
     end
 end
 
-#compute ramping up and down
-@variable(model, ramp_up[t in 2:T, g in keys(ref[:gen])] >= 0)
-@variable(model, ramp_down[t in 2:T, g in keys(ref[:gen])] >= 0)
-
-
-@objective(model, Min,
-sum(sum(ref[:gen][g]["cost"][1]*pg[t,g]^2 + ref[:gen][g]["cost"][2]*pg[t,g] + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T) +
-sum(ramping_cost * (ramp_up[t, g] + ramp_down[t, g]) for g in keys(ref[:gen]) for t in 2:T)
-)
-
 for g in keys(ref[:gen])
     for t in 2:T
         @constraint(model, ramp_up[t, g] >= pg[t, g] - pg[t-1, g])
@@ -171,14 +140,11 @@ for g in keys(ref[:gen])
     end
 end
 
+
 optimize!(model)
 optimal_cost = objective_value(model)
 println("Optimal Cost: ")
 show(optimal_cost)
 
-AC_initial_pg_values = JuMP.value.(pg)
-# @save "./Attachments/AC_initial_pg_values.jld2" AC_initial_pg_values
-
-# Link to code I folowed: https://github.com/lanl-ansi/rosetta-opf/blob/main/jump.jl
-
-# Answer is consistent with Matpower graph when switched to AC: https://matpower.app/
+AC_initial_pg_values_Uncertainty = JuMP.value.(pg)
+# @save "./Attachments/AC_initial_pg_values_Uncertainty.jld2" AC_initial_pg_values_Uncertainty
