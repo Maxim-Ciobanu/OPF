@@ -1,7 +1,7 @@
-using PowerModels, Gurobi, JuMP, JLD2
+using PowerModels, Gurobi, JuMP, JLD2, Ipopt
 const PM = PowerModels
 
-file_path = "./Cases/case300.m"
+file_path = "./Cases/case5.m"
 
 data = PowerModels.parse_file(file_path)
 PowerModels.standardize_cost_terms!(data, order=2)
@@ -21,7 +21,7 @@ load_length = length(load_data)
 
 
 # Create model
-model = JuMP.Model(Gurobi.Optimizer)
+model = JuMP.Model(Ipopt.Optimizer)
 
 # Time periods
 T = 24
