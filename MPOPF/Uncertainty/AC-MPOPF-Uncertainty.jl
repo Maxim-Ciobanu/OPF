@@ -30,6 +30,12 @@ factor = vcat(factor, random_vector)
 # Set a ramping cost
 ramping_cost = 7
 
+# Possible scenarios for loads in the next time period
+load_scenarios_factors = Dict( # 2 scenarios for 3 load factors
+    1 => Dict(1 => 1.03, 2 => 1.03, 3 => 1.03, 4 => 1.03, 5 => 1.03), # 3% increase
+    2 => Dict(1 => 0.95, 2 => 0.95, 3 => 0.95, 4 => 0.95, 5 => 0.95)  # 5% decrease
+)
+
 # Create model
 model = JuMP.Model(Ipopt.Optimizer) # Use Ipopt for AC-OPF
 
@@ -44,20 +50,22 @@ model = JuMP.Model(Ipopt.Optimizer) # Use Ipopt for AC-OPF
 @variable(model, ramp_up[t in 2:T, g in keys(ref[:gen])] >= 0)
 @variable(model, ramp_down[t in 2:T, g in keys(ref[:gen])] >= 0)
 
-
-# Possible scenarios for loads in the next time period
-load_scenarios_factors = Dict( # 2 scenarios for 3 load factors
-    1 => Dict(1 => 1.03, 2 => 1.03, 3 => 1.03), # 3% increase
-    2 => Dict(1 => 0.95, 2 => 0.95, 3 => 0.95)  # 5% decrease
-)
-
+# Variables for changes in generation to meet future scenarios
+@variable(model, mu_plus[t in 1:T, g in keys(ref[:gen]), s in 1:length(load_scenarios_factors)] >= 0)
+@variable(model, mu_minus[t in 1:T, g in keys(ref[:gen]), s in 1:length(load_scenarios_factors)] >= 0)
 
 # Objective function with ramping costs
-@objective(model, Min,
-sum(sum(ref[:gen][g]["cost"][1]*pg[t,g]^2 + ref[:gen][g]["cost"][2]*pg[t,g] + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T) +
-sum(ramping_cost * (ramp_up[t, g] + ramp_down[t, g]) for g in keys(ref[:gen]) for t in 2:T)
-)
+# @objective(model, Min,
+# sum(sum(ref[:gen][g]["cost"][1]*pg[t,g]^2 + ref[:gen][g]["cost"][2]*pg[t,g] + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T) +
+# sum(ramping_cost * (ramp_up[t, g] + ramp_down[t, g]) for g in keys(ref[:gen]) for t in 2:T)
+# )
 
+# Objective function with ramping costs and expected costs for scenarios
+@objective(model, Min,
+    sum(sum(ref[:gen][g]["cost"][1] * pg[t, g]^2 + ref[:gen][g]["cost"][2] * pg[t, g] + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T) +
+    sum(ramping_cost * (ramp_up[t, g] + ramp_down[t, g]) for g in keys(ref[:gen]) for t in 2:T) +
+    sum(0.5 * (mu_plus[t, g, s] + mu_minus[t, g, s]) for g in keys(ref[:gen]) for t in 1:T for s in 1:length(load_scenarios_factors))
+)
 
 # Stuff below is from Sajads notebook
 for t in 1:T
@@ -137,6 +145,33 @@ for g in keys(ref[:gen])
     for t in 2:T
         @constraint(model, ramp_up[t, g] >= pg[t, g] - pg[t-1, g])
         @constraint(model, ramp_down[t, g] >= pg[t-1, g] - pg[t, g])
+    end
+end
+
+
+# Constraints for future scenarios
+z = length(load_scenarios_factors)
+for s in 1:z
+    scenario = load_scenarios_factors[s]
+    for b in keys(ref[:bus])
+        # Active power balance at node i for scenario s
+        bus_loads = [ref[:load][l] for l in ref[:bus_loads][b]]
+        adjusted_pd = isempty(bus_loads) ? 0.0 : sum(load["pd"] * scenario[b] for load in bus_loads)
+        adjusted_qd = isempty(bus_loads) ? 0.0 : sum(load["qd"] * scenario[b] for load in bus_loads)
+
+        @constraint(model,
+            sum(p[1, a] for a in ref[:bus_arcs][b]) ==
+            sum(pg[1, g] + mu_plus[1, g, s] - mu_minus[1, g, s] for g in ref[:bus_gens][b]) - 
+            adjusted_pd - 
+            sum(shunt["gs"] for shunt in ref[:bus_shunts][b]) * vm[1, b]^2
+        )
+
+        @constraint(model,
+            sum(q[1, a] for a in ref[:bus_arcs][b]) ==
+            sum(qg[1, g] for g in ref[:bus_gens][b]) - 
+            adjusted_qd + 
+            sum(shunt["bs"] for shunt in ref[:bus_shunts][b]) * vm[1, b]^2
+        )
     end
 end
 
