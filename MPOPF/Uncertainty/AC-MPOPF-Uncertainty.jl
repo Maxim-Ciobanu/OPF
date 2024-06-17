@@ -31,10 +31,23 @@ factor = vcat(factor, random_vector)
 ramping_cost = 7
 
 # Possible scenarios for loads in the next time period
-load_scenarios_factors = Dict( # 2 scenarios for 3 load factors
-    1 => Dict(1 => 1.03, 2 => 1.03, 3 => 1.03, 4 => 1.03, 5 => 1.03), # 3% increase
-    2 => Dict(1 => 0.95, 2 => 0.95, 3 => 0.95, 4 => 0.95, 5 => 0.95)  # 5% decrease
+# load_scenarios_factors = Dict( # 2 scenarios for 3 load factors
+#     1 => Dict(1 => 1.03, 2 => 1.03, 3 => 1.03, 4 => 1.03, 5 => 1.03), # 3% increase
+#     2 => Dict(1 => 0.95, 2 => 0.95, 3 => 0.95, 4 => 0.95, 5 => 0.95)  # 5% decrease
+# )
+# load_scenarios_factors = Dict(
+#     1 => Dict(1 => 1.03, 2 => 1.03, 3 => 1.03, 4 => 1.03, 5 => 1.03),
+# )
+# load_scenarios_factors = Dict(
+#     1 => Dict(1 => 1.03, 2 => 1.03, 3 => 1.03, 4 => 1.03, 5 => 1.03),
+#     2 => Dict(1 => 1, 2 => 1, 3 => 1, 4 => 1, 5 => 1)
+# )
+
+load_scenarios_factors = Dict(
+    1 => Dict(1 => 1.001, 2 => 1.001, 3 => 1.001, 4 => 1.001, 5 => 1.001),
 )
+
+
 
 # Create model
 model = JuMP.Model(Ipopt.Optimizer) # Use Ipopt for AC-OPF
@@ -63,8 +76,9 @@ model = JuMP.Model(Ipopt.Optimizer) # Use Ipopt for AC-OPF
 # Objective function with ramping costs and expected costs for scenarios
 @objective(model, Min,
     sum(sum(ref[:gen][g]["cost"][1] * pg[t, g]^2 + ref[:gen][g]["cost"][2] * pg[t, g] + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T) +
-    sum(ramping_cost * (ramp_up[t, g] + ramp_down[t, g]) for g in keys(ref[:gen]) for t in 2:T) +
-    sum(0.5 * (mu_plus[t, g, s] + mu_minus[t, g, s]) for g in keys(ref[:gen]) for t in 1:T for s in 1:length(load_scenarios_factors))
+    sum(ramping_cost * (ramp_up[t, g] + ramp_down[t, g]) for g in keys(ref[:gen]) for t in 2:T) 
+    # Adding some cost for mu_plus and mu_minus.
+    + sum(0.5 * (mu_plus[t, g, s] + mu_minus[t, g, s]) for g in keys(ref[:gen]) for t in 1:T for s in 1:length(load_scenarios_factors))
 )
 
 # Stuff below is from Sajads notebook
@@ -73,27 +87,69 @@ for t in 1:T
         @constraint(model, va[t,i] == 0)
     end
 end
-
+z = length(load_scenarios_factors)
 for t in 1:T
-    for (i,bus) in ref[:bus]
-        # Build a list of the loads and shunt elements connected to the bus i
-        bus_loads = [ref[:load][l] for l in ref[:bus_loads][i]]
-        bus_shunts = [ref[:shunt][s] for s in ref[:bus_shunts][i]]
+    # for (i,bus) in ref[:bus]
+    #     # Build a list of the loads and shunt elements connected to the bus i
+    #     bus_loads = [ref[:load][l] for l in ref[:bus_loads][i]]
+    #     bus_shunts = [ref[:shunt][s] for s in ref[:bus_shunts][i]]
 
-        # Active power balance at node i
-        @constraint(model,
-            sum(p[t,a] for a in ref[:bus_arcs][i]) ==    
-            sum(pg[t, g] for g in ref[:bus_gens][i]) -  # Note the double loop over t and g
-            sum(load["pd"] * factor[t] for load in bus_loads) -       # Maybe add * increase here               
-            sum(shunt["gs"] for shunt in bus_shunts)*vm[t,i]^2         
-        )
+    #     # Active power balance at node i
+    #     @constraint(model,
+    #         sum(p[t,a] for a in ref[:bus_arcs][i]) ==    
+    #         sum(pg[t, g] for g in ref[:bus_gens][i]) -  # Note the double loop over t and g
+    #         sum(load["pd"] * factor[t] for load in bus_loads) -       # Maybe add * increase here               
+    #         sum(shunt["gs"] for shunt in bus_shunts)*vm[t,i]^2
+    #     )
 
-        @constraint(model,
-            sum(q[t,a] for a in ref[:bus_arcs][i]) ==    
-            sum(qg[t, g] for g in ref[:bus_gens][i]) -  # Note the double loop over t and g
-            sum(load["qd"] * factor[t] for load in bus_loads) +       # Maybe add * increase here               
-            sum(shunt["bs"] for shunt in bus_shunts)*vm[t,i]^2         
-        )
+    #     @constraint(model,
+    #         sum(q[t,a] for a in ref[:bus_arcs][i]) ==    
+    #         sum(qg[t, g] for g in ref[:bus_gens][i]) -  # Note the double loop over t and g
+    #         sum(load["qd"] * factor[t] for load in bus_loads) +       # Maybe add * increase here               
+    #         sum(shunt["bs"] for shunt in bus_shunts)*vm[t,i]^2         
+    #     )
+    # end
+
+    # Constraints for future scenarios
+    for s in 1:z
+        scenario = load_scenarios_factors[s]
+        for b in keys(ref[:bus])
+            
+            # Active power balance at node i for scenario s
+            bus_loads = [ref[:load][l] for l in ref[:bus_loads][b]]
+            bus_shunts = [ref[:shunt][s] for s in ref[:bus_shunts][b]]
+            adjusted_pd = isempty(bus_loads) ? 0.0 : sum(load["pd"] * scenario[b] for load in bus_loads)
+            adjusted_qd = isempty(bus_loads) ? 0.0 : sum(load["qd"] * scenario[b] for load in bus_loads)
+
+            # Active power balance at node i
+            @constraint(model,
+                sum(p[t,a] for a in ref[:bus_arcs][b]) ==    
+                sum(pg[t, g] for g in ref[:bus_gens][b]) -  # Note the double loop over t and g
+                sum(load["pd"] * factor[t] for load in bus_loads) -       # Maybe add * increase here               
+                sum(shunt["gs"] for shunt in bus_shunts)*vm[t,b]^2
+            )
+
+            @constraint(model,
+                sum(q[t,a] for a in ref[:bus_arcs][b]) ==    
+                sum(qg[t, g] for g in ref[:bus_gens][b]) -  # Note the double loop over t and g
+                sum(load["qd"] * factor[t] for load in bus_loads) +       # Maybe add * increase here               
+                sum(shunt["bs"] for shunt in bus_shunts)*vm[t,b]^2         
+            )
+
+            @constraint(model,
+                sum(p[t, a] for a in ref[:bus_arcs][b]) ==
+                sum(pg[t, g] + mu_plus[t, g, s] - mu_minus[t, g, s] for g in ref[:bus_gens][b]) - 
+                adjusted_pd - 
+                sum(shunt["gs"] for shunt in bus_shunts)*vm[t,b]^2
+            )
+
+            @constraint(model,
+                sum(q[t, a] for a in ref[:bus_arcs][b]) ==
+                sum(qg[t, g] for g in ref[:bus_gens][b]) - 
+                adjusted_qd + 
+                sum(shunt["bs"] for shunt in bus_shunts)*vm[t,b]^2 
+            )
+        end
     end
 
     # Branch power flow physics and limit constraints
@@ -149,37 +205,45 @@ for g in keys(ref[:gen])
 end
 
 
-# Constraints for future scenarios
-z = length(load_scenarios_factors)
-for s in 1:z
-    scenario = load_scenarios_factors[s]
-    for b in keys(ref[:bus])
-        # Active power balance at node i for scenario s
-        bus_loads = [ref[:load][l] for l in ref[:bus_loads][b]]
-        adjusted_pd = isempty(bus_loads) ? 0.0 : sum(load["pd"] * scenario[b] for load in bus_loads)
-        adjusted_qd = isempty(bus_loads) ? 0.0 : sum(load["qd"] * scenario[b] for load in bus_loads)
 
-        @constraint(model,
-            sum(p[1, a] for a in ref[:bus_arcs][b]) ==
-            sum(pg[1, g] + mu_plus[1, g, s] - mu_minus[1, g, s] for g in ref[:bus_gens][b]) - 
-            adjusted_pd - 
-            sum(shunt["gs"] for shunt in ref[:bus_shunts][b]) * vm[1, b]^2
-        )
-
-        @constraint(model,
-            sum(q[1, a] for a in ref[:bus_arcs][b]) ==
-            sum(qg[1, g] for g in ref[:bus_gens][b]) - 
-            adjusted_qd + 
-            sum(shunt["bs"] for shunt in ref[:bus_shunts][b]) * vm[1, b]^2
-        )
-    end
-end
 
 
 optimize!(model)
 optimal_cost = objective_value(model)
+
+println()
+println()
+println()
 println("Optimal Cost: ")
-show(optimal_cost)
+display(optimal_cost)
 
 AC_initial_pg_values_Uncertainty = JuMP.value.(pg)
 # @save "./Attachments/AC_initial_pg_values_Uncertainty.jld2" AC_initial_pg_values_Uncertainty
+
+
+println()
+println()
+println()
+println("PG-Values: ")
+display(JuMP.value.(pg))
+
+println()
+println()
+println()
+println("mu-plus: ")
+display(JuMP.value.(mu_plus))
+
+println()
+println()
+println()
+println("mu-minus: ")
+display(JuMP.value.(mu_minus))
+
+println()
+println()
+println()
+println("mu-difference: ")
+display(JuMP.value.(mu_plus).data-JuMP.value.(mu_minus).data)
+
+# And data, a 1×5 Matrix{Float64}:
+#  4.70694  -6.51851e-9  1.7  3.24498  0.4
