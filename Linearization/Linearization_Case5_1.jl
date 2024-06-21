@@ -1,4 +1,4 @@
-using PowerModels, Ipopt, Gurobi, JuMP, JLD2
+using PowerModels, Ipopt, JuMP, JLD2
 const PM = PowerModels
 
 file_path = "./Cases/case5.m"
@@ -137,12 +137,53 @@ for t in 1:T
         b_to = branch["b_to"]
 
         # From side of the branch flow
-        @constraint(model, p_fr ==  (g+g_fr)/ttm*vm_fr^2 + (-g*tr+b*ti)/ttm*(vm_fr*vm_to*cos(va_fr-va_to)) + (-b*tr-g*ti)/ttm*(vm_fr*vm_to*sin(va_fr-va_to)) )
-        @constraint(model, q_fr == -(b+b_fr)/ttm*vm_fr^2 - (-b*tr-g*ti)/ttm*(vm_fr*vm_to*cos(va_fr-va_to)) + (-g*tr+b*ti)/ttm*(vm_fr*vm_to*sin(va_fr-va_to)) )
+        # old p = @constraint(model, p_fr ==  (g+g_fr)/ttm*vm_fr^2 + (-g*tr+b*ti)/ttm*(vm_fr*vm_to*cos(va_fr-va_to)) + (-b*tr-g*ti)/ttm*(vm_fr*vm_to*sin(va_fr-va_to)) )
+        # old q = @constraint(model, q_fr == -(b+b_fr)/ttm*vm_fr^2 - (-b*tr-g*ti)/ttm*(vm_fr*vm_to*cos(va_fr-va_to)) + (-g*tr+b*ti)/ttm*(vm_fr*vm_to*sin(va_fr-va_to)) )
+
+        # From side of the branch flow in linear form
+        @constraint(model, p_fr == ((g+g_fr)/ttm*vm_fr^2)/2 + ((-g*tr+b*ti)/ttm*vm_to^2)/2 + (-b*tr-g*ti)/ttm * (va_fr-va_to) # approximation -> gij*vi^2/2 - gij*jv^2/2 - bij*thetha_ij
+        + ((-g*tr+b*ti)/ttm) *((va_fr-va_to)^2)/2 + ((-g*tr+b*ti)/ttm)*((vm_fr-vm_to)^2)/2 # loss_p -> gij*((va_fr-va_to)^2)/2 + gij*((vm_fr-vm_to)^2)/2
+        )
+        @constraint(model, q_fr == (-(b+b_fr)/ttm*vm_fr^2)/2 - ((-b*tr-g*ti)/ttm*vm_to^2)/2 + (-g*tr+b*ti)/ttm*(va_fr-va_to) # approximation -> -bij*vi^2/2 - -bij*vj^2/2 - gij*thetha_ij
+        + ((-b*tr-g*ti)/ttm)*((va_fr-va_to)^2)/2 + ((-b*tr-g*ti)/ttm)*((vm_fr-vm_to)^2)/2 # loss_q -> -bij*((va_fr-va_to)^2)/2 + -bij*((vm_fr-vm_to)^2)/2
+        )
+
+        
+        # (g+g_fr)/ttm*vm_fr^2 + 
+        # (-g*tr+b*ti)/ttm*(vm_fr*vm_to*cos(va_fr-va_to)) + 
+        # (-b*tr-g*ti)/ttm*(vm_fr*vm_to*sin(va_fr-va_to))
+
+        # gij = (-g*tr+b*ti)/ttm
+        # bij = (-b*tr-g*ti)/ttm
+        # vi = vm_fr
+        # vj = vm_to
+        # theta = va_fr-va_to
+
+        # loss = gij*(va_fr-va)/2 + gij*(vm_fr-vm_to)
+
+        # here is the right function:
+        # ((g+g_fr)/ttm*vm_fr^2)/2 + ((-g*tr+b*ti)/ttm*vm_to^2)/2 + (-b*tr-g*ti)/ttm * (va_fr-va_to)
+
+        # ---------------------------------------------------------------------------------------------------------------------
+
+        # -(b+b_fr)/ttm*vm_fr^2 - (-b*tr-g*ti)/ttm*(vm_fr*vm_to*cos(va_fr-va_to)) + (-g*tr+b*ti)/ttm*(vm_fr*vm_to*sin(va_fr-va_to))
+
+        # New function:
+        # (-(b+b_fr)/ttm*vm_fr^2)/2 - ((-b*tr+g*ti)/ttm*vm_to^2)/2 + (-g*tr+b*ti)/ttm*(va_fr-va_to) + loss
+
 
         # To side of the branch flow
-        @constraint(model, p_to ==  (g+g_to)*vm_to^2 + (-g*tr-b*ti)/ttm*(vm_to*vm_fr*cos(va_to-va_fr)) + (-b*tr+g*ti)/ttm*(vm_to*vm_fr*sin(va_to-va_fr)) )
-        @constraint(model, q_to == -(b+b_to)*vm_to^2 - (-b*tr+g*ti)/ttm*(vm_to*vm_fr*cos(va_to-va_fr)) + (-g*tr-b*ti)/ttm*(vm_to*vm_fr*sin(va_to-va_fr)) )
+        # old p = @constraint(model, p_to ==  (g+g_to)*vm_to^2 + (-g*tr-b*ti)/ttm*(vm_to*vm_fr*cos(va_to-va_fr)) + (-b*tr+g*ti)/ttm*(vm_to*vm_fr*sin(va_to-va_fr)) )
+        # old q = @constraint(model, q_to == -(b+b_to)*vm_to^2 - (-b*tr+g*ti)/ttm*(vm_to*vm_fr*cos(va_to-va_fr)) + (-g*tr-b*ti)/ttm*(vm_to*vm_fr*sin(va_to-va_fr)) )
+
+        # To side of the branch flow in linear form
+        @constraint(model, p_fr == ((g+g_to)*vm_to^2)/2 + ((-g*tr-b*ti)/ttm*vm_fr^2)/2 + (-b*tr+g*ti)/ttm*(va_to-va_fr) # approximation -> gij*vj^2/2 - gij*vi^2/2 - bij*thetha_ji
+        + ((-g*tr-b*ti)/ttm)*((va_to-va_fr)^2)/2 + ((-g*tr-b*ti)/ttm)*((vm_to-vm_fr)^2)/2 # loss -> gij*((va_to-va_fr)^2)/2 + gij*((vm_to-vm_fr)^2)/2
+        )
+        @constraint(model, q_fr == (-(b+b_to)*vm_to^2)/2 - ((-b*tr+g*ti)/ttm*vm_fr^2)/2 + (-g*tr-b*ti)/ttm*(va_to-va_fr)# approximation -> -bij*vi^2/2 - -bij*vj^2/2 - gij*thetha_ij
+        - ((-b*tr+g*ti)/ttm) *((va_to-va_fr)^2)/2 - ((-b*tr+g*ti)/ttm)*((vm_to-vm_fr)^2)/2 # loss -> -bij*((va_to-va_fr)^2)/2 + -bij*((vm_to-vm_fr)^2)/2
+        )
+
     
         # Voltage angle difference limit
         @constraint(model, va_fr - va_to <= branch["angmax"])
@@ -159,10 +200,20 @@ end
 @variable(model, ramp_down[t in 2:T, g in keys(ref[:gen])] >= 0)
 
 
-@objective(model, Min,
-sum(sum(ref[:gen][g]["cost"][1]*pg[t,g]^2 + ref[:gen][g]["cost"][2]*pg[t,g] + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T) +
-sum(ramping_cost * (ramp_up[t, g] + ramp_down[t, g]) for g in keys(ref[:gen]) for t in 2:T)
-)
+# @objective(model, Min,
+# sum(sum(ref[:gen][g]["cost"][1]*pg[t,g]^2 + ref[:gen][g]["cost"][2]*pg[t,g] + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T) +
+# sum(ramping_cost * (ramp_up[t, g] + ramp_down[t, g]) for g in keys(ref[:gen]) for t in 2:T)
+# )
+
+# new objective function using linearized model, this is not the right place...
+# @objective(model, Min, 
+#     sum(sum(
+#         g_ij[i,j] * (vm[t,i]^2 - vm[t,i] * vm[t,j]) - b_ij[i,j] * va[t,i] - va[t,j] +  # Equation 10
+#         -b_ij[i,j] * (vm[t,i]^2 - vm[t,i] * vm[t,j]) - g_ij[i,j] * va[t,i] - va[t,j]  # Equation 11
+#         for (i,j) in ref[:branch]) for t in 1:T)
+# )
+
+
 
 for g in keys(ref[:gen])
     for t in 2:T
