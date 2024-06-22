@@ -161,15 +161,9 @@ for t in 1:T
 
         # loss = gij*(va_fr-va)/2 + gij*(vm_fr-vm_to)
 
-        # here is the right function:
-        # ((g+g_fr)/ttm*vm_fr^2)/2 + ((-g*tr+b*ti)/ttm*vm_to^2)/2 + (-b*tr-g*ti)/ttm * (va_fr-va_to)
+        # here is the new function function:
+        # ((g+g_fr)/ttm*vm_fr^2)/2 + ((-g*tr+b*ti)/ttm*vm_to^2)/2 + (-b*tr-g*ti)/ttm * (va_fr-va_to) + loss
 
-        # ---------------------------------------------------------------------------------------------------------------------
-
-        # -(b+b_fr)/ttm*vm_fr^2 - (-b*tr-g*ti)/ttm*(vm_fr*vm_to*cos(va_fr-va_to)) + (-g*tr+b*ti)/ttm*(vm_fr*vm_to*sin(va_fr-va_to))
-
-        # New function:
-        # (-(b+b_fr)/ttm*vm_fr^2)/2 - ((-b*tr+g*ti)/ttm*vm_to^2)/2 + (-g*tr+b*ti)/ttm*(va_fr-va_to) + loss
 
 
         # To side of the branch flow
@@ -200,19 +194,10 @@ end
 @variable(model, ramp_down[t in 2:T, g in keys(ref[:gen])] >= 0)
 
 
-# @objective(model, Min,
-# sum(sum(ref[:gen][g]["cost"][1]*pg[t,g]^2 + ref[:gen][g]["cost"][2]*pg[t,g] + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T) +
-# sum(ramping_cost * (ramp_up[t, g] + ramp_down[t, g]) for g in keys(ref[:gen]) for t in 2:T)
-# )
-
-# new objective function using linearized model, this is not the right place...
-# @objective(model, Min, 
-#     sum(sum(
-#         g_ij[i,j] * (vm[t,i]^2 - vm[t,i] * vm[t,j]) - b_ij[i,j] * va[t,i] - va[t,j] +  # Equation 10
-#         -b_ij[i,j] * (vm[t,i]^2 - vm[t,i] * vm[t,j]) - g_ij[i,j] * va[t,i] - va[t,j]  # Equation 11
-#         for (i,j) in ref[:branch]) for t in 1:T)
-# )
-
+@objective(model, Min,
+sum(sum(ref[:gen][g]["cost"][1]*pg[t,g]^2 + ref[:gen][g]["cost"][2]*pg[t,g] + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T) +
+sum(ramping_cost * (ramp_up[t, g] + ramp_down[t, g]) for g in keys(ref[:gen]) for t in 2:T)
+)
 
 
 for g in keys(ref[:gen])
