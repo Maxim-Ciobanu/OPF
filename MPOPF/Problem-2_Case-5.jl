@@ -57,7 +57,7 @@ end
 
 # Create a random vector two multiply loads by for each T
 factor = [1]
-random_vector = 0.975 .+ 0.05 .* rand(T-1)
+random_vector = [0.975, 0.98, 1.01, 1.015, 1.025, 0.99, 0.975, 1.03, 0.975, 0.98, 1.01, 1.015, 1.025, 0.99, 0.975, 1.03, 0.975, 0.98, 1.01, 1.015, 1.025, 0.99, 0.975]
 factor = vcat(factor, random_vector)
 
 @constraint(model, pg[1,3] == 0.01)
@@ -126,5 +126,5 @@ initial_pg_values = JuMP.value.(pg)
 initial_optimal_value = optimal_cost
 # I commented out the following line since I dont want the code
 # I run to overwride the already "initial_pg_values.jld2" saved file.
-@save "./Attachments/saved_data.jld2" initial_pg_values initial_optimal_value
+#@save "./Attachments/saved_data.jld2" initial_pg_values initial_optimal_value
 
