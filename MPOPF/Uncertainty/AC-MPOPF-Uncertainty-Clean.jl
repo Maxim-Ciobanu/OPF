@@ -22,40 +22,19 @@ load_length = length(load_data)
 # Time periods
 T = 1
 
-# Create a random vector two multiply loads by for each T
-factor = [1]
-random_vector = [0.975, 0.98, 1.01, 1.015, 1.025, 0.99, 0.975, 1.03, 0.975, 0.98, 1.01, 1.015, 1.025, 0.99, 0.975, 1.03, 0.975, 0.98, 1.01, 1.015, 1.025, 0.99, 0.975]
-factor = vcat(factor, random_vector)
-
 # Set a ramping cost
 ramping_cost = 7
 
-# Possible scenarios for loads in the next time period
-# load_scenarios_factors = Dict( # 2 scenarios for 3 load factors
-#     1 => Dict(1 => 1.03, 2 => 1.03, 3 => 1.03, 4 => 1.03, 5 => 1.03), # 3% increase
-#     2 => Dict(1 => 0.95, 2 => 0.95, 3 => 0.95, 4 => 0.95, 5 => 0.95)  # 5% decrease
-# )
-# load_scenarios_factors = Dict(
-#     1 => Dict(1 => 1.03, 2 => 1.03, 3 => 1.03, 4 => 1.03, 5 => 1.03),
-# )
-# load_scenarios_factors = Dict(
-#     1 => Dict(1 => 1.03, 2 => 1.03, 3 => 1.03, 4 => 1.03, 5 => 1.03),
-#     2 => Dict(1 => 1, 2 => 1, 3 => 1, 4 => 1, 5 => 1)
-# )
 load_scenarios_factors = Dict(
     1 => Dict(1 => 1, 2 => 1, 3 => 1, 4 => 1, 5 => 1),
-    2 => Dict(1 => 1.03, 2 => 1.03, 3 => 1.03, 4 => 1.03, 5 => 1.03),
-    3 => Dict(1 => 0.95, 2 => 0.95, 3 => 0.95, 4 => 0.95, 5 => 0.95)
+    2 => Dict(1 => 1.001, 2 => 1.001, 3 => 1.003, 4 => 1.002, 5 => 1.001),
+    3 => Dict(1 => 0.98, 2 => 0.99, 3 => 0.997, 4 => 0.998, 5 => 0.99)
 )
-
-# load_scenarios_factors = Dict(
-#     1 => Dict(1 => 1.001, 2 => 1.001, 3 => 1.001, 4 => 1.001, 5 => 1.001),
-# )
-
 
 
 # Create model
-model = JuMP.Model(Ipopt.Optimizer) # Use Ipopt for AC-OPF
+model = JuMP.Model(Gurobi.Optimizer) # Use Ipopt for AC-OPF
+set_optimizer_attribute(model, "NonConvex", 2)
 
 @variable(model, va[t in 1:T, i in keys(ref[:bus])])
 @variable(model, ref[:bus][i]["vmin"] <= vm[t in 1:T, i in keys(ref[:bus])] <= ref[:bus][i]["vmax"], start=1.0)
@@ -72,19 +51,15 @@ model = JuMP.Model(Ipopt.Optimizer) # Use Ipopt for AC-OPF
 @variable(model, mu_plus[t in 1:T, g in keys(ref[:gen]), s in 1:length(load_scenarios_factors)] >= 0)
 @variable(model, mu_minus[t in 1:T, l in keys(ref[:load]), s in 1:length(load_scenarios_factors)] >= 0)
 
-# Objective function with ramping costs
-# @objective(model, Min,
-# sum(sum(ref[:gen][g]["cost"][1]*pg[t,g]^2 + ref[:gen][g]["cost"][2]*pg[t,g] + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T) +
-# sum(ramping_cost * (ramp_up[t, g] + ramp_down[t, g]) for g in keys(ref[:gen]) for t in 2:T)
-# )
 
 # Objective function with ramping costs and expected costs for scenarios
 @objective(model, Min,
     sum(sum(ref[:gen][g]["cost"][1] * pg[t, g]^2 + ref[:gen][g]["cost"][2] * pg[t, g] + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T) +
     sum(ramping_cost * (ramp_up[t, g] + ramp_down[t, g]) for g in keys(ref[:gen]) for t in 2:T) 
     # Adding some cost for mu_plus and mu_minus.
-    + sum(10000 * (mu_plus[t, g, s] + mu_minus[t, l, s]) for g in keys(ref[:gen]) for l in keys(ref[:load]) for t in 1:T for s in 1:length(load_scenarios_factors))
+    + sum(10000 * (mu_plus[t, g, s]^2 + mu_minus[t, l, s]) for g in keys(ref[:gen]) for l in keys(ref[:load]) for t in 1:T for s in 1:length(load_scenarios_factors))
 )
+
 
 # Stuff below is from Sajads notebook
 for t in 1:T
@@ -97,29 +72,7 @@ ref[:load]
 
 num_scenarios = length(load_scenarios_factors)
 for t in 1:T
-    # for (i,bus) in ref[:bus]
-    #     # Build a list of the loads and shunt elements connected to the bus i
-    #     bus_loads = [ref[:load][l] for l in ref[:bus_loads][i]]
-    #     bus_shunts = [ref[:shunt][s] for s in ref[:bus_shunts][i]]
-
-    #     # Active power balance at node i
-    #     @constraint(model,
-    #         sum(p[t,a] for a in ref[:bus_arcs][i]) ==    
-    #         sum(pg[t, g] for g in ref[:bus_gens][i]) -  # Note the double loop over t and g
-    #         sum(load["pd"] * factor[t] for load in bus_loads) -       # Maybe add * increase here               
-    #         sum(shunt["gs"] for shunt in bus_shunts)*vm[t,i]^2
-    #     )
-
-    #     @constraint(model,
-    #         sum(q[t,a] for a in ref[:bus_arcs][i]) ==    
-    #         sum(qg[t, g] for g in ref[:bus_gens][i]) -  # Note the double loop over t and g
-    #         sum(load["qd"] * factor[t] for load in bus_loads) +       # Maybe add * increase here               
-    #         sum(shunt["bs"] for shunt in bus_shunts)*vm[t,i]^2         
-    #     )
-    # end
-
     # Constraints for future scenarios
-
     for s in 1:num_scenarios
         scenario = load_scenarios_factors[s]
         for b in keys(ref[:bus])
@@ -127,39 +80,6 @@ for t in 1:T
             # Active power balance at node i for scenario s
             bus_loads = [ref[:load][l] for l in ref[:bus_loads][b]]
             bus_shunts = [ref[:shunt][s] for s in ref[:bus_shunts][b]]
-            # adjusted_pd = isempty(bus_loads) ? 0.0 : sum(load["pd"] * scenario[b] for load in bus_loads)
-            # adjusted_qd = isempty(bus_loads) ? 0.0 : sum(load["qd"] * scenario[b] for load in bus_loads)
-            # adjusted_pd = isempty(bus_loads) ? 0.0 : sum(load["pd"] * scenario[b] + mu_minus[t, l, s] for load in bus_loads for l in ref[:bus_loads][b])
-
-
-            # Active power balance at node i
-            # @constraint(model,
-            #     sum(p[t,a] for a in ref[:bus_arcs][b]) ==    
-            #     sum(pg[t, g] for g in ref[:bus_gens][b]) -  # Note the double loop over t and g
-            #     sum(load["pd"] * factor[t] for load in bus_loads) -       # Maybe add * increase here               
-            #     sum(shunt["gs"] for shunt in bus_shunts)*vm[t,b]^2
-            # )
-
-            # @constraint(model,
-            #     sum(q[t,a] for a in ref[:bus_arcs][b]) ==    
-            #     sum(qg[t, g] for g in ref[:bus_gens][b]) -  # Note the double loop over t and g
-            #     sum(load["qd"] * factor[t] for load in bus_loads) +       # Maybe add * increase here               
-            #     sum(shunt["bs"] for shunt in bus_shunts)*vm[t,b]^2         
-            # )
-
-            # @constraint(model,
-            #     sum(p[t, a] for a in ref[:bus_arcs][b]) ==
-            #     sum(pg[t, g] + mu_plus[t, g, s] - mu_minus[t, g, s] for g in ref[:bus_gens][b]) - 
-            #     adjusted_pd - 
-            #     sum(shunt["gs"] for shunt in bus_shunts)*vm[t,b]^2
-            # )
-
-            # @constraint(model,
-            #     sum(q[t, a] for a in ref[:bus_arcs][b]) ==
-            #     sum(qg[t, g] for g in ref[:bus_gens][b]) - 
-            #     adjusted_qd + 
-            #     sum(shunt["bs"] for shunt in bus_shunts)*vm[t,b]^2 
-            # )
 
             @constraint(model,
                 sum(p[t, a] for a in ref[:bus_arcs][b]) ==
