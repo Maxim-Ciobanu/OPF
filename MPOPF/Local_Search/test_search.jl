@@ -1,11 +1,47 @@
-using PowerModels, Gurobi, JuMP, JLD2, Ipopt
+using Ipopt, Gurobi, JuMP, JLD2, PowerModels
 const PM = PowerModels
 
-file_path = "./Cases/case14.m"
+file_path = "././Cases/case14.m"
 
 data = PowerModels.parse_file(file_path)
 PowerModels.standardize_cost_terms!(data, order=2)
 PowerModels.calc_thermal_limits!(data)
+
+ref = PowerModels.build_ref(data)[:it][:pm][:nw][0]
+bus_data = ref[:bus]
+gen_data = ref[:gen]
+branch_data = ref[:branch]
+load_data = ref[:load]
+
+gen_length = length(gen_data)
+
+@load "././Attachments/saved_data.jld2" initial_pg_values initial_optimal_value
+
+function local_search(original_model::Model, pg, T::Int, gen_length::Int, epsilon::Float64, i, j)
+    # Copy the model to avoid modifying the original model
+    new_model = copy(original_model)
+    set_optimizer(new_model, Ipopt.Optimizer)
+    # Apply the epsilon perturbation to the first generator's pg value
+    
+    # Update the pg values in the copied model
+    changed_pg = pg[i,j] + epsilon
+    @constraint(new_model, pg[i,j] == changed_pg)
+
+    # Resolve the new model
+    optimize!(new_model)
+
+    # Check feasibility
+    status = termination_status(new_model)
+    status = string(status)
+    # Get the objective value from the new model
+    obj_value = objective_value(new_model)
+
+    # Get the updated pg values from the new model
+    updated_pg_values = [value(pg[t, g]) for t in 1:T, g in 1:gen_length]
+
+    return obj_value, updated_pg_values, status
+end
+
 
 # Initialize variables
 ref = PowerModels.build_ref(data)[:it][:pm][:nw][0]
@@ -25,7 +61,6 @@ model = JuMP.Model(Ipopt.Optimizer)
 
 # Time periods
 T = 3
-
 # Set a ramping cost
 ramping_cost = 7
 
@@ -33,11 +68,10 @@ ramping_cost = 7
 
 # Define variables
 # Sets variables for each 1 -> T with upper and lower bounds
-
 @variable(model, gen_data[g]["pmin"] <= pg[t in 1:T, g in 1:gen_length] <= gen_data[g]["pmax"])
+@constraint(model, pg .>= 0)
 @variable(model, -360 <= theta[t in 1:T, b in 1:bus_length] <= 360, start = 0)
 
-# Stuff below is from Sajads notebook
 for t in 1:T
     for (i,bus) in ref[:ref_buses]
         @constraint(model, va[t,i] == 0)
@@ -57,10 +91,8 @@ end
 
 # Create a random vector two multiply loads by for each T
 factor = [1]
-random_vector = 0.975 .+ 0.05 .* rand(T-1)
+random_vector = [0.975, 0.98, 1.01, 1.015, 1.025, 0.99, 0.975, 1.03, 0.975, 0.98, 1.01, 1.015, 1.025, 0.99, 0.975, 1.03, 0.975, 0.98, 1.01, 1.015, 1.025, 0.99, 0.975]
 factor = vcat(factor, random_vector)
-
-@constraint(model, pg[1,3] == 0.01)
 
 for t in 1:T
     for (i,bus) in ref[:bus]
@@ -118,13 +150,22 @@ for g in keys(ref[:gen])
 end
 
 optimize!(model)
-optimal_cost = objective_value(model)
-println("Optimal Cost: ")
-show(optimal_cost)
+println("Optimal Cost: ", objective_value(model))
+status = termination_status(model)
+status = string(status)
+println(value.(pg))
 
-initial_pg_values = JuMP.value.(pg)
-initial_optimal_value = optimal_cost
-# I commented out the following line since I dont want the code
-# I run to overwride the already "initial_pg_values.jld2" saved file.
-@save "./Attachments/saved_data.jld2" initial_pg_values initial_optimal_value
+global results = []
+for t in 1:T
+    for g in 1:gen_length
+        temp = local_search(model, value.(pg), T, gen_length, 0.01, t, g)
+        push!(results, temp)
+    end
+end
 
+for x in results
+    println(x[1])
+    println(value.(x[2]))
+    println(x[3])
+    println()
+end

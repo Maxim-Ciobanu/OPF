@@ -2,7 +2,7 @@ using PowerModels, Gurobi, JuMP, JLD2, Ipopt
 const PM = PowerModels
 
 
-file_path = "././Cases/case5.m"
+file_path = "././Cases/case14.m"
 
 data = PowerModels.parse_file(file_path)
 PowerModels.standardize_cost_terms!(data, order=2)
@@ -17,9 +17,9 @@ load_data = ref[:load]
 gen_length = length(gen_data)
 
 
-@load "././Attachments/saved_data.jld2" initial_pg_values
+@load "././Attachments/saved_data.jld2" initial_pg_values initial_optimal_value
 
-function run_MPOPF_local_search(solver, data, new_pg, epsilon, x, y)
+function solve_model(solver, data, new_pg, epsilon, T, x, y)
     # Initialize variables
     ref = PowerModels.build_ref(data)[:it][:pm][:nw][0]
     bus_data = ref[:bus]
@@ -37,8 +37,7 @@ function run_MPOPF_local_search(solver, data, new_pg, epsilon, x, y)
     model = JuMP.Model(solver.Optimizer)
 
     # Time periods
-    T = 24
-
+    
     # Set a ramping cost
     ramping_cost = 7
 
@@ -50,9 +49,8 @@ function run_MPOPF_local_search(solver, data, new_pg, epsilon, x, y)
     @constraint(model, pg .>= 0)
     @variable(model, -360 <= theta[t in 1:T, b in 1:bus_length] <= 360, start = 0)
 
-    # Cannot add epsilon to any pg without getting infeasible solution
-    # Even handpicking a value > 5
-    changed_pg = pg[x, y] + epsilon
+    # Modify some pg value +/- epsilon
+    changed_pg = new_pg[x, y] + epsilon
     @constraint(model, pg[x,y] == changed_pg)
     
     # Stuff below is from Sajads notebook
@@ -137,15 +135,51 @@ function run_MPOPF_local_search(solver, data, new_pg, epsilon, x, y)
     println("Optimal Cost: ", objective_value(model))
     status = termination_status(model)
     status = string(status)
-    
+    println(value.(pg))
+
     return objective_value(model), pg, status
 end
 
-##############################################
+function single_variable_neighbourhood(initial_optimal_value, initial_pg_values, solver, data, epsilon, T)
+    new_optimal_value = initial_optimal_value
+    new_pg_values = initial_pg_values
+    iterations = 0
+    diff_of_solutions = Inf
+
+    while iterations < 40 && diff_of_solutions > 0.01
+        results = []
+        for t in 1:T
+            for i in 1:gen_length
+                test = solve_model(solver, data, initial_pg_values, epsilon, T, t, i)
+                push!(results, test)
+            end
+        end
+        
+        solved_pairs = filter(x -> x[3] == "LOCALLY_SOLVED", results)
+        if !isempty(solved_pairs)
+            min_tuple = solved_pairs[argmin(x[1] for x in solved_pairs)]
+
+            if min_tuple[1] < new_optimal_value
+                new_optimal_value = min_tuple[1]
+                new_pg_values = min_tuple[2]  
+            end
+        end
+
+        diff_of_solutions = abs(initial_optimal_value - new_optimal_value)
+        initial_optimal_value = new_optimal_value
+        iterations += 1
+    end
+
+    return new_optimal_value, value.(new_pg_values) 
+end
+
+
 
 ##############################################
 
-T = 24
+##############################################
+
+T = 3
 
 # Use random epsilon with range 0.005 - 0.025
 epsilon = 0.01 #-(0.025 + (0.005 - 0.025) * rand())
@@ -153,14 +187,12 @@ epsilon = 0.01 #-(0.025 + (0.005 - 0.025) * rand())
 # Solver to be used 
 solver = Ipopt
 
-# Run optimizer with initial optimal values as pg, add epsilon to (t, i) indexed variable
-results = []
-for t in 1:T
-    for i in 1:gen_length
-        test = run_MPOPF_local_search(solver, data, initial_pg_values, epsilon, t, i)
-        push!(results, test)
-    end
+new_values = single_variable_neighbourhood(initial_optimal_value, initial_pg_values, solver, data, epsilon, T)
+println("Initial optimal value: ", initial_optimal_value)
+println("Lowest found value in search: ", new_values[1])
+
+if initial_optimal_value > new_values[1]
+    new_values = single_variable_neighbourhood(new_values[1], new_values[2], solver, data, epsilon, T)
 end
 
-solved_pairs = filter(x -> x[3] == "LOCALLY_SOLVED", results)
-solved_pairs
+println("Lowest in second search: ", new_values[1])
