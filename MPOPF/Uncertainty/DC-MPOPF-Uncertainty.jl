@@ -89,7 +89,7 @@ for t in 1:T
                 sum(p_expr[t][a] for a in ref[:bus_arcs][b]) ==
                 sum(pg[t, g] + mu_plus[t, g, s] for g in ref[:bus_gens][b]) - 
                 sum(load["pd"] * scenario[b] + mu_minus[t, l, s] for load in bus_loads for l in ref[:bus_loads][b]) - 
-                sum(shunt["gs"] for shunt in bus_shunts)*vm[t,b]^2
+                sum(shunt["gs"] for shunt in bus_shunts)*1.0^2
             )
         end
     end
