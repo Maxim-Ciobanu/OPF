@@ -1,5 +1,5 @@
 using PowerModels, JuMP, Ipopt, Gurobi
-function set_model_variables!(power_flow_model::PowerFlowModel, factory::ACPowerFlowModelFactory)
+function set_model_variables!(power_flow_model::AbstractPowerFlowModel, factory::ACPowerFlowModelFactory)
     model = power_flow_model.model
     T = power_flow_model.time_periods
     ref = PowerModels.build_ref(power_flow_model.data)[:it][:pm][:nw][0]
@@ -17,7 +17,7 @@ function set_model_variables!(power_flow_model::PowerFlowModel, factory::ACPower
     @variable(model, ramp_down[t in 2:T, g in keys(gen_data)] >= 0)
 end
 
-function set_model_objective_function!(power_flow_model::PowerFlowModel, factory::ACPowerFlowModelFactory)
+function set_model_objective_function!(power_flow_model::AbstractPowerFlowModel, factory::ACPowerFlowModelFactory)
     model = power_flow_model.model
     data = power_flow_model.data
     T = power_flow_model.time_periods
@@ -25,6 +25,8 @@ function set_model_objective_function!(power_flow_model::PowerFlowModel, factory
     ref = PowerModels.build_ref(data)[:it][:pm][:nw][0]
     gen_data = ref[:gen]
     pg = model[:pg]
+    ramp_up = model[:ramp_up]
+    ramp_down = model[:ramp_down]
     
     @objective(model, Min,
         sum(sum(gen_data[g]["cost"][1]*pg[t,g]^2 + gen_data[g]["cost"][2]*pg[t,g] + gen_data[g]["cost"][3] for g in keys(gen_data)) for t in 1:T) +
@@ -32,7 +34,7 @@ function set_model_objective_function!(power_flow_model::PowerFlowModel, factory
     )
 end
 
-function set_model_constraints!(power_flow_model::PowerFlowModel, factory::ACPowerFlowModelFactory)
+function set_model_constraints!(power_flow_model::AbstractPowerFlowModel, factory::ACPowerFlowModelFactory)
     model = power_flow_model.model
     data = power_flow_model.data
     T = power_flow_model.time_periods
@@ -45,6 +47,8 @@ function set_model_constraints!(power_flow_model::PowerFlowModel, factory::ACPow
     pg = model[:pg]
     qg = model[:qg]
     vm = model[:vm]
+    ramp_up = model[:ramp_up]
+    ramp_down = model[:ramp_down]
 
     for t in 1:T
         for (i, bus) in ref[:ref_buses]
