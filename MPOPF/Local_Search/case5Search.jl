@@ -124,12 +124,14 @@ function single_change_solve_model(solver, data, new_pg, epsilon, T, x, y)
     end
 
     optimize!(model)
-    println("Optimal Cost: ", objective_value(model))
     status = termination_status(model)
     status = string(status)
-    println(value.(pg))
 
-    return objective_value(model), pg, status
+    if status == "LOCALLY_SOLVED"
+        return objective_value(model), pg, status
+    else
+        return status
+    end
 end
 
 function two_var_change_solve_model(solver, data, new_pg, epsilon1, epsilon2, T, x, y)
@@ -243,12 +245,14 @@ function two_var_change_solve_model(solver, data, new_pg, epsilon1, epsilon2, T,
     end
 
     optimize!(model)
-    println("Optimal Cost: ", objective_value(model))
     status = termination_status(model)
     status = string(status)
-    println(value.(pg))
 
-    return objective_value(model), pg, status
+    if status == "LOCALLY_SOLVED"
+        return objective_value(model), pg, status
+    else
+        return status
+    end
 end
 
 function single_variable_neighbourhood(initial_optimal_value, initial_pg_values, solver, data, epsilon, T)
@@ -265,7 +269,7 @@ function single_variable_neighbourhood(initial_optimal_value, initial_pg_values,
                 push!(results, temp)
             end
         end
-        
+
         solved_pairs = filter(x -> x[3] == "LOCALLY_SOLVED", results)
         if !isempty(solved_pairs)
             min_tuple = solved_pairs[argmin(x[1] for x in solved_pairs)]
@@ -347,7 +351,8 @@ epsilon = 0.01 #-(0.025 + (0.005 - 0.025) * rand())
 solver = Ipopt
 
 new_values = single_variable_neighbourhood(initial_optimal_value, initial_pg_values, solver, data, epsilon, T)
-println("Initial optimal value: ", initial_optimal_value)
-println("Lowest found value in search: ", new_values[1])
 
 new_values = two_variable_neighbourhood(new_values[1], new_values[2], solver, data, 0.01, T)
+
+println("Initial optimal value: ", initial_optimal_value)
+println("Lowest found value in search: ", new_values[1])

@@ -17,26 +17,17 @@ gen_length = length(gen_data)
 
 @load "././Attachments/saved_data.jld2" initial_pg_values initial_optimal_value
 
-function local_search(original_model::Model, pg, T::Int, gen_length::Int, epsilon::Float64, i, j)
-    # Copy the model to avoid modifying the original model
-    new_model = copy(original_model)
-    set_optimizer(new_model, Ipopt.Optimizer)
-    # Apply the epsilon perturbation to the first generator's pg value
+function local_search(model::Model, pg, T::Int, gen_length::Int, epsilon::Float64, i::Int, j::Int)
     
-    # Update the pg values in the copied model
-    changed_pg = pg[i,j] + epsilon
-    @constraint(new_model, pg[i,j] == changed_pg)
+    changed_pg = value(pg[i,j]) + epsilon
+    @constraint(model, pg[i,j] == changed_pg)
 
-    # Resolve the new model
-    optimize!(new_model)
+    optimize!(model)
 
-    # Check feasibility
-    status = termination_status(new_model)
+    status = termination_status(model)
     status = string(status)
-    # Get the objective value from the new model
-    obj_value = objective_value(new_model)
+    obj_value = objective_value(model)
 
-    # Get the updated pg values from the new model
     updated_pg_values = [value(pg[t, g]) for t in 1:T, g in 1:gen_length]
 
     return obj_value, updated_pg_values, status
