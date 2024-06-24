@@ -1,5 +1,5 @@
 using PowerModels, JuMP, Ipopt, Gurobi
-function set_model_variables!(power_flow_model::PowerFlowModel, factory::DCPowerFlowModelFactory)
+function set_model_variables!(power_flow_model::AbstractPowerFlowModel, factory::DCPowerFlowModelFactory)
     model = power_flow_model.model
     T = power_flow_model.time_periods
     ref = PowerModels.build_ref(power_flow_model.data)[:it][:pm][:nw][0]
@@ -7,7 +7,6 @@ function set_model_variables!(power_flow_model::PowerFlowModel, factory::DCPower
     gen_data = ref[:gen]
     
     @variable(model, va[t in 1:T, i in keys(bus_data)])
-    @variable(model, bus_data[i]["vmin"] <= vm[t in 1:T, i in keys(bus_data)] <= bus_data[i]["vmax"], start=1.0)
     @variable(model, gen_data[i]["pmin"] <= pg[t in 1:T, i in keys(gen_data)] <= gen_data[i]["pmax"])
     # @variable(model, -branch_data[l]["rate_a"] <= p[t in 1:T, (l,i,j) in ref[:arcs]] <= branch_data[l]["rate_a"])
     @variable(model, -ref[:branch][l]["rate_a"] <= p[1:T,(l,i,j) in ref[:arcs_from]] <= ref[:branch][l]["rate_a"])
@@ -15,13 +14,15 @@ function set_model_variables!(power_flow_model::PowerFlowModel, factory::DCPower
     @variable(model, ramp_down[t in 2:T, g in keys(gen_data)] >= 0)
 end
 
-function set_model_objective_function!(power_flow_model::PowerFlowModel, factory::DCPowerFlowModelFactory)
+function set_model_objective_function!(power_flow_model::AbstractPowerFlowModel, factory::DCPowerFlowModelFactory)
     model = power_flow_model.model
     data = power_flow_model.data
     T = power_flow_model.time_periods
     ramping_cost = power_flow_model.ramping_cost
     ref = PowerModels.build_ref(data)[:it][:pm][:nw][0]
     pg = model[:pg]
+    ramp_up = model[:ramp_up]
+    ramp_down = model[:ramp_down]
     
     @objective(model, Min,
     sum(sum(ref[:gen][g]["cost"][1]*pg[t,g]^2 + ref[:gen][g]["cost"][2]*pg[t,g] + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T) +
@@ -29,7 +30,7 @@ function set_model_objective_function!(power_flow_model::PowerFlowModel, factory
     )
 end
 
-function set_model_constraints!(power_flow_model::PowerFlowModel, factory::DCPowerFlowModelFactory)
+function set_model_constraints!(power_flow_model::AbstractPowerFlowModel, factory::DCPowerFlowModelFactory)
     model = power_flow_model.model
     data = power_flow_model.data
     T = power_flow_model.time_periods
@@ -39,6 +40,8 @@ function set_model_constraints!(power_flow_model::PowerFlowModel, factory::DCPow
     va = model[:va]
     p = model[:p]
     pg = model[:pg]
+    ramp_up = model[:ramp_up]
+    ramp_down = model[:ramp_down]
 
     p_expr = Dict()
     for t in 1:T
