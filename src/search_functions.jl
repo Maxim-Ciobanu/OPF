@@ -8,14 +8,15 @@ function single_variable_search(power_flow_model, pg, T, num_of_gens, epsilon)
     return results
 end
 
-function single_variable_solve(power_flow_model::Main.MPOPF.PowerFlowModel, pg, epsilon, i, j)
+function single_variable_solve(power_flow_model, pg, epsilon, i, j)
     # Store current values before modifying the model
     current_pg_values = value.(pg)
-
-    # Update the constraints
     changed_pg = current_pg_values[i, j] + epsilon
-    constraint1 = @constraint(power_flow_model.model, pg[i, j] >= changed_pg)
-    constraint2 = @constraint(power_flow_model.model, pg[i, j] <= changed_pg)
+    
+    upper = power_flow_model.data["gen"][string(j)]["pmax"]
+    lower = power_flow_model.data["gen"][string(j)]["pmin"]
+    
+    fix(pg[i, j], changed_pg; force = true)
 
     # Optimize the model
     optimize!(power_flow_model.model)
@@ -27,9 +28,9 @@ function single_variable_solve(power_flow_model::Main.MPOPF.PowerFlowModel, pg, 
     # Get the updated pg values
     updated_pg_values = value.(pg)
 
-    # Remove the constraints
-    delete(power_flow_model.model, constraint1)
-    delete(power_flow_model.model, constraint2)
+    unfix(pg[i,j])
+    set_upper_bound(pg[i,j], upper)
+    set_lower_bound(pg[i,j], lower)
 
     return obj_value, updated_pg_values, status
 end
