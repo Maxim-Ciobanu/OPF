@@ -1,5 +1,5 @@
 using PowerModels, JuMP, Ipopt, Gurobi
-function set_model_variables!(power_flow_model::AbstractPowerFlowModel, factory::ACPowerFlowModelFactory)
+function set_model_variables!(power_flow_model::AbstractMPOPFModel, factory::ACMPOPFModelFactory)
     model = power_flow_model.model
     T = power_flow_model.time_periods
     ref = PowerModels.build_ref(power_flow_model.data)[:it][:pm][:nw][0]
@@ -17,7 +17,7 @@ function set_model_variables!(power_flow_model::AbstractPowerFlowModel, factory:
     @variable(model, ramp_down[t in 2:T, g in keys(gen_data)] >= 0)
 end
 
-function set_model_objective_function!(power_flow_model::AbstractPowerFlowModel, factory::ACPowerFlowModelFactory)
+function set_model_objective_function!(power_flow_model::AbstractMPOPFModel, factory::ACMPOPFModelFactory)
     model = power_flow_model.model
     data = power_flow_model.data
     T = power_flow_model.time_periods
@@ -34,7 +34,7 @@ function set_model_objective_function!(power_flow_model::AbstractPowerFlowModel,
     )
 end
 
-function set_model_constraints!(power_flow_model::AbstractPowerFlowModel, factory::ACPowerFlowModelFactory)
+function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::ACMPOPFModelFactory)
     model = power_flow_model.model
     data = power_flow_model.data
     T = power_flow_model.time_periods
@@ -47,6 +47,7 @@ function set_model_constraints!(power_flow_model::AbstractPowerFlowModel, factor
     pg = model[:pg]
     qg = model[:qg]
     vm = model[:vm]
+    factors = power_flow_model.factors
     ramp_up = model[:ramp_up]
     ramp_down = model[:ramp_down]
 
@@ -62,14 +63,14 @@ function set_model_constraints!(power_flow_model::AbstractPowerFlowModel, factor
             @constraint(model,
                 sum(p[t,a] for a in ref[:bus_arcs][i]) ==
                 sum(pg[t, g] for g in ref[:bus_gens][i]) -
-                sum(load["pd"] for load in bus_loads) -
+                sum(load["pd"] * factors[t] for load in bus_loads) -
                 sum(shunt["gs"] for shunt in bus_shunts)*vm[t,i]^2
             )
 
             @constraint(model,
                 sum(q[t,a] for a in ref[:bus_arcs][i]) ==
                 sum(qg[t, g] for g in ref[:bus_gens][i]) -
-                sum(load["qd"] for load in bus_loads) +
+                sum(load["qd"] * factors[t] for load in bus_loads) +
                 sum(shunt["bs"] for shunt in bus_shunts)*vm[t,i]^2
             )
         end
