@@ -2,7 +2,7 @@ module MPOPF
     using PowerModels, JuMP, Ipopt, Gurobi
     
     # Exporting these functions from the module so we dont have to prefix them with MPOPF.
-    export create_model, optimize_model, ACPowerFlowModelFactory, DCPowerFlowModelFactory
+    export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory
 
 ##############################################################################################
 # Factory Structs
@@ -10,28 +10,27 @@ module MPOPF
 ##############################################################################################
 
     # Abstract type as a base so that we can use this type as a parameter in fucntions
-    abstract type PowerFlowModelFactory end
+    abstract type AbstractMPOPFModelFactory end
 
     # This struct "inherits" from PowerFlowModelFactory
-    mutable struct ACPowerFlowModelFactory <: PowerFlowModelFactory
+    mutable struct ACMPOPFModelFactory <: AbstractMPOPFModelFactory
         file_path::String
         optimizer::Type
 
-        function ACPowerFlowModelFactory(file_path::String, optimizer::Type)
+        function ACMPOPFModelFactory(file_path::String, optimizer::Type)
             return new(file_path, optimizer)
         end
     end
 
     # This struct "inherits" from PowerFlowModelFactory
-    mutable struct DCPowerFlowModelFactory <: PowerFlowModelFactory
+    mutable struct DCMPOPFModelFactory <: AbstractMPOPFModelFactory
         file_path::String
         optimizer::Type
 
-        function DCPowerFlowModelFactory(file_path::String, optimizer::Type)
+        function DCMPOPFModelFactory(file_path::String, optimizer::Type)
             return new(file_path, optimizer)
         end
     end
-
 
 ##############################################################################################
 # Concrete Model Structs
@@ -39,23 +38,33 @@ module MPOPF
 ##############################################################################################
 
     # Abstract type as a base so that we can use this type as a parameter in fucntions
-    abstract type AbstractPowerFlowModel end
+    abstract type AbstractMPOPFModel end
 
     # The actual PowerFlowModel struct that "inherits" forrm AbstractPowerFlowModel
-    mutable struct PowerFlowModel <: AbstractPowerFlowModel
+    mutable struct MPOPFModel <: AbstractMPOPFModel
         model::JuMP.Model
         data::Dict
         time_periods::Int64
+        factors::Vector{Float64}
         ramping_cost::Int64
+
+        function MPOPFModel(model::JuMP.Model, data::Dict, time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0)
+            return new(model, data, time_periods, factors, ramping_cost)
+        end
     end
 
     # Similar PowerFlowModel object but with an additional scenrios variable for uncertainty
-    mutable struct PowerFlowModelUncertainty <: AbstractPowerFlowModel
+    mutable struct MPOPFModelUncertainty <: AbstractMPOPFModel
         model::JuMP.Model
         data::Dict
-        time_periods::Int64
-        ramping_cost::Int64
         scenarios::Dict
+        time_periods::Int64
+        factors::Vector{Float64}
+        ramping_cost::Int64
+
+        function MPOPFModelUncertainty(model::JuMP.Model, data::Dict, scenarios::Dict, time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0)
+            return new(model, data, scenarios, time_periods, factors, ramping_cost)
+        end
     end
 
 ##############################################################################################
@@ -73,14 +82,14 @@ module MPOPF
     # The first create_model fucntion creates a PowerFlowModel object
     # It creates the right model depending on the factory passed as the first paramenter
     # For Example: If the factory passed is an AC factory the function will return an AC model
-    function create_model(factory::PowerFlowModelFactory, time_periods::Int64=1, ramping_cost::Int64=0)::PowerFlowModel
+    function create_model(factory::AbstractMPOPFModelFactory, time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0)::MPOPFModel
         data = PowerModels.parse_file(factory.file_path)
         PowerModels.standardize_cost_terms!(data, order=2)
         PowerModels.calc_thermal_limits!(data)
 
         model = JuMP.Model(factory.optimizer)
 
-        power_flow_model = PowerFlowModel(model, data, time_periods, ramping_cost)
+        power_flow_model = MPOPFModel(model, data, time_periods, factors, ramping_cost)
 
         set_model_variables!(power_flow_model, factory)
         set_model_objective_function!(power_flow_model, factory)
@@ -92,14 +101,14 @@ module MPOPF
     # The second create_model fucntion creates a PowerFlowModelUncertainty object
     # Similarly it creates the right model depending on the factory passed as the first paramenter
     # However now we are passing the scenarios as parameters too
-    function create_model(factory::PowerFlowModelFactory, scenarios::Dict, time_periods::Int64=1, ramping_cost::Int64=0)::PowerFlowModelUncertainty
+    function create_model(factory::AbstractMPOPFModelFactory, scenarios::Dict, time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0)::MPOPFModelUncertainty
         data = PowerModels.parse_file(factory.file_path)
         PowerModels.standardize_cost_terms!(data, order=2)
         PowerModels.calc_thermal_limits!(data)
 
         model = JuMP.Model(factory.optimizer)
         
-        power_flow_model = PowerFlowModelUncertainty(model, data, time_periods, ramping_cost, scenarios)
+        power_flow_model = MPOPFModelUncertainty(model, data, scenarios, time_periods, factors, ramping_cost)
 
         set_model_variables!(power_flow_model, factory)
         set_model_uncertainty_variables!(power_flow_model)
@@ -115,8 +124,7 @@ module MPOPF
 
     # This function simply optimizes any model given as a parameter
     # It prints the Optimial cost
-    function optimize_model(model::AbstractPowerFlowModel)
-        println("Processing Model with case data: ", model.data)
+    function optimize_model(model::AbstractMPOPFModel)
         optimize!(model.model)
         optimal_cost = objective_value(model.model)
         println("Optimal Cost: ", optimal_cost)

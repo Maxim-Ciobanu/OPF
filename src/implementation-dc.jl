@@ -1,5 +1,5 @@
 using PowerModels, JuMP, Ipopt, Gurobi
-function set_model_variables!(power_flow_model::AbstractPowerFlowModel, factory::DCPowerFlowModelFactory)
+function set_model_variables!(power_flow_model::AbstractMPOPFModel, factory::DCMPOPFModelFactory)
     model = power_flow_model.model
     T = power_flow_model.time_periods
     ref = PowerModels.build_ref(power_flow_model.data)[:it][:pm][:nw][0]
@@ -14,7 +14,7 @@ function set_model_variables!(power_flow_model::AbstractPowerFlowModel, factory:
     @variable(model, ramp_down[t in 2:T, g in keys(gen_data)] >= 0)
 end
 
-function set_model_objective_function!(power_flow_model::AbstractPowerFlowModel, factory::DCPowerFlowModelFactory)
+function set_model_objective_function!(power_flow_model::AbstractMPOPFModel, factory::DCMPOPFModelFactory)
     model = power_flow_model.model
     data = power_flow_model.data
     T = power_flow_model.time_periods
@@ -30,7 +30,7 @@ function set_model_objective_function!(power_flow_model::AbstractPowerFlowModel,
     )
 end
 
-function set_model_constraints!(power_flow_model::AbstractPowerFlowModel, factory::DCPowerFlowModelFactory)
+function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::DCMPOPFModelFactory)
     model = power_flow_model.model
     data = power_flow_model.data
     T = power_flow_model.time_periods
@@ -40,6 +40,7 @@ function set_model_constraints!(power_flow_model::AbstractPowerFlowModel, factor
     va = model[:va]
     p = model[:p]
     pg = model[:pg]
+    factors = power_flow_model.factors
     ramp_up = model[:ramp_up]
     ramp_down = model[:ramp_down]
 
@@ -64,7 +65,7 @@ function set_model_constraints!(power_flow_model::AbstractPowerFlowModel, factor
             @constraint(model,
                 sum(p_expr[t][a] for a in ref[:bus_arcs][i]) ==
                 sum(pg[t, g] for g in ref[:bus_gens][i]) -
-                sum(load["pd"] for load in bus_loads) -
+                sum(load["pd"] * factors[t] for load in bus_loads) -
                 sum(shunt["gs"] for shunt in bus_shunts)*1.0^2
             )
         end

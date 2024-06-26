@@ -1,4 +1,4 @@
-# Functionf or scenarios
+# Function for generating scenario load factors
 function generate_load_scenarios(num_scenarios::Int, num_buses::Int)
     load_scenarios_factors = Dict()
     for scenario in 1:num_scenarios

@@ -1,5 +1,5 @@
 using PowerModels, JuMP, Ipopt, Gurobi
-function set_model_uncertainty_variables!(power_flow_model::AbstractPowerFlowModel)
+function set_model_uncertainty_variables!(power_flow_model::MPOPFModelUncertainty)
     model = power_flow_model.model
     T = power_flow_model.time_periods
     ref = PowerModels.build_ref(power_flow_model.data)[:it][:pm][:nw][0]
@@ -9,7 +9,7 @@ function set_model_uncertainty_variables!(power_flow_model::AbstractPowerFlowMod
     @variable(model, mu_minus[t in 1:T, l in keys(ref[:load]), s in 1:length(scenarios)] >= 0)
 end
 
-function set_model_uncertainty_objective_function!(power_flow_model::AbstractPowerFlowModel, factory::ACPowerFlowModelFactory)
+function set_model_uncertainty_objective_function!(power_flow_model::MPOPFModelUncertainty, factory::ACMPOPFModelFactory)
     model = power_flow_model.model
     data = power_flow_model.data
     T = power_flow_model.time_periods
@@ -31,7 +31,7 @@ function set_model_uncertainty_objective_function!(power_flow_model::AbstractPow
     )
 end
 
-function set_model_uncertainty_constraints!(power_flow_model::AbstractPowerFlowModel, factory::ACPowerFlowModelFactory)
+function set_model_uncertainty_constraints!(power_flow_model::MPOPFModelUncertainty, factory::ACMPOPFModelFactory)
     model = power_flow_model.model
     data = power_flow_model.data
     T = power_flow_model.time_periods
@@ -125,7 +125,7 @@ function set_model_uncertainty_constraints!(power_flow_model::AbstractPowerFlowM
     end
 end
 
-function set_model_uncertainty_objective_function!(power_flow_model::AbstractPowerFlowModel, factory::DCPowerFlowModelFactory)
+function set_model_uncertainty_objective_function!(power_flow_model::MPOPFModelUncertainty, factory::DCMPOPFModelFactory)
     model = power_flow_model.model
     data = power_flow_model.data
     T = power_flow_model.time_periods
@@ -147,7 +147,7 @@ function set_model_uncertainty_objective_function!(power_flow_model::AbstractPow
     )
 end
 
-function set_model_uncertainty_constraints!(power_flow_model::AbstractPowerFlowModel, factory::DCPowerFlowModelFactory)
+function set_model_uncertainty_constraints!(power_flow_model::MPOPFModelUncertainty, factory::DCMPOPFModelFactory)
     model = power_flow_model.model
     data = power_flow_model.data
     T = power_flow_model.time_periods

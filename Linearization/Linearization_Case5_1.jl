@@ -52,31 +52,6 @@ end
 @variable(model, -ref[:branch][l]["rate_a"] <= p[1:T,(l,i,j) in ref[:arcs]] <= ref[:branch][l]["rate_a"])
 @variable(model, -ref[:branch][l]["rate_a"] <= q[1:T,(l,i,j) in ref[:arcs]] <= ref[:branch][l]["rate_a"])
 
-# ---------------------------------------------
-# For some Reason if we use p_expr 
-# we get the wrong anser will investigate
-# ---------------------------------------------
-# p_expr = Dict()
-# for t in 1:T
-#     p_expr[t] = Dict()
-# end
-# # Iterate over each time period
-# for t in 1:T
-#     p_expr[t] = Dict([((l, i, j), 1.0 * p[t, (l, i, j)]) for (l, i, j) in ref[:arcs]])
-#     p_expr[t] = merge(p_expr[t], Dict([((l, j, i), -1.0 * p[t, (l, i, j)]) for (l, i, j) in ref[:arcs]]))
-# end
-
-# q_expr = Dict()
-# for t in 1:T
-#     q_expr[t] = Dict()
-# end
-# # Iterate over each time period
-# for t in 1:T
-#     q_expr[t] = Dict([((l, i, j), 1.0 * q[t, (l, i, j)]) for (l, i, j) in ref[:arcs]])
-#     q_expr[t] = merge(q_expr[t], Dict([((l, j, i), -1.0 * q[t, (l, i, j)]) for (l, i, j) in ref[:arcs]]))
-# end
-# ---------------------------------------------
-
 # Create a random vector two multiply loads by for each T
 factor = [1]
 random_vector = [0.975, 0.98, 1.01, 1.015, 1.025, 0.99, 0.975, 1.03, 0.975, 0.98, 1.01, 1.015, 1.025, 0.99, 0.975, 1.03, 0.975, 0.98, 1.01, 1.015, 1.025, 0.99, 0.975]
@@ -136,47 +111,40 @@ for t in 1:T
         g_to = branch["g_to"]
         b_to = branch["b_to"]
 
+        # old stuff ----------------------------------------------------------------------
         # From side of the branch flow
         # old p = @constraint(model, p_fr ==  (g+g_fr)/ttm*vm_fr^2 + (-g*tr+b*ti)/ttm*(vm_fr*vm_to*cos(va_fr-va_to)) + (-b*tr-g*ti)/ttm*(vm_fr*vm_to*sin(va_fr-va_to)) )
         # old q = @constraint(model, q_fr == -(b+b_fr)/ttm*vm_fr^2 - (-b*tr-g*ti)/ttm*(vm_fr*vm_to*cos(va_fr-va_to)) + (-g*tr+b*ti)/ttm*(vm_fr*vm_to*sin(va_fr-va_to)) )
 
         # From side of the branch flow in linear form
-        @constraint(model, p_fr == ((g+g_fr)/ttm*vm_fr^2)/2 + ((-g*tr+b*ti)/ttm*vm_to^2)/2 + (-b*tr-g*ti)/ttm * (va_fr-va_to) # approximation -> gij*vi^2/2 - gij*jv^2/2 - bij*thetha_ij
-        + ((-g*tr+b*ti)/ttm) *((va_fr-va_to)^2)/2 + ((-g*tr+b*ti)/ttm)*((vm_fr-vm_to)^2)/2 # loss_p -> gij*((va_fr-va_to)^2)/2 + gij*((vm_fr-vm_to)^2)/2
-        )
-        @constraint(model, q_fr == (-(b+b_fr)/ttm*vm_fr^2)/2 - ((-b*tr-g*ti)/ttm*vm_to^2)/2 + (-g*tr+b*ti)/ttm*(va_fr-va_to) # approximation -> -bij*vi^2/2 - -bij*vj^2/2 - gij*thetha_ij
-        + ((-b*tr-g*ti)/ttm)*((va_fr-va_to)^2)/2 + ((-b*tr-g*ti)/ttm)*((vm_fr-vm_to)^2)/2 # loss_q -> -bij*((va_fr-va_to)^2)/2 + -bij*((vm_fr-vm_to)^2)/2
-        )
-
-        
-        # (g+g_fr)/ttm*vm_fr^2 + 
-        # (-g*tr+b*ti)/ttm*(vm_fr*vm_to*cos(va_fr-va_to)) + 
-        # (-b*tr-g*ti)/ttm*(vm_fr*vm_to*sin(va_fr-va_to))
-
-        # gij = (-g*tr+b*ti)/ttm
-        # bij = (-b*tr-g*ti)/ttm
-        # vi = vm_fr
-        # vj = vm_to
-        # theta = va_fr-va_to
-
-        # loss = gij*(va_fr-va)/2 + gij*(vm_fr-vm_to)
-
-        # here is the new function function:
-        # ((g+g_fr)/ttm*vm_fr^2)/2 + ((-g*tr+b*ti)/ttm*vm_to^2)/2 + (-b*tr-g*ti)/ttm * (va_fr-va_to) + loss
-
-
+        # @constraint(model, p_fr == ((g+g_fr)/ttm*vm_fr^2)/2 + ((-g*tr+b*ti)/ttm*vm_to^2)/2 + (-b*tr-g*ti)/ttm * (va_fr-va_to) # approximation -> gij*vi^2/2 - gij*jv^2/2 - bij*thetha_ij
+        # + ((-g*tr+b*ti)/ttm) *((va_fr-va_to)^2)/2 + ((-g*tr+b*ti)/ttm)*((vm_fr-vm_to)^2)/2 # loss_p -> gij*((va_fr-va_to)^2)/2 + gij*((vm_fr-vm_to)^2)/2
+        # )
+        # @constraint(model, q_fr == (-(b+b_fr)/ttm*vm_fr^2)/2 - ((-b*tr-g*ti)/ttm*vm_to^2)/2 + (-g*tr+b*ti)/ttm*(va_fr-va_to) # approximation -> -bij*vi^2/2 - -bij*vj^2/2 - gij*thetha_ij
+        # + ((-b*tr-g*ti)/ttm)*((va_fr-va_to)^2)/2 + ((-b*tr-g*ti)/ttm)*((vm_fr-vm_to)^2)/2 # loss_q -> -bij*((va_fr-va_to)^2)/2 + -bij*((vm_fr-vm_to)^2)/2
+        # )
 
         # To side of the branch flow
         # old p = @constraint(model, p_to ==  (g+g_to)*vm_to^2 + (-g*tr-b*ti)/ttm*(vm_to*vm_fr*cos(va_to-va_fr)) + (-b*tr+g*ti)/ttm*(vm_to*vm_fr*sin(va_to-va_fr)) )
         # old q = @constraint(model, q_to == -(b+b_to)*vm_to^2 - (-b*tr+g*ti)/ttm*(vm_to*vm_fr*cos(va_to-va_fr)) + (-g*tr-b*ti)/ttm*(vm_to*vm_fr*sin(va_to-va_fr)) )
 
         # To side of the branch flow in linear form
-        @constraint(model, p_fr == ((g+g_to)*vm_to^2)/2 + ((-g*tr-b*ti)/ttm*vm_fr^2)/2 + (-b*tr+g*ti)/ttm*(va_to-va_fr) # approximation -> gij*vj^2/2 - gij*vi^2/2 - bij*thetha_ji
-        + ((-g*tr-b*ti)/ttm)*((va_to-va_fr)^2)/2 + ((-g*tr-b*ti)/ttm)*((vm_to-vm_fr)^2)/2 # loss -> gij*((va_to-va_fr)^2)/2 + gij*((vm_to-vm_fr)^2)/2
-        )
-        @constraint(model, q_fr == (-(b+b_to)*vm_to^2)/2 - ((-b*tr+g*ti)/ttm*vm_fr^2)/2 + (-g*tr-b*ti)/ttm*(va_to-va_fr)# approximation -> -bij*vi^2/2 - -bij*vj^2/2 - gij*thetha_ij
-        - ((-b*tr+g*ti)/ttm) *((va_to-va_fr)^2)/2 - ((-b*tr+g*ti)/ttm)*((vm_to-vm_fr)^2)/2 # loss -> -bij*((va_to-va_fr)^2)/2 + -bij*((vm_to-vm_fr)^2)/2
-        )
+        # @constraint(model, p_fr == ((g+g_to)*vm_to^2)/2 + ((-g*tr-b*ti)/ttm*vm_fr^2)/2 + (-b*tr+g*ti)/ttm*(va_to-va_fr) # approximation -> gij*vj^2/2 - gij*vi^2/2 - bij*thetha_ji
+        # + ((-g*tr-b*ti)/ttm)*((va_to-va_fr)^2)/2 + ((-g*tr-b*ti)/ttm)*((vm_to-vm_fr)^2)/2 # loss -> gij*((va_to-va_fr)^2)/2 + gij*((vm_to-vm_fr)^2)/2
+        # )
+        # @constraint(model, q_fr == (-(b+b_to)*vm_to^2)/2 - ((-b*tr+g*ti)/ttm*vm_fr^2)/2 + (-g*tr-b*ti)/ttm*(va_to-va_fr)# approximation -> -bij*vi^2/2 - -bij*vj^2/2 - gij*thetha_ij
+        # - ((-b*tr+g*ti)/ttm) *((va_to-va_fr)^2)/2 - ((-b*tr+g*ti)/ttm)*((vm_to-vm_fr)^2)/2 # loss -> -bij*((va_to-va_fr)^2)/2 + -bij*((vm_to-vm_fr)^2)/2
+        # )
+        # --------------------------------------------------------------------------------
+
+        #From side of the branch flow
+        @constraint(model, p_fr == (g + g_fr) / ttm * (vm_fr^2 - vm_to^2) / 2 +(-b*tr-g*ti)/ttm*(va_fr-va_to) + (g + g_fr) / ttm * ((va_fr - va_to)^2 / 2  + (vm_fr - vm_to)^2 / 2))
+        @constraint(model, q_fr == (-(b+b_fr)/ttm*(vm_fr^2-vm_to^2)/2 + (-g*tr+b*ti)/ttm*(va_fr-va_to) +(-(b+b_fr)/ttm *((va_fr-va_to)^2/2 +(vm_fr-vm_to)^2/2 ))))# loss -> -bij*((va_to-va_fr)^2)/2 + -bij*((vm_to-vm_fr)^2)/2
+
+        #To side of the branch flow
+        @constraint(model, p_to == (g + g_to) / ttm * (vm_to^2 - vm_fr^2) / 2 +(-b*tr-g*ti)/ttm*(va_to-va_fr) + (g + g_to) / ttm * ((va_to - va_fr)^2 / 2  + (vm_to - vm_fr)^2 / 2))
+        @constraint(model, q_to == (-(b+b_to)/ttm*(vm_to^2-vm_fr^2)/2 + (-g*tr+b*ti)/ttm*(va_to-va_fr) +(-(b+b_to)/ttm *((va_to-va_fr)^2/2 +(vm_to-vm_fr)^2/2 ))))# loss -> -bij*((va_to-va_fr)^2)/2 + -bij*((vm_to-vm_fr)^2)/2
+
 
     
         # Voltage angle difference limit
