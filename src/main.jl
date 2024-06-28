@@ -47,19 +47,10 @@ display(JuMP.value.(modelToAnalyse.model[:pg]))
 display(JuMP.value.(modelToAnalyse.model[:mu_plus]))
 display(JuMP.value.(modelToAnalyse.model[:mu_minus]))
 =#
-#test = single_variable_solve(My_DC_model, My_DC_model.model[:pg], 0.01, 1, 1)
-# 0.00311609  0.00358132  0.376584  0.00396391  2.20275
-#=
-global results = []
-for g in 1:5
-    temp = single_variable_solve(My_DC_model, My_DC_model.model[:pg], 0.01, 1, g)
-    push!(results, temp)
-end
 
-display(results) =#
+temp = single_variable_search(My_DC_model, 1, 5, 0.01)
 
-temp = single_variable_search(My_DC_model, My_DC_model.model[:pg], 1, 5, 0.01)
-display(temp)
-for t in temp
-    println(t[2])
-end
+
+# initial optimal value: 7642.591774313989
+# initial pg values:  -8.95979e-9  -8.95981e-9  0.380323  -8.95969e-9  2.20968
+
