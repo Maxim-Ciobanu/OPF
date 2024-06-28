@@ -1,3 +1,7 @@
+#############################################################################
+# Note: This file is curently being used for testing, nothing is permanent
+#############################################################################
+
 using PowerModels, JuMP, Ipopt, Gurobi
 include("MPOPF.jl")
 include("misc.jl")

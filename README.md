@@ -70,9 +70,11 @@ Second, we will explain the design in detail and how different components work t
 Thirdly, we will showcase how development can continue, and how new optimization strategies can be added to the code-base.
 Lastly, we will go over some key points about the design Philosophy of this project.
 
-## Usage
+## Getting Started
 
-### Requirements
+In these following sections we will describe how to get started with using our code.
+
+### Before we Begin
 
 To run the scripts, you need to have the following Julia packages installed:
 
@@ -91,7 +93,7 @@ Pkg.add("Ipopt")
 Pkg.add("Gurobi")
 ```
 
-### Usage
+### What to Include in your Workspace
 
 To be able to run the code we need to use the packages we just installed, we need to include the `MPOPF.jl` file, and we need to explicitly say we want to use our defined MPOPF module. (Note: The period indicates that it is a local Module)
 This can be done with the following three lines of code.
@@ -102,9 +104,9 @@ This can be done with the following three lines of code.
    using .MPOPF
    ```
 
-#### Simple example
+#### Basic Example
 
-Here is a simple example to showcase how a model can be created and optimized.
+Here is a simple example to showcase how a model can be created and optimized:
 
 ```julia
 using PowerModels, JuMP, Ipopt, Gurobi
@@ -126,16 +128,14 @@ my_dc_model = create_model(dc_factory)
 # Once we have our model we just optimize
 # This will print the Minimum Cost
 optimize_model(my_dc_model)
-```
 
-If we want to make an AC model instead simply create it with an AC Factory
-
-```julia
+# If we want to make an AC model instead simply create it with an AC Factory
 ac_factory = ACMPOPFModelFactory(file_path, Ipopt.Optimizer)
 my_ac_model = create_model(ac_factory)
+optimize_model(my_ac_model)
 ```
 
-#### Multi Period Example
+#### Multi-Period Example
 
 To create a model with multiple periods we just specify the number of periods, the factors for the loads (multiplied to the current load to create different demand for the next period), and the ramping cost.
 They are specified in the `create_model` function
@@ -169,11 +169,9 @@ optimize_model(my_dc_model)
 The Factories are used as parameters so that Julia's multiple dispatch feature runs the correct functions depending on the factory given.
 
 We have two, `ACMPOPFModelFactory` and `DCMPOPFModelFactory` which are subtypes of the abstract type `AbstractMPOPFModelFactory`.
-This abstract type is what the implementation functions expect but since AC and DC are subtypes they will work. This makes it possible to create functions with the same names that preform different cations depending on the factory provided.
+This abstract type is what the implementation functions expect but since AC and DC are subtypes they will work. This makes it possible to create functions with the same names that preform different operations depending on the factory provided.
 
-The functions inside these two factory structs `function ACMPOPFModelFactory(file_path::String, optimizer::Type)` are optional since they preform the same thing as the default constructors but I put them here for clarity.
-
-Here is the code:
+Here is the code for our Factory Structs:
 
 ```julia
 # Abstract type as a base so that we can use this type as a parameter in fucntions
@@ -206,12 +204,16 @@ The MPOPF Model objects are what the `create_model` function returns. They have 
 
 Similarly to our factory structs we currently have two concrete structs of MPOPF, `MPOPFModel` and `MPOPFModelUncertainty` which are subtypes of the abstract type `AbstractMPOPFModel`. This is useful when we want both MPOPF models to be passed in a function interchangeably (That is the case for the `optimize_model` function).
 
-`MPOPFModel` has the following as variables: `Jump Model`, `Data read from file`, `time periods`, `Load Factors`, and `Ramping Cost`.
-`MPOPFModelUncertainty` has the same variables except that it hold one more variable `scenarios` which is only relevant for Uncertainty.
+`MPOPFModel` has the following as variables: 
+- `Jump Model`
+- `Data read from file`
+- `time periods`
+- `Load Factors`
+- `Ramping Cost`
 
-Again, the functions inside these two MPOPF structs are optional since they preform the same thing as the default constructors but I put them here for clarity.
+`MPOPFModelUncertainty` has the same variables except that it holds one more variable `scenarios` which is only relevant for Uncertainty.
 
-Here is the code:
+Here is the code for out MPOPF Model Structs:
 
 ```julia
 # Abstract type as a base so that we can use this type as a parameter in fucntions
@@ -254,16 +256,16 @@ The system knows which one to call depending on whether the `scenarios` variable
 Both share the same logic so whatever I explain about the first can be extrapolated to the second.
 
 The `create_model` function takes in a factory of type `AbstractMPOPFModelFactory` as the first parameter. This means that both `ACMPOPFModelFactory`, `ACMPOPFModelFactory`, or any other Factory that inherits from the Abstract one is accepted.
-The following three parameters, `time_periods`, `factors`, and `ramping_cost` are only relevant for multiperiod so they are optional. (If not provided the system will assume one period).
+The following three parameters, `time_periods`, `factors`, and `ramping_cost` are only relevant for multiperiod so they are optional. (If not provided, the system will assume one period).
 
 For AC and DC models, the steps of creating a model are the same. We first define the model variables, then we define the model objective function, and lastly we set the model constraints.
 
-However inside of these functions different things happen depending if we want AC, DC, or any other form of defining.
-This is why the factory is passed as a parameter inside the `set_model_variables!`, `set_model_objective_function!`, and `set_model_constraints!` functions alongside the model we want to add these things to.
+However, inside of these functions different things happen depending if we want AC, DC, or any other form of defining.
+This is why the factory is passed as a parameter inside the `set_model_variables!`, `set_model_objective_function!`, and `set_model_constraints!` functions.
 
 Thanks to Julia's multiple dispatch feature, the correct function will be called depending on the type of the factory. Therefore, the correct variables, objective function, and constraints will be added without having to create massive if statements that check what model we want.
 
-Here is the function:
+Here is our create model function:
 
 ```julia
 function create_model(factory::AbstractMPOPFModelFactory, time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0)::MPOPFModel
@@ -288,39 +290,16 @@ Here is an example of the AC and DC `set_model_variables!` functions. Take note 
 **AC**
 ```julia
 function set_model_variables!(power_flow_model::AbstractMPOPFModel, factory::ACMPOPFModelFactory)
-    model = power_flow_model.model
-    T = power_flow_model.time_periods
-    ref = PowerModels.build_ref(power_flow_model.data)[:it][:pm][:nw][0]
-    bus_data = ref[:bus]
-    gen_data = ref[:gen]
-    branch_data = ref[:branch]
-    
-    @variable(model, va[t in 1:T, i in keys(bus_data)])
-    @variable(model, bus_data[i]["vmin"] <= vm[t in 1:T, i in keys(bus_data)] <= bus_data[i]["vmax"], start=1.0)
-    @variable(model, gen_data[i]["pmin"] <= pg[t in 1:T, i in keys(gen_data)] <= gen_data[i]["pmax"])
-    @variable(model, gen_data[i]["qmin"] <= qg[t in 1:T, i in keys(gen_data)] <= gen_data[i]["qmax"])
-    @variable(model, -branch_data[l]["rate_a"] <= p[t in 1:T, (l,i,j) in ref[:arcs]] <= branch_data[l]["rate_a"])
-    @variable(model, -branch_data[l]["rate_a"] <= q[t in 1:T, (l,i,j) in ref[:arcs]] <= branch_data[l]["rate_a"])
-    @variable(model, ramp_up[t in 2:T, g in keys(gen_data)] >= 0)
-    @variable(model, ramp_down[t in 2:T, g in keys(gen_data)] >= 0)
+# Here would be the code for AC model
+# Take note of the second parameter which accepts type ACMPOPFModelFactory
 end
 ```
 
 **DC**
 ```julia
-using PowerModels, JuMP, Ipopt, Gurobi
 function set_model_variables!(power_flow_model::AbstractMPOPFModel, factory::DCMPOPFModelFactory)
-    model = power_flow_model.model
-    T = power_flow_model.time_periods
-    ref = PowerModels.build_ref(power_flow_model.data)[:it][:pm][:nw][0]
-    bus_data = ref[:bus]
-    gen_data = ref[:gen]
-    
-    @variable(model, va[t in 1:T, i in keys(bus_data)])
-    @variable(model, gen_data[i]["pmin"] <= pg[t in 1:T, i in keys(gen_data)] <= gen_data[i]["pmax"])
-    @variable(model, -ref[:branch][l]["rate_a"] <= p[1:T,(l,i,j) in ref[:arcs_from]] <= ref[:branch][l]["rate_a"])
-    @variable(model, ramp_up[t in 2:T, g in keys(gen_data)] >= 0)
-    @variable(model, ramp_down[t in 2:T, g in keys(gen_data)] >= 0)
+# Here would be the code for DC model
+# Take note of the second parameter which accepts type DCMPOPFModelFactory
 end
 ```
 
@@ -330,20 +309,36 @@ The factory is not used for any computation, it is just there to let the system 
 
 To further improve the project and add more functionality to the system, there are two good things that can be done.
 
-1. If the functionality that we want to add follows the same procedure for creating a model that AC or DC follow then we can follow these steps:
+### Similar Procedure as AC or DC
 
-	1. Create a new `MPOPFModelFactory` that "inherits" from `AbstractMPOPFModelFactory`. At the simplest case this can be identical to AC or DC factories with the name changed.
-	2. Create your new model functionality by implementing these three functions: `set_model_variables!`, `set_model_objective_function!`, and `set_model_constraints!`. Note that the factory passed to these functions should be your newly created factory.
-	3. That's it, now you can create a model with your new implementation with the `create_model` function and your factory passed to it.
+If the functionality that we want to add follows the same procedure for creating a model that AC or DC follow then we can follow these steps:
 
-2. If the new functionality that we want to add does not follow the same steps then a little more work needs to be done. 
+1. Create a new `MPOPFModelFactory` that "inherits" from `AbstractMPOPFModelFactory`. At the simplest case this can be identical to AC or DC factories with the name changed.
+2. Create your new model functionality by implementing these three functions: `set_model_variables!`, `set_model_objective_function!`, and `set_model_constraints!`. Note that the factory passed to these functions should be your newly created factory.
+3. That's it, now you can create a model with your new implementation with the `create_model` function and your factory passed to it.
 
-	Let's take uncertainty for example. Uncertainty should work for both AC and DC, it needs a new variable to handle scenarios and it modifies current constraints instead of adding on to them. Here are the steps I took to create it. Similar process can be taken for something new.
+### Different Procedure as AC or DC
 
-	1. Since we need a new variable I created a new struct `MPOPFModelUncertainty` which is identical to `MPOPFModel` but with a new variable `scenarios`. It is also a subtype of `AbstractMPOPFModel`.
-	2. I then created a new `create_model` function that accepts this new variable `scenarios` as a parameter and returns a model of type `MPOPFModelUncertainty`. (This is how the system will know which create model function to call, whether the `scenarios` variable is provided).
-	3. I implemented the process for uncertainty inside this new `create_model` function.
+If the new functionality that we want to add does not follow the same steps then a little more work needs to be done. 
+
+Let's take uncertainty for example. Uncertainty should work for both AC and DC, it needs a new variable to handle scenarios and it modifies current constraints instead of adding on to them. Here are the steps I took to create it. Similar process can be taken for something new.
+
+1. Since we need a new variable I created a new struct `MPOPFModelUncertainty` which is identical to `MPOPFModel` but with a new variable `scenarios`. It is also a subtype of `AbstractMPOPFModel`.
+2. I then created a new `create_model` function that accepts this new variable `scenarios` as a parameter and returns a model of type `MPOPFModelUncertainty`. (The system will know which create model function to call depending on if the `scenarios` variable is provided).
+3. I implemented the process for uncertainty inside this new `create_model` function.
 
 ## Design Philosophy
 
-... Not done this section ...
+The design of this project is grounded in several key principles aimed at ensuring flexibility, modularity, and ease of use. These principles guide the structure and development of the codebase, making it robust and adaptable to future development.
+
+### 1. Modularity
+
+The codebase is designed with modularity in mind. By defining abstract types and leveraging Julia's multiple dispatch feature, we allow for the seamless addition of new model types and functionalities. Each component, whether it be AC, DC, or uncertainty models, can be developed and maintained independently. This modular approach ensures that changes in one part of the system do not inadvertently impact others.
+
+### 2. Separation of Concerns
+
+The design follows the principle of separation of concerns, where each part of the system has a distinct responsibility. For instance, the factories are responsible for creating models, while the models themselves encapsulate the specific optimization logic. This separation helps in isolating and addressing issues, testing components independently, and ensuring that each part of the system can evolve without causing disruptions.
+
+### 3. Reusability
+
+Reusability is emphasized through the use of common abstract interfaces and the implementation of general functions that can operate on any subtype. For example, the `optimize_model` function can be used with any model that conforms to the `AbstractMPOPFModel` interface.
