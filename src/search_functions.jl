@@ -3,9 +3,8 @@ function single_variable_search(power_flow_model, T, num_of_gens, epsilon)
     current_pg_values = power_flow_model.model[:pg]
     optimal_pg = value.(power_flow_model.model[:pg])
     iterations = 0
-    diff_of_solutions = Inf
     
-    while iterations < 1 && diff_of_solutions > 0.01
+    while iterations < 1
         results = []
         for t in 1:T
             for g in 1:num_of_gens
