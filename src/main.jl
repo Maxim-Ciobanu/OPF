@@ -48,9 +48,9 @@ display(JuMP.value.(modelToAnalyse.model[:mu_plus]))
 display(JuMP.value.(modelToAnalyse.model[:mu_minus]))
 =#
 
-temp = single_variable_search(My_DC_model, 1, 5, 0.01)
+test1 = single_variable_search(My_DC_model, 1, 5, 0.01)
 
 
 # initial optimal value: 7642.591774313989
 # initial pg values:  -8.95979e-9  -8.95981e-9  0.380323  -8.95969e-9  2.20968
-
+test2 = two_variable_search(My_DC_model, 1, 5, 0.1)
