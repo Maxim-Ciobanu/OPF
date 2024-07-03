@@ -255,7 +255,7 @@ The system knows which one to call depending on whether the `scenarios` variable
 
 Both share the same logic so whatever I explain about the first can be extrapolated to the second.
 
-The `create_model` function takes in a factory of type `AbstractMPOPFModelFactory` as the first parameter. This means that both `ACMPOPFModelFactory`, `ACMPOPFModelFactory`, or any other Factory that inherits from the Abstract one is accepted.
+The `create_model` function takes in a factory of type `AbstractMPOPFModelFactory` as the first parameter. This means that both `ACMPOPFModelFactory`, `DCMPOPFModelFactory`, or any other Factory that inherits from the Abstract one is accepted.
 The following three parameters, `time_periods`, `factors`, and `ramping_cost` are only relevant for multiperiod so they are optional. (If not provided, the system will assume one period).
 
 For AC and DC models, the steps of creating a model are the same. We first define the model variables, then we define the model objective function, and lastly we set the model constraints.
