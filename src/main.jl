@@ -23,7 +23,7 @@ optimize_model_with_plot(My_AC_model_Graphing_single_period)
 # Multi Period Graphing Example
 # --------------------------------------------------------------------------
 ac_factory = ACMPOPFModelFactory(file_path, Ipopt.Optimizer)
-My_AC_model_Graphing_multi_period = create_model(ac_factory, [1.0, 1.05, 0.98, 1.03, 0.96, 0.97, 0.99, 1.0, 1.05, 1.03, 1.01, 0.95, 1.04, 1.02, 0.99, 0.99, 0.99, 0.95, 1.04, 1.02, 0.98, 1.0, 1.02, 0.97], 2000)
+My_AC_model_Graphing_multi_period = create_model(ac_factory, 24, [1.0, 1.05, 0.98, 1.03, 0.96, 0.97, 0.99, 1.0, 1.05, 1.03, 1.01, 0.95, 1.04, 1.02, 0.99, 0.99, 0.99, 0.95, 1.04, 1.02, 0.98, 1.0, 1.02, 0.97], 2000)
 optimize_model_with_plot(My_AC_model_Graphing_multi_period)
 # --------------------------------------------------------------------------
 
