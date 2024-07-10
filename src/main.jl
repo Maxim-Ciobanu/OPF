@@ -13,7 +13,7 @@ ac_factory = ACMPOPFModelFactory(file_path, Ipopt.Optimizer)
 My_AC_model = create_model(ac_factory)
 optimize_model(My_AC_model)
 # --------------------------------------------------------------------------
-=#
+
 
 # Example for DC
 # --------------------------------------------------------------------------
@@ -22,7 +22,6 @@ My_DC_model = create_model(dc_factory)
 optimize_model(My_DC_model)
 # --------------------------------------------------------------------------
 
-#=
 # Example for AC with UncertaintyFactory
 # --------------------------------------------------------------------------
 load_scenarios_factors = load_scenarios_factors = generate_load_scenarios(3, 14)
@@ -48,9 +47,25 @@ display(JuMP.value.(modelToAnalyse.model[:mu_plus]))
 display(JuMP.value.(modelToAnalyse.model[:mu_minus]))
 =#
 
-test1 = single_variable_search(My_DC_model, 1, 5, 0.01)
-
-
 # initial optimal value: 7642.591774313989
 # initial pg values:  -8.95979e-9  -8.95981e-9  0.380323  -8.95969e-9  2.20968
-test2 = two_variable_search(My_DC_model, 1, 5, 0.1)
+
+# Example usage:
+file_path = "./Cases/case14.m"
+
+#solver_dc_factory = DCMPOPFModelFactory(file_path, Ipopt.Optimizer)
+#solver_model = create_model(solver_dc_factory, 3, [1.0, 1.0, 1.0], 22)
+#optimize_model(solver_model)
+
+dc_factory = DCMPOPFModelFactory(file_path, Ipopt.Optimizer)
+
+factors = [1.0, 1.03, 0.98]
+T = length(factors)
+ramping_cost = 22 # 22 is when it starts to get cheaper
+
+base_cost, test = single_variable_search_DC(dc_factory, file_path, T, factors, ramping_cost)
+
+#println("Base cost: ", base_cost)
+#println("Cheapest in search: ", test[1])
+
+# 22927.77532255143

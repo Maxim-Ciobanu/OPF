@@ -2,7 +2,7 @@ module MPOPF
     using PowerModels, JuMP, Ipopt, Gurobi
     
     # Exporting these functions from the module so we dont have to prefix them with MPOPF.
-    export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory
+    export create_model, create_search_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory
 
 ##############################################################################################
 # Factory Structs
@@ -97,6 +97,19 @@ module MPOPF
 
         return power_flow_model
     end
+
+    function create_search_model(factory::AbstractMPOPFModelFactory, data, time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0)::MPOPFModel
+        model = JuMP.Model(factory.optimizer)
+
+        power_flow_model = MPOPFModel(model, data, time_periods, factors, ramping_cost)
+
+        set_model_variables!(power_flow_model, factory)
+        set_model_objective_function!(power_flow_model, factory)
+        set_model_constraints!(power_flow_model, factory)
+
+        return power_flow_model
+    end
+    
 
     # The second create_model fucntion creates a PowerFlowModelUncertainty object
     # Similarly it creates the right model depending on the factory passed as the first paramenter
