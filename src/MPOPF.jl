@@ -109,6 +109,18 @@ module MPOPF
 
         return power_flow_model
     end
+
+    function create_search_model(factory::AbstractMPOPFModelFactory, data, time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0)::MPOPFModel
+        model = JuMP.Model(factory.optimizer)
+
+        power_flow_model = MPOPFModel(model, data, time_periods, factors, ramping_cost)
+
+        set_model_variables!(power_flow_model, factory)
+        set_model_objective_function!(power_flow_model, factory)
+        set_model_constraints!(power_flow_model, factory)
+
+        return power_flow_model
+    end
     
 
     # The second create_model fucntion creates a PowerFlowModelUncertainty object

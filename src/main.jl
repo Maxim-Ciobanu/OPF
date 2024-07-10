@@ -61,11 +61,11 @@ dc_factory = DCMPOPFModelFactory(file_path, Ipopt.Optimizer)
 
 factors = [1.0, 1.03, 0.98]
 T = length(factors)
-ramping_cost = 22 # 22 is when it starts to get cheaper
+ramping_cost = 3 
 
 base_cost, test = single_variable_search_DC(dc_factory, file_path, T, factors, ramping_cost)
 
-#println("Base cost: ", base_cost)
-#println("Cheapest in search: ", test[1])
+println("Base cost: ", base_cost)
+println("Cheapest in search: ", test[1])
 
 # 22927.77532255143

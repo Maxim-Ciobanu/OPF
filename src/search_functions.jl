@@ -205,11 +205,11 @@ end
 # 3. Re-sum total cost 
 # 4. Compare with solver
 
-function single_variable_search_DC(factory, file_path, T, factors, ramping_cost)
+function single_variable_search_DC(factory::MPOPF.AbstractMPOPFModelFactory, file_path, T, factors, ramping_cost)
     data = PowerModels.parse_file(file_path)
-    data_copy = deepcopy(data)
     PowerModels.standardize_cost_terms!(data, order=2)
     PowerModels.calc_thermal_limits!(data)
+    data_copy = deepcopy(data)
 
     base_values = calculate_base_cost(factory, data_copy, T, factors, ramping_cost)
     initial_cost = base_values[1]
@@ -224,14 +224,14 @@ function single_variable_search_DC(factory, file_path, T, factors, ramping_cost)
         if test[1] < best_cost
             best_cost = test[1]
             best_pg = test[2]
-            search_data = test[3]
+            search_data = deepcopy(test[3])
         end
     end
 
     return initial_cost, (best_cost, best_pg)
 end
 
-function calculate_base_cost(factory, data, T, factors, ramping_cost)
+function calculate_base_cost(factory::MPOPF.AbstractMPOPFModelFactory, data, T, factors, ramping_cost)
     cost_per_time_period = []
     pg_values_per_time_period = []
     statuses_per_time_period = []
@@ -240,7 +240,7 @@ function calculate_base_cost(factory, data, T, factors, ramping_cost)
         for (bus_id, load) in data_copy["load"]
             data_copy["load"][bus_id]["pd"] *= factors[t]
         end
-        new_model = MPOPF.create_search_model(factory, data_copy, 3)
+        new_model = MPOPF.create_search_model(factory, data_copy, 1, [1.0], 0)
         optimize!(new_model.model)
 
         status = termination_status(new_model.model)
@@ -262,7 +262,7 @@ function calculate_base_cost(factory, data, T, factors, ramping_cost)
     return base_cost, pg_values_per_time_period
 end
 
-function single_variable_neighbourhood_search(factory, data, T, factors, ramping_cost, epsilon)
+function single_variable_neighbourhood_search(factory::MPOPF.AbstractMPOPFModelFactory, data, T, factors, ramping_cost, epsilon)
     results = []
     for i in 1:T
         data_copy = deepcopy(data)
@@ -279,7 +279,7 @@ function single_variable_neighbourhood_search(factory, data, T, factors, ramping
                     data_copy["load"][bus_id]["pd"] *= (factors[t])
                 end
             end
-            new_model = MPOPF.create_search_model(factory, data_copy, 3)
+            new_model = MPOPF.create_search_model(factory, data_copy, 1, [1.0], 0)
             optimize!(new_model.model)
 
             status = termination_status(new_model.model)
