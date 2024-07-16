@@ -2,7 +2,7 @@
 # Note: This file is curently being used for testing, nothing is permanent
 #############################################################################
 
-using PowerModels, JuMP, Ipopt, Gurobi
+using PowerModels, JuMP, Ipopt#, Gurobi
 include("MPOPF.jl")
 include("misc.jl")
 include("search_functions.jl")
@@ -19,12 +19,23 @@ optimize_model(My_AC_model)
 # --------------------------------------------------------------------------
 =#
 
+#=
 # Example for DC
 # --------------------------------------------------------------------------
 dc_factory = DCMPOPFModelFactory(file_path, Ipopt.Optimizer)
 My_DC_model = create_model(dc_factory)
 optimize_model(My_DC_model)
 # --------------------------------------------------------------------------
+=#
+
+
+# Example for Linearization
+# --------------------------------------------------------------------------
+linear_factory = LinMPOPFModelFactory(file_path, Ipopt.Optimizer)
+My_Linear_model = create_model(linear_factory)
+optimize_model(My_Linear_model)
+# --------------------------------------------------------------------------
+
 
 #=
 # Example for AC with UncertaintyFactory
@@ -33,7 +44,7 @@ load_scenarios_factors = load_scenarios_factors = generate_load_scenarios(3, 14)
 # Using AC Factory from previous example
 My_AC_model_Uncertainty = create_model(ac_factory, load_scenarios_factors)
 optimize_model(My_AC_model_Uncertainty)
-# --------------------------------------------------------------------------
+# -------------------------------------------------------------------------- 
 
 
 # Example for DC with UncertaintyFactory
@@ -52,7 +63,7 @@ display(JuMP.value.(modelToAnalyse.model[:mu_plus]))
 display(JuMP.value.(modelToAnalyse.model[:mu_minus]))
 =#
 
-temp = single_variable_search(My_DC_model, 1, 5, 0.01)
+temp = single_variable_search(My_Linear_model, 1, 5, 0.01)
 
 
 # initial optimal value: 7642.591774313989

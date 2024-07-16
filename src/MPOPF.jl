@@ -1,8 +1,8 @@
 module MPOPF
-    using PowerModels, JuMP, Ipopt, Gurobi
+    using PowerModels, JuMP, Ipopt#, Gurobi
     
     # Exporting these functions from the module so we dont have to prefix them with MPOPF.
-    export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory
+    export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory, LinMPOPFModelFactory
 
 ##############################################################################################
 # Factory Structs
@@ -28,6 +28,15 @@ module MPOPF
         optimizer::Type
 
         function DCMPOPFModelFactory(file_path::String, optimizer::Type)
+            return new(file_path, optimizer)
+        end
+    end
+
+    mutable struct LinMPOPFModelFactory <: AbstractMPOPFModelFactory
+        file_path::String
+        optimizer::Type
+
+        function LinMPOPFModelFactory(file_path::String, optimizer::Type)
             return new(file_path, optimizer)
         end
     end
@@ -78,6 +87,7 @@ module MPOPF
     include("implementation-ac.jl")
     include("implementation-dc.jl")
     include("implementation_uncertainty.jl")
+    include("implementation-linear.jl")
 
     # The first create_model fucntion creates a PowerFlowModel object
     # It creates the right model depending on the factory passed as the first paramenter

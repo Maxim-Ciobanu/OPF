@@ -1,6 +1,6 @@
+using PowerModels, JuMP, Ipopt#, Gurobi
 
-using PowerModels, JuMP, Ipopt, Gurobi
-function set_model_variables!(power_flow_model::AbstractMPOPFModel, factory::ACMPOPFModelFactory)
+function set_model_variables!(power_flow_model::AbstractMPOPFModel, factory::LinMPOPFModelFactory)
     model = power_flow_model.model
     T = power_flow_model.time_periods
     ref = PowerModels.build_ref(power_flow_model.data)[:it][:pm][:nw][0]
@@ -18,7 +18,7 @@ function set_model_variables!(power_flow_model::AbstractMPOPFModel, factory::ACM
     @variable(model, ramp_down[t in 2:T, g in keys(gen_data)] >= 0)
 end
 
-function set_model_objective_function!(power_flow_model::AbstractMPOPFModel, factory::ACMPOPFModelFactory)
+function set_model_objective_function!(power_flow_model::AbstractMPOPFModel, factory::LinMPOPFModelFactory)
     model = power_flow_model.model
     data = power_flow_model.data
     T = power_flow_model.time_periods
@@ -35,7 +35,7 @@ function set_model_objective_function!(power_flow_model::AbstractMPOPFModel, fac
     )
 end
 
-function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::ACMPOPFModelFactory)
+function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::LinMPOPFModelFactory)
     model = power_flow_model.model
     data = power_flow_model.data
     T = power_flow_model.time_periods
@@ -100,11 +100,11 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::A
             g_to = branch["g_to"]
             b_to = branch["b_to"]
 
-            @constraint(model, p_fr ==  (g+g_fr)/ttm*vm_fr^2 + (-g*tr+b*ti)/ttm*(vm_fr*vm_to*cos(va_fr-va_to)) + (-b*tr-g*ti)/ttm*(vm_fr*vm_to*sin(va_fr-va_to)) )
-            @constraint(model, q_fr == -(b+b_fr)/ttm*vm_fr^2 - (-b*tr-g*ti)/ttm*(vm_fr*vm_to*cos(va_fr-va_to)) + (-g*tr+b*ti)/ttm*(vm_fr*vm_to*sin(va_fr-va_to)) )
+            @constraint(model, p_fr == (g+g_fr)/ttm*(vm_fr^2-vm_to^2)/2 + (-b*tr-g*ti)/ttm*(va_fr-va_to) + (g+g_fr)/ttm*((va_fr-va_to)^2/2+(vm_fr-vm_to)^2/2))
+            @constraint(model, q_fr == (-(b+b_fr)/ttm*(vm_fr^2-vm_to^2)/2 + (-g*tr+b*ti)/ttm*(va_fr-va_to) + (-(b+b_fr)/ttm*((va_fr-va_to)^2/2+(vm_fr-vm_to)^2/2))))
 
-            @constraint(model, p_to ==  (g+g_to)*vm_to^2 + (-g*tr-b*ti)/ttm*(vm_to*vm_fr*cos(va_to-va_fr)) + (-b*tr+g*ti)/ttm*(vm_to*vm_fr*sin(va_to-va_fr)) )
-            @constraint(model, q_to == -(b+b_to)*vm_to^2 - (-b*tr+g*ti)/ttm*(vm_to*vm_fr*cos(va_to-va_fr)) + (-g*tr-b*ti)/ttm*(vm_to*vm_fr*sin(va_to-va_fr)) )
+            @constraint(model, p_to == (g+g_to)/ttm*(vm_to^2-vm_fr^2)/2 + (-b*tr-g*ti)/ttm*(va_to-va_fr) + (g+g_to)/ttm*((va_to-va_fr)^2/2+(vm_to-vm_fr)^2/2))
+            @constraint(model, q_to == (-(b+b_to)/ttm*(vm_to^2-vm_fr^2)/2 + (-g*tr+b*ti)/ttm*(va_to-va_fr) + (-(b+b_to)/ttm*((va_to-va_fr)^2/2+(vm_to-vm_fr)^2/2))))
 
             @constraint(model, va_fr - va_to <= branch["angmax"])
             @constraint(model, va_fr - va_to >= branch["angmin"])
