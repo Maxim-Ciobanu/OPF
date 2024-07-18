@@ -1,4 +1,4 @@
-using PowerModels, JuMP, Ipopt, Gurobi
+using Revise, PowerModels, JuMP, Ipopt, Gurobi
 include("MPOPF.jl")
 include("misc.jl")
 include("search_functions.jl")
@@ -53,19 +53,27 @@ display(JuMP.value.(modelToAnalyse.model[:mu_minus]))
 # Example usage:
 file_path = "./Cases/case14.m"
 
-#solver_dc_factory = DCMPOPFModelFactory(file_path, Ipopt.Optimizer)
-#solver_model = create_model(solver_dc_factory, 3, [1.0, 1.0, 1.0], 22)
-#optimize_model(solver_model)
+ramping_data = Dict(
+    "ramp_up_limits" => [166, 70, 50, 50, 50],
+    "ramp_down_limits" => [166, 70, 50, 50, 50],
+    "costs" => [7, 7, 7, 7, 7]
+)
 
+demands = [2.59, 2.667, 2.56032]
+#=
 dc_factory = DCMPOPFModelFactory(file_path, Ipopt.Optimizer)
+My_DC_model = create_model(dc_factory)
+optimize_model(My_DC_model)
+=#
 
-factors = [1.0, 1.03, 0.98]
-T = length(factors)
-ramping_cost = 3 
 
-base_cost, test = single_variable_search_DC(dc_factory, file_path, T, factors, ramping_cost)
+# Total load for initial T = 1 is 2.59 (adjusted order=2)
 
-println("Base cost: ", base_cost)
-println("Cheapest in search: ", test[1])
+search_factory = DCMPOPFSearchFactory(file_path, Ipopt.Optimizer)
+search_model = create_search_model(search_factory, 3, ramping_data, demands)
+optimize_model(search_model)
+# Cost is not correct, actual cost should be 22834.693...
 
-# 22927.77532255143
+test_factory = DCMPOPFModelFactory(file_path, Ipopt.Optimizer)
+test_model = create_model(test_factory, 3, [1.0, 1.03, 0.96], 7)
+optimize_model(test_model)
