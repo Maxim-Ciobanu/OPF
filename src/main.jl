@@ -60,6 +60,9 @@ ramping_data = Dict(
 )
 
 demands = [2.59, 2.667, 2.56032]
+# Total demand for initial case adjusted order=2 is 2.59
+
+
 #=
 dc_factory = DCMPOPFModelFactory(file_path, Ipopt.Optimizer)
 My_DC_model = create_model(dc_factory)
@@ -67,13 +70,12 @@ optimize_model(My_DC_model)
 =#
 
 
-# Total load for initial T = 1 is 2.59 (adjusted order=2)
 
 search_factory = DCMPOPFSearchFactory(file_path, Ipopt.Optimizer)
 search_model = create_search_model(search_factory, 3, ramping_data, demands)
 optimize_model(search_model)
-# Cost is not correct, actual cost should be 22834.693...
+# Cost is not correct, actual cost should be 22834.693
 
-test_factory = DCMPOPFModelFactory(file_path, Ipopt.Optimizer)
-test_model = create_model(test_factory, 3, [1.0, 1.03, 0.96], 7)
-optimize_model(test_model)
+#test_factory = DCMPOPFModelFactory(file_path, Ipopt.Optimizer)
+#test_model = create_model(test_factory, 3, [1.0, 1.03, 0.96], 7)
+#optimize_model(test_model)
