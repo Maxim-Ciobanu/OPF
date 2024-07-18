@@ -128,6 +128,44 @@ module MPOPF
         optimize!(model.model)
         optimal_cost = objective_value(model.model)
         println("Optimal Cost: ", optimal_cost)
+        println()
+
+        if isa(model, MPOPFModelUncertainty)
+            data = model.data
+            T = model.time_periods
+            S = length(model.scenarios)
+            ref = PowerModels.build_ref(data)[:it][:pm][:nw][0]
+            error_check = 0
+
+            for t in 1:T    
+                for s in 1:S
+                    for b in keys(ref[:bus])
+                        sum_of_mu_plus = 0
+                        mu_minus = 0
+                        sum_of_mu_plus = sum(value(model.model[:mu_plus][t, g, s]) for g in ref[:bus_gens][b]; init = 0)
+                        mu_minus = value(model.model[:mu_minus][t, b, s])
+                        if sum_of_mu_plus >= 0.01 && mu_minus >= 0.01
+                            error_check = error_check + 1
+                            println("###############")
+                            println("#### Error ####")
+                            Println("###############")
+
+                            println("Scenario: $s Bus: $b")
+                            println("mu_plus: $sum_of_mu_plus")
+                            println("mu_minus: $mu_minus")
+                            println()
+                        end
+                    end
+                end
+            end
+            if error_check == 0
+                println("No mu_plus and mu_minus errors found")
+                println()
+            else
+                println("Found $error_check error(s)")
+                println()
+            end
+        end
     end
 
     # Optimized and graphs the given model using a callback function
@@ -155,15 +193,17 @@ module MPOPF
             println("Optimal Cost: ", optimal_cost)
             
             # Plotting Code
-            trace = scatter(x=iterations, y=objective_values,
-            mode="lines+markers",
-            name="Objective Cost",
-            marker_color="blue",
-            hoverinfo="x+y", # Ensure hover displays both x and y values
-            hovertemplate="%{x}, %{y:.2f}<extra></extra>") # Custom hover text format
+            trace = scatter(
+                x=iterations, y=objective_values,
+                mode="lines+markers",
+                name="Objective Cost",
+                marker_color="blue",
+                hoverinfo="x+y", # Ensure hover displays both x and y values
+                hovertemplate="%{x}, %{y:.2f}<extra></extra>" # Custom hover text format
+            )
 
             layout = Layout(
-                title="Plotting Objective Cost agaist Solver Iterations",
+                title="Plotting Objective Cost against Solver Iterations",
                 xaxis=attr(title="Iterations", tickangle=-45, tickmode="linear", tick0=0, dtick=1),
                 yaxis=attr(title="Objective Cost", hoverformat=".2f"),
                 showlegend=true
