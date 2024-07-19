@@ -68,9 +68,9 @@ module MPOPF
         data::Dict
         time_periods::Int64
         ramping_data::Dict
-        demands::Vector{Float64}
+        demands::Vector{Vector{Float64}}
 
-        function MPOPFSearchModel(model::JuMP.Model, data::Dict, time_periods::Int64, ramping_data::Dict, demands::Vector{Float64})
+        function MPOPFSearchModel(model::JuMP.Model, data::Dict, time_periods::Int64, ramping_data::Dict, demands::Vector{Vector{Float64}})
             return new(model, data, time_periods, ramping_data, demands)
         end
     end
@@ -121,7 +121,7 @@ module MPOPF
         return power_flow_model
     end
 
-    function create_search_model(factory::AbstractMPOPFModelFactory, time_periods::Int64, ramping_data::Dict, demands::Vector{Float64})::MPOPFSearchModel
+    function create_search_model(factory::AbstractMPOPFModelFactory, time_periods::Int64, ramping_data::Dict, demands::Vector{Vector{Float64}})::MPOPFSearchModel
         data = PowerModels.parse_file(factory.file_path)
         PowerModels.standardize_cost_terms!(data, order=2)
         PowerModels.calc_thermal_limits!(data)

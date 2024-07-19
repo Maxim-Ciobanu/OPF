@@ -59,7 +59,11 @@ ramping_data = Dict(
     "costs" => [7, 7, 7, 7, 7]
 )
 
-demands = [2.59, 2.667, 2.56032]
+demands = [
+    [0.0, 0.217, 0.942, 0.478, 0.076, 0.112, 0.0, 0.0, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+    [0.0, 0.217, 0.942, 0.478, 0.076, 0.112, 0.0, 0.0, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+    [0.0, 0.217, 0.942, 0.478, 0.076, 0.112, 0.0, 0.0, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149]
+]
 # Total demand for initial case adjusted order=2 is 2.59
 
 
@@ -76,6 +80,22 @@ search_model = create_search_model(search_factory, 3, ramping_data, demands)
 optimize_model(search_model)
 # Cost is not correct, actual cost should be 22834.693
 
-#test_factory = DCMPOPFModelFactory(file_path, Ipopt.Optimizer)
-#test_model = create_model(test_factory, 3, [1.0, 1.03, 0.96], 7)
-#optimize_model(test_model)
+test_factory = DCMPOPFModelFactory(file_path, Ipopt.Optimizer)
+test_model = create_model(test_factory, 3, [1.0, 1.0, 1.0], 0)
+optimize_model(test_model)
+#=
+data = PowerModels.parse_file(file_path)
+PowerModels.standardize_cost_terms!(data, order=2)
+PowerModels.calc_thermal_limits!(data)
+ref = PowerModels.build_ref(data)[:it][:pm][:nw][0]
+
+load_data = ref[:load]
+
+
+for (i, bus) in ref[:bus]
+    global bus_loads = [load_data[l] for l in ref[:bus_loads][i]]
+    println(bus_loads)
+end
+
+sum(load["pd"] for load in bus_loads)
+    =#

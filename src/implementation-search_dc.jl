@@ -23,6 +23,7 @@ function set_model_objective_function!(power_flow_model::AbstractMPOPFModel, fac
     pg = model[:pg]
     ramp_up = model[:ramp_up]
     ramp_down = model[:ramp_down]
+    ramping_cost = 7
     
     @objective(model, Min,
     sum(sum(ref[:gen][g]["cost"][1]*pg[t,g]^2 + ref[:gen][g]["cost"][2]*pg[t,g] + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T) +
@@ -41,6 +42,7 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::D
     p = model[:p]
     pg = model[:pg]
     demands = power_flow_model.demands
+    demands_size = length(demands[1])
     ramp_up = model[:ramp_up]
     ramp_down = model[:ramp_down]
 
@@ -65,7 +67,7 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::D
             @constraint(model,
                 sum(p_expr[t][a] for a in ref[:bus_arcs][i]) ==
                 sum(pg[t, g] for g in ref[:bus_gens][i]) -
-                demands[t] -
+                sum(demands[t][i]) -
                 sum(shunt["gs"] for shunt in bus_shunts)*1.0^2
             )
         end
