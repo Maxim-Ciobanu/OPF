@@ -28,12 +28,21 @@ optimize_model(My_DC_model)
 # --------------------------------------------------------------------------
 =#
 
-
+#=
 # Example for Linearization
 # --------------------------------------------------------------------------
 linear_factory = LinMPOPFModelFactory(file_path, Ipopt.Optimizer)
 My_Linear_model = create_model(linear_factory)
 optimize_model(My_Linear_model)
+# --------------------------------------------------------------------------
+=#
+
+
+# Example for AC
+# --------------------------------------------------------------------------
+FC_factory = NewACMPOPFModelFactory(file_path, Ipopt.Optimizer)
+My_FC_model = create_model(FC_factory)
+optimize_model(My_FC_model)
 # --------------------------------------------------------------------------
 
 
@@ -63,7 +72,7 @@ display(JuMP.value.(modelToAnalyse.model[:mu_plus]))
 display(JuMP.value.(modelToAnalyse.model[:mu_minus]))
 =#
 
-temp = single_variable_search(My_Linear_model, 1, 5, 0.01)
+temp = single_variable_search(My_FC_model, 1, 5, 0.01)
 
 
 # initial optimal value: 7642.591774313989
