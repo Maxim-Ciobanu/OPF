@@ -5,13 +5,14 @@ function set_model_variables!(power_flow_model::AbstractMPOPFModel, factory::DCM
     ref = PowerModels.build_ref(power_flow_model.data)[:it][:pm][:nw][0]
     bus_data = ref[:bus]
     gen_data = ref[:gen]
+    ramp_data = power_flow_model.ramping_data["ramp_limits"]
     
     @variable(model, va[t in 1:T, i in keys(bus_data)])
     @variable(model, gen_data[i]["pmin"] <= pg[t in 1:T, i in keys(gen_data)] <= gen_data[i]["pmax"])
     # @variable(model, -branch_data[l]["rate_a"] <= p[t in 1:T, (l,i,j) in ref[:arcs]] <= branch_data[l]["rate_a"])
     @variable(model, -ref[:branch][l]["rate_a"] <= p[1:T,(l,i,j) in ref[:arcs_from]] <= ref[:branch][l]["rate_a"])
-    @variable(model, ramp_up[t in 2:T, g in keys(gen_data)] >= 0)
-    @variable(model, ramp_down[t in 2:T, g in keys(gen_data)] >= 0)
+    @variable(model, 0 <= ramp_up[t in 2:T, g in keys(gen_data)] <= ramp_data[g])
+    @variable(model, 0 <= ramp_down[t in 2:T, g in keys(gen_data)] <= ramp_data[g])
 end
 
 function set_model_objective_function!(power_flow_model::AbstractMPOPFModel, factory::DCMPOPFSearchFactory)
@@ -23,7 +24,6 @@ function set_model_objective_function!(power_flow_model::AbstractMPOPFModel, fac
     pg = model[:pg]
     ramp_up = model[:ramp_up]
     ramp_down = model[:ramp_down]
-    ramping_cost = 7
     
     @objective(model, Min,
     sum(sum(ref[:gen][g]["cost"][1]*pg[t,g]^2 + ref[:gen][g]["cost"][2]*pg[t,g] + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T) +
@@ -42,7 +42,6 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::D
     p = model[:p]
     pg = model[:pg]
     demands = power_flow_model.demands
-    demands_size = length(demands[1])
     ramp_up = model[:ramp_up]
     ramp_down = model[:ramp_down]
 
@@ -86,6 +85,13 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::D
         
             @constraint(model, va_fr - va_to <= branch["angmax"])
             @constraint(model, va_fr - va_to >= branch["angmin"])
+        end
+    end
+
+    for g in keys(gen_data)
+        for t in 2:T
+            @constraint(model, ramp_up[t, g] >= pg[t, g] - pg[t-1, g])
+            @constraint(model, ramp_down[t, g] >= pg[t-1, g] - pg[t, g])
         end
     end
 
