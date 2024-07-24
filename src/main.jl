@@ -54,7 +54,7 @@ display(JuMP.value.(modelToAnalyse.model[:mu_minus]))
 file_path = "./Cases/case14.m"
 
 ramping_data = Dict(
-    "ramp_limits" => [0.02, 0.01, 50, 50, 50],
+    "ramp_limits" => [0.01, 0.01, 0.01, 0.01, 0.01],
     "costs" => [5, 1, 3, 4, 7]
 )
 
@@ -70,6 +70,7 @@ search_factory = DCMPOPFSearchFactory(file_path, Ipopt.Optimizer)
 search_model = create_search_model(search_factory, 3, ramping_data, demands)
 optimize_model(search_model)
 
+println(value.(search_model.model[:pg]))
 #=
 dc_factory = DCMPOPFModelFactory(file_path, Ipopt.Optimizer)
 My_DC_model = create_model(dc_factory)

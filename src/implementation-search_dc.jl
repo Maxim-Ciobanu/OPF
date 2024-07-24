@@ -94,11 +94,4 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::D
             @constraint(model, ramp_down[t, g] >= pg[t-1, g] - pg[t, g])
         end
     end
-
-    for g in keys(gen_data)
-        for t in 2:T
-            @constraint(model, ramp_up[t, g] >= pg[t, g] - pg[t-1, g])
-            @constraint(model, ramp_down[t, g] >= pg[t-1, g] - pg[t, g])
-        end
-    end
 end

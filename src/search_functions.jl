@@ -32,3 +32,9 @@ function calculate_cost(models, costs, ramping_data)
     end
     return sum_of_each_model + sum_of_ramping
 end
+
+function check_slack(factory, T, models, ramping_data, demands, cost)
+    slack = 0.1
+    
+
+end
