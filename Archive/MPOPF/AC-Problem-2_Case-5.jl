@@ -1,7 +1,7 @@
-using PowerModels, Ipopt, Gurobi, JuMP, JLD2
+using PowerModels, Ipopt, JuMP, JLD2
 const PM = PowerModels
 
-file_path = "./Cases/case5.m"
+file_path = "./Cases/case14.m"
 
 data = PowerModels.parse_file(file_path)
 PowerModels.standardize_cost_terms!(data, order=2)

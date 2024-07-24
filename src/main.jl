@@ -10,14 +10,22 @@ using .MPOPF
 
 file_path = "./Cases/case14.m"
 
-#=
-# Example for AC
+
+# Example for AC with feasibility check
 # --------------------------------------------------------------------------
 ac_factory = ACMPOPFModelFactory(file_path, Ipopt.Optimizer)
 My_AC_model = create_model(ac_factory)
 optimize_model(My_AC_model)
+#store pg value
+new_pg = value.(My_AC_model.model[:pg])
+#new factory
+new_factory = NewACMPOPFModelFactory(file_path, Ipopt.Optimizer)
+#new create model and pass through pg -> vectory of floats
+New_Model = create_model_check_feasibility(new_pg, new_factory)
+#optimize
+optimize_model(New_Model)
 # --------------------------------------------------------------------------
-=#
+
 
 #=
 # Example for DC
@@ -36,15 +44,6 @@ My_Linear_model = create_model(linear_factory)
 optimize_model(My_Linear_model)
 # --------------------------------------------------------------------------
 =#
-
-
-# Example for AC
-# --------------------------------------------------------------------------
-FC_factory = NewACMPOPFModelFactory(file_path, Ipopt.Optimizer)
-My_FC_model = create_model(FC_factory)
-optimize_model(My_FC_model)
-# --------------------------------------------------------------------------
-
 
 #=
 # Example for AC with UncertaintyFactory
@@ -71,9 +70,6 @@ display(JuMP.value.(modelToAnalyse.model[:pg]))
 display(JuMP.value.(modelToAnalyse.model[:mu_plus]))
 display(JuMP.value.(modelToAnalyse.model[:mu_minus]))
 =#
-
-temp = single_variable_search(My_FC_model, 1, 5, 0.01)
-
 
 # initial optimal value: 7642.591774313989
 # initial pg values:  -8.95979e-9  -8.95981e-9  0.380323  -8.95969e-9  2.20968

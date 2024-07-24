@@ -2,7 +2,7 @@ module MPOPF
     using PowerModels, JuMP, Ipopt#, Gurobi
     
     # Exporting these functions from the module so we dont have to prefix them with MPOPF.
-    export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory, LinMPOPFModelFactory, NewACMPOPFModelFactory
+    export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory, LinMPOPFModelFactory, NewACMPOPFModelFactory, create_model_check_feasibility
 
 ##############################################################################################
 # Factory Structs
@@ -134,6 +134,26 @@ module MPOPF
         set_model_uncertainty_variables!(power_flow_model)
         set_model_uncertainty_objective_function!(power_flow_model, factory)
         set_model_uncertainty_constraints!(power_flow_model, factory)
+
+        return power_flow_model
+    end
+
+    # A new create model to create a secondary model that asseses how feasible the first solution was
+    # It uses the pg values from a previous model and fixes it, then asses if it works referencing AC OPF
+    function create_model_check_feasibility(new_pg, factory::NewACMPOPFModelFactory, time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0)::MPOPFModel
+        data = PowerModels.parse_file(factory.file_path)
+        PowerModels.standardize_cost_terms!(data, order=2)
+        PowerModels.calc_thermal_limits!(data)
+
+        model = JuMP.Model(factory.optimizer)
+
+        power_flow_model = MPOPFModel(model, data, time_periods, factors, ramping_cost)
+
+        set_model_variables!(power_flow_model, factory)
+        # sets pg from previous model
+        fix.(power_flow_model.model[:pg], new_pg; force=true)
+        set_model_objective_function!(power_flow_model, factory)
+        set_model_constraints!(power_flow_model, factory)
 
         return power_flow_model
     end
