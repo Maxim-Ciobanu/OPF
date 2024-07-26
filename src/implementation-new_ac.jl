@@ -23,13 +23,8 @@ function set_model_objective_function!(power_flow_model::AbstractMPOPFModel, fac
     model = power_flow_model.model
     data = power_flow_model.data
     T = power_flow_model.time_periods
-    #ramping_cost = power_flow_model.ramping_cost
     ref = PowerModels.build_ref(data)[:it][:pm][:nw][0]
     bus_data = ref[:bus]
-    #gen_data = ref[:gen]
-    #pg = model[:pg]
-    #ramp_up = model[:ramp_up]
-    #ramp_down = model[:ramp_down]
     
     @objective(model, Min,
         sum(sum((x[i]^2 + y[i]^2) for i in keys(bus_data)) for t in 1:T))
