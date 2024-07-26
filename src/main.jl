@@ -10,23 +10,24 @@ using .MPOPF
 
 file_path = "./Cases/case14.m"
 
-
+#=
 # Example for AC with feasibility check
 # --------------------------------------------------------------------------
 ac_factory = ACMPOPFModelFactory(file_path, Ipopt.Optimizer)
 My_AC_model = create_model(ac_factory)
 optimize_model(My_AC_model)
-#store pg value
+#store pg and qg value
 new_pg = value.(My_AC_model.model[:pg])
+new_qg = value.(My_AC_model.model[:qg])
 #new factory
 new_factory = NewACMPOPFModelFactory(file_path, Ipopt.Optimizer)
 #new create model and pass through pg -> vectory of floats
-New_Model = create_model_check_feasibility(new_pg, new_factory)
+New_Model = create_model_check_feasibility(new_pg, new_qg, new_factory)
 #optimize
 optimize_model(New_Model)
 println(value.(New_Model.model[:x]))
 # --------------------------------------------------------------------------
-
+=#
 
 #=
 # Example for DC
@@ -34,6 +35,16 @@ println(value.(New_Model.model[:x]))
 dc_factory = DCMPOPFModelFactory(file_path, Ipopt.Optimizer)
 My_DC_model = create_model(dc_factory)
 optimize_model(My_DC_model)
+#store pg and qg value
+new_pg = value.(My_DC_model.model[:pg])
+new_qg = 0
+#new factory
+new_factory = NewACMPOPFModelFactory(file_path, Ipopt.Optimizer)
+#new create model and pass through pg -> vectory of floats
+New_Model = create_model_check_feasibility(new_pg, new_qg, new_factory)
+#optimize
+optimize_model(New_Model)
+println(value.(New_Model.model[:x]))
 # --------------------------------------------------------------------------
 =#
 
@@ -43,6 +54,16 @@ optimize_model(My_DC_model)
 linear_factory = LinMPOPFModelFactory(file_path, Ipopt.Optimizer)
 My_Linear_model = create_model(linear_factory)
 optimize_model(My_Linear_model)
+#store pg and qg value
+new_pg = value.(My_Linear_model.model[:pg])
+new_qg = value.(My_Linear_model.model[:qg])
+#new factory
+new_factory = NewACMPOPFModelFactory(file_path, Ipopt.Optimizer)
+#new create model and pass through pg -> vectory of floats
+New_Model = create_model_check_feasibility(new_pg, new_qg, new_factory)
+#optimize
+optimize_model(New_Model)
+println(value.(New_Model.model[:x]))
 # --------------------------------------------------------------------------
 =#
 

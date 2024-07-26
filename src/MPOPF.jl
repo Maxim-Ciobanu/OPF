@@ -140,7 +140,7 @@ module MPOPF
 
     # A new create model to create a secondary model that asseses how feasible the first solution was
     # It uses the pg values from a previous model and fixes it, then asses if it works referencing AC OPF
-    function create_model_check_feasibility(new_pg, factory::NewACMPOPFModelFactory, time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0)::MPOPFModel
+    function create_model_check_feasibility(new_pg, new_qg, factory::NewACMPOPFModelFactory, time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0)::MPOPFModel
         data = PowerModels.parse_file(factory.file_path)
         PowerModels.standardize_cost_terms!(data, order=2)
         PowerModels.calc_thermal_limits!(data)
@@ -152,6 +152,7 @@ module MPOPF
         set_model_variables!(power_flow_model, factory)
         # sets pg from previous model
         fix.(power_flow_model.model[:pg], new_pg; force=true)
+        fix.(power_flow_model.model[:qg], new_qg; force=true)
         set_model_objective_function!(power_flow_model, factory)
         set_model_constraints!(power_flow_model, factory)
 

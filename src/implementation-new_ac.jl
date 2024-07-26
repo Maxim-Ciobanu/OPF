@@ -28,8 +28,7 @@ function set_model_objective_function!(power_flow_model::AbstractMPOPFModel, fac
     optimize!(power_flow_model.model)
     x = power_flow_model.model[:x]
     y = power_flow_model.model[:y]
-    println(x[1,1])
-    println("Here is x.")
+
     @objective(model, Min,
         sum(sum(((x[t,i])^2 + (y[t,i])^2) for i in keys(bus_data)) for t in 1:T))
 end
