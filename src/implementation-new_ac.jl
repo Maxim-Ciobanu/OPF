@@ -25,9 +25,13 @@ function set_model_objective_function!(power_flow_model::AbstractMPOPFModel, fac
     T = power_flow_model.time_periods
     ref = PowerModels.build_ref(data)[:it][:pm][:nw][0]
     bus_data = ref[:bus]
-    
+    optimize!(power_flow_model.model)
+    x = power_flow_model.model[:x]
+    y = power_flow_model.model[:y]
+    println(x[1,1])
+    println("Here is x.")
     @objective(model, Min,
-        sum(sum((x[i]^2 + y[i]^2) for i in keys(bus_data)) for t in 1:T))
+        sum(sum(((x[t,i])^2 + (y[t,i])^2) for i in keys(bus_data)) for t in 1:T))
 end
 
 function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::NewACMPOPFModelFactory)
@@ -46,6 +50,8 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::N
     factors = power_flow_model.factors
     ramp_up = model[:ramp_up]
     ramp_down = model[:ramp_down]
+    x = model[:x]
+    y = model[:y]
 
     for t in 1:T
         for (i, bus) in ref[:ref_buses]
@@ -60,14 +66,14 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::N
                 sum(p[t,a] for a in ref[:bus_arcs][i]) ==
                 sum(pg[t, g] for g in ref[:bus_gens][i]) -
                 sum(load["pd"] * factors[t] for load in bus_loads) -
-                sum(shunt["gs"] for shunt in bus_shunts)*vm[t,i]^2 + x[i]
+                sum(shunt["gs"] for shunt in bus_shunts)*vm[t,i]^2 + x[t,i]
             )
 
             @constraint(model,
                 sum(q[t,a] for a in ref[:bus_arcs][i]) ==
                 sum(qg[t, g] for g in ref[:bus_gens][i]) -
                 sum(load["qd"] * factors[t] for load in bus_loads) +
-                sum(shunt["bs"] for shunt in bus_shunts)*vm[t,i]^2 + y[i]
+                sum(shunt["bs"] for shunt in bus_shunts)*vm[t,i]^2 + y[t,i]
             )
         end
 

@@ -24,6 +24,7 @@ new_factory = NewACMPOPFModelFactory(file_path, Ipopt.Optimizer)
 New_Model = create_model_check_feasibility(new_pg, new_factory)
 #optimize
 optimize_model(New_Model)
+println(value.(New_Model.model[:x]))
 # --------------------------------------------------------------------------
 
 
