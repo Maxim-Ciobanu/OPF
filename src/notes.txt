@@ -50,3 +50,113 @@ ramping_data = Dict(
 = 7.7440999999999995
 
 22834.01465073691
+
+###########
+NEXT STEPS
+###########
+
+1. Allow for extra power generation (very strict ramping scenarios should still be feasible)
+
+2. Satisfy ramping limits between single time period models
+
+3. 
+
+
+
+function build_search_model(factory, T, ramping_data, demands)
+    models = []
+    costs = []
+
+    for i in 1:T
+        demand_vec = Vector{Vector{Float64}}(undef, 1)
+        demand_vec[1] = demands[i]
+        model = create_search_model(factory, 1, ramping_data, demand_vec)
+        optimize_model(model)
+        cost = objective_value(model.model)
+        push!(models, model)
+        push!(costs, cost)
+    end
+
+    base_cost = calculate_cost(models, costs, ramping_data)
+
+    return build_top_down(factory, T, ramping_data, demands)
+end
+
+function calculate_cost(models, costs, ramping_data)
+    sum_of_each_model = sum(costs)
+    T = length(models)
+    num_of_gens = length(models[1].data["gen"])
+    sum_of_ramping = 0
+
+    for i in 1:T-1
+        ramping_cost = 0
+        for j in 1:num_of_gens
+            ramping_cost += abs(value(models[i].model[:pg][1,j]) - value(models[i+1].model[:pg][1,j])) * ramping_data["costs"][j]
+        end
+        sum_of_ramping += ramping_cost
+    end
+    return sum_of_each_model + sum_of_ramping
+end
+
+function check_slack(factory, T, models, ramping_data, demands, costs)
+    slack = 0.1
+    output_per_period = []
+    T = length(models)
+    num_of_gens = length(models[1].data["gen"])
+
+
+    for t in 1:T
+        temp = 0
+        for g in 1:num_of_gens
+            temp += value(models[t].model[:pg][1, g])
+        end
+        push!(output_per_period, temp)
+    end
+
+
+
+    return 
+end
+
+function build_top_down(factory, T, ramping_data, demands)
+    demands_per_period = []
+
+    for t in 1:T
+        dem = 0
+        dem = sum(demands[t])
+        push!(demands_per_period, dem)
+    end
+
+    largest = argmax(demands_per_period)
+
+
+    return largest
+end
+
+
+#######
+This looks really good but there is still room for improvement
+ramping_data = Dict(
+ "ramp_limits" => [0.5, 0.01, 0.5, 0.5, 0.5],
+"costs" => [5000, 5000, 0, 5000, 5000]
+)
+demands = [
+ [0.0, 0.217, 0.942, 0.478, 0.076, 0.112, 0.0, 0.0, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+ [0.0, 0.217, 0.942, 0.478, 0.076, 0.112, 0.0, 0.0, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+ [0.0, 0.217, 0.942, 0.478, 0.076, 0.112, 0.0, 0.0, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149]
+]
+demands[2] .*= 1.03
+demands[3] .*= 0.96
+
+Given this data, another model finds more economical values in the solution
+ -9.27385e-9  -9.27386e-9  0.36511   0.1036      2.12129
+ -9.27775e-9  -9.27776e-9  0.36511   0.1813      2.12129
+ -9.28592e-9  -9.28592e-9  0.36511  -9.78387e-9  2.12129
+Given the expensive ramping all generators aside from 3, it fixes 1 and 2 and does any ramping with 3
+
+Our output is :
+Dict(5 => -8.960088712786587e-9, 4 => -8.960106310320218e-9, 2 => 0.3803230378348171, 3 => -8.960028957052248e-9, 1 => 2.2096768494049517)
+ Dict(5 => -7.501397290389943e-9, 4 => -7.501397286336524e-9, 2 => 0.39032302892690385, 3 => -7.501397301805247e-9, 1 => 2.277376853931702)
+ Dict(5 => -9.459001903097273e-9, 4 => -9.459004480023967e-9, 2 => 0.3798715024725259, 3 => -9.458997113088475e-9, 1 => 2.106528386272364)
+
+We can see we are still ramping the expensive generators, as well as violating the ramp up/ramp down limit imposed on generator 2. Lets refine our code to strictly comply with ramping limits and get closer to an optimal solution
