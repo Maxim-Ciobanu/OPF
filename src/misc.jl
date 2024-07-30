@@ -19,3 +19,36 @@ function generate_load_scenarios(num_scenarios::Int, num_buses::Int)
     end
     return load_scenarios_factors
 end
+
+function output_to_file(output::String, file_name::String="")
+	# check if the output directory exists
+	if !isdir("output")
+		mkdir("output")
+	end
+
+	# list all of the files in this directory
+	files = readdir("output")
+
+	# append to file
+	if (file_name !== "")
+		
+		# check if it already exists
+		if file_name in files
+			println("File already exists")
+		else
+			open("output/$(file_name)", "w") do io
+				write(io, output)
+			end
+		end
+	
+	# create a new output file
+	else
+
+		# get the number of files in the directory
+		num = length(files) + 1
+
+		open("output/output_$(num).txt", "w") do io
+			write(io, output)
+		end
+	end
+end
