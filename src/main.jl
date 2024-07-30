@@ -50,6 +50,7 @@ optimize_model(New_Model_DC)
 
 
 
+#
 # Example for Linearization
 # --------------------------------------------------------------------------
 linear_factory = LinMPOPFModelFactory(file_path, Ipopt.Optimizer)
@@ -60,6 +61,9 @@ new_pg_Lin = value.(My_Linear_model.model[:pg])
 new_qg_Lin = value.(My_Linear_model.model[:qg])
 
 #new factory
+new_factory = NewACMPOPFModelFactory(file_path, Ipopt.Optimizer)
+#new create model and pass through pg -> vectory of floats
+New_Model = create_model_check_feasibility(new_factory, new_pg, new_qg)
 new_factory_Lin = NewACMPOPFModelFactory(file_path, Ipopt.Optimizer)
 #new create model and pass through pg
 New_Model_Lin = create_model_check_feasibility(new_pg_Lin, new_qg_Lin, new_factory_Lin)
@@ -67,6 +71,41 @@ New_Model_Lin = create_model_check_feasibility(new_pg_Lin, new_qg_Lin, new_facto
 optimize_model(New_Model_Lin)
 
 # --------------------------------------------------------------------------
+#
+
+#=
+# Example for AC with UncertaintyFactory
+# --------------------------------------------------------------------------
+ac_factory = ACMPOPFModelFactory(file_path, Ipopt.Optimizer)
+load_scenarios_factors = load_scenarios_factors = generate_load_scenarios(3, 14)
+# Using AC Factory from previous example
+My_AC_model_Uncertainty = create_model(ac_factory, load_scenarios_factors)
+optimize_model(My_AC_model_Uncertainty)
+# -------------------------------------------------------------------------- 
+=#
+
+#=
+# Example for DC with UncertaintyFactory
+# --------------------------------------------------------------------------
+load_scenarios_factors2 = load_scenarios_factors = generate_load_scenarios(3, 14)
+# Using DC Factory but with Gurobi
+dc_factory_Gurobi = DCMPOPFModelFactory(file_path, Ipopt.Optimizer)
+My_DC_model_Uncertainty = create_model(dc_factory_Gurobi, load_scenarios_factors2)
+optimize_model(My_DC_model_Uncertainty)
+# --------------------------------------------------------------------------
+=#
+
+#=
+modelToAnalyse = My_DC_model_Uncertainty
+display(JuMP.value.(modelToAnalyse.model[:pg]))
+display(JuMP.value.(modelToAnalyse.model[:mu_plus]))
+display(JuMP.value.(modelToAnalyse.model[:mu_minus]))
+=#
+
+# initial optimal value: 7642.591774313989
+# initial pg values:  -8.95979e-9  -8.95981e-9  0.380323  -8.95969e-9  2.20968
+
+
 
 ### Check cost of each set_model_objective_function
 
