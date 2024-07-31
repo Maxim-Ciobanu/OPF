@@ -1,3 +1,5 @@
+using PlotlyJS
+
 # Function for generating scenario load factors
 # function generate_load_scenarios(num_scenarios::Int, num_buses::Int)
 #     load_scenarios_factors = Dict()
@@ -45,3 +47,26 @@ function generate_load_scenarios(num_scenarios::Int, num_buses::Int)
     end
     return load_scenarios_factors
 end
+
+function plot_graph(x, y, x_label, y_label)
+	# Plotting Code
+	trace = scatter(x=x, y=y,
+		mode="lines+markers",
+		name="Objective Cost",
+		marker_color="blue",
+		hoverinfo="x+y", # Ensure hover displays both x and y values
+		hovertemplate="%{x}, %{y:.2f}<extra></extra>") # Custom hover text format
+
+	layout = Layout(
+		title="Plotting Objective Cost agaist Solver Iterations",
+		xaxis=attr(title=x_label, tickangle=-45, tickmode="linear", tick0=0, dtick=1),
+		yaxis=attr(title=y_label, hoverformat=".2f"),
+		showlegend=true)
+
+	My_plot = plot([trace], layout)
+
+	display(My_plot)
+end
+
+plot_graph([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], "X label", "Y label")
+
