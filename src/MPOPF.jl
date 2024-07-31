@@ -176,3 +176,6 @@ module MPOPF
     end
 
 end # module
+
+
+methods(MPOPF.create_model_check_feasibility)
