@@ -1,8 +1,8 @@
 module MPOPF
-    using PowerModels, JuMP, Ipopt, Gurobi, PlotlyJS
+    using PowerModels, JuMP, Ipopt, PlotlyJS#, Gurobi
     
     # Exporting these functions from the module so we dont have to prefix them with MPOPF.
-    export create_model, optimize_model, optimize_model_with_plot, ACMPOPFModelFactory, DCMPOPFModelFactory
+    export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory, optimize_model_with_plot, LinMPOPFModelFactory, NewACMPOPFModelFactory, create_model_check_feasibility
 
 ##############################################################################################
 # Factory Structs
@@ -28,6 +28,24 @@ module MPOPF
         optimizer::Type
 
         function DCMPOPFModelFactory(file_path::String, optimizer::Type)
+            return new(file_path, optimizer)
+        end
+    end
+
+    mutable struct LinMPOPFModelFactory <: AbstractMPOPFModelFactory
+        file_path::String
+        optimizer::Type
+
+        function LinMPOPFModelFactory(file_path::String, optimizer::Type)
+            return new(file_path, optimizer)
+        end
+    end
+
+    mutable struct NewACMPOPFModelFactory <: AbstractMPOPFModelFactory
+        file_path::String
+        optimizer::Type
+
+        function NewACMPOPFModelFactory(file_path::String, optimizer::Type)
             return new(file_path, optimizer)
         end
     end
@@ -78,6 +96,8 @@ module MPOPF
     include("implementation-ac.jl")
     include("implementation-dc.jl")
     include("implementation_uncertainty.jl")
+    include("implementation-linear.jl")
+    include("implementation-new_ac.jl")
 
     # The first create_model fucntion creates a PowerFlowModel object
     # It creates the right model depending on the factory passed as the first paramenter
@@ -114,6 +134,31 @@ module MPOPF
         set_model_uncertainty_variables!(power_flow_model)
         set_model_uncertainty_objective_function!(power_flow_model, factory)
         set_model_uncertainty_constraints!(power_flow_model, factory)
+
+        return power_flow_model
+    end
+
+    # A new create model to create a secondary model that asseses how feasible the first solution was
+    # It uses the pg values from a previous model and fixes it, then asses if it works referencing AC OPF
+    function create_model_check_feasibility(factory::NewACMPOPFModelFactory, new_pg=false, new_qg=false, v=false, theta=false, time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0)::MPOPFModel
+        data = PowerModels.parse_file(factory.file_path)
+        PowerModels.standardize_cost_terms!(data, order=2)
+        PowerModels.calc_thermal_limits!(data)
+
+        model = JuMP.Model(factory.optimizer)
+
+        power_flow_model = MPOPFModel(model, data, time_periods, factors, ramping_cost)
+
+        set_model_variables!(power_flow_model, factory)
+
+        # fix values that have been declared
+        if (new_pg !== false) fix.(power_flow_model.model[:pg], new_pg; force=true) end
+        if (new_qg !== false) fix.(power_flow_model.model[:qg], new_qg; force=true) end
+		if (v !== false) fix.(power_flow_model.model[:v], v; force=true) end
+		if (theta !== false) fix.(power_flow_model.model[:theta], theta; force=true) end
+
+        set_model_objective_function!(power_flow_model, factory)
+        set_model_constraints!(power_flow_model, factory)
 
         return power_flow_model
     end
@@ -304,5 +349,7 @@ module MPOPF
             display(My_plot)
         end
     end
-
 end # module
+
+
+methods(MPOPF.create_model_check_feasibility)

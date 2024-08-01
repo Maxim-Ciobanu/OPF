@@ -48,8 +48,46 @@ function generate_load_scenarios(num_scenarios::Int, num_buses::Int)
     return load_scenarios_factors
 end
 
+function output_to_file(output::String, file_name::String="")
+	# check if the output directory exists
+	if !isdir("output")
+		mkdir("output")
+	end
+
+	# list all of the files in this directory
+	files = readdir("output")
+
+	# append to file
+	if (file_name !== "")
+		
+		# check if it already exists
+		if file_name in files
+			println("File already exists")
+		else
+			open("output/$(file_name)", "w") do io
+				write(io, output)
+			end
+		end
+	
+	# create a new output file
+	else
+
+		# get the number of files in the directory
+		num = length(files) + 1
+
+		open("output/output_$(num).txt", "w") do io
+			write(io, output)
+		end
+	end
+end
+
+# Function for plotting the objective cost against solver iterations
+# x: Array{Int} - x-axis values
+# y: Array{Int} - y-axis values
+# x_label: String - x-axis label
+# y_label: String - y-axis label
+# -------------------------------------------------------------
 function plot_graph(x, y, x_label, y_label)
-	# Plotting Code
 	trace = scatter(x=x, y=y,
 		mode="lines+markers",
 		name="Objective Cost",
@@ -65,8 +103,13 @@ function plot_graph(x, y, x_label, y_label)
 
 	My_plot = plot([trace], layout)
 
-	display(My_plot)
+	return My_plot
 end
 
-plot_graph([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], "X label", "Y label")
+# graph = plot_graph([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], "X label", "Y label")
+# display(graph)
 
+using Plots
+x = 1:10; y = rand(10); 
+p = Plots.plot(x, y)
+savefig(p, "output/plots/plot.png")
