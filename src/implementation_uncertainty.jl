@@ -6,7 +6,7 @@ function set_model_uncertainty_variables!(power_flow_model::MPOPFModelUncertaint
     scenarios = power_flow_model.scenarios
 
     @variable(model, mu_plus[t in 1:T, g in keys(ref[:gen]), s in 1:length(scenarios)] >= 0)
-    @variable(model, mu_minus[t in 1:T, l in keys(ref[:load]), s in 1:length(scenarios)] >= 0)
+    @variable(model, mu_minus[t in 1:T, l in keys(ref[:bus]), s in 1:length(scenarios)] >= 0)
 end
 
 function set_model_uncertainty_objective_function!(power_flow_model::MPOPFModelUncertainty, factory::ACMPOPFModelFactory)
@@ -143,7 +143,9 @@ function set_model_uncertainty_objective_function!(power_flow_model::MPOPFModelU
         sum(sum(gen_data[g]["cost"][1]*pg[t,g]^2 + gen_data[g]["cost"][2]*pg[t,g] + gen_data[g]["cost"][3] for g in keys(gen_data)) for t in 1:T) +
         sum(ramping_cost * (ramp_up[t, g] + ramp_down[t, g]) for g in keys(gen_data) for t in 2:T)
         # Adding some cost for mu_plus and mu_minus.
-        + sum(10000 * (mu_plus[t, g, s]^2 + mu_minus[t, l, s]) for g in keys(ref[:gen]) for l in keys(ref[:load]) for t in 1:T for s in 1:length(scenarios))
+        # + sum(10000 * (mu_plus[t, g, s] + mu_minus[t, b, s]) for g in keys(ref[:gen]) for b in keys(ref[:bus]) for t in 1:T for s in 1:length(scenarios))
+        + sum(10000 * mu_plus[t, g, s] for t in 1:T for s in 1:length(scenarios) for g in keys(ref[:gen]))
+        + sum(10000 * mu_minus[t, b, s] for t in 1:T for s in 1:length(scenarios) for b in keys(ref[:bus]))
     )
 end
 
@@ -189,8 +191,8 @@ function set_model_uncertainty_constraints!(power_flow_model::MPOPFModelUncertai
                 @constraint(model,
                     sum(p_expr[t][a] for a in ref[:bus_arcs][b]) ==
                     sum(pg[t, g] + mu_plus[t, g, s] for g in ref[:bus_gens][b]) - 
-                    sum(load["pd"] * scenario[b] + mu_minus[t, l, s] for load in bus_loads for l in ref[:bus_loads][b]) - 
-                    sum(shunt["gs"] for shunt in bus_shunts)*1.0^2
+                    sum(load["pd"] * scenario[b] for load in bus_loads) - 
+                    sum(shunt["gs"] for shunt in bus_shunts)*1.0^2 - mu_minus[t, b, s]
                 )
             end
         end

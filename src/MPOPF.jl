@@ -1,8 +1,8 @@
 module MPOPF
-    using PowerModels, JuMP, Ipopt#, Gurobi
+    using PowerModels, JuMP, Ipopt, Gurobi, PlotlyJS
     
     # Exporting these functions from the module so we dont have to prefix them with MPOPF.
-    export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory, LinMPOPFModelFactory, NewACMPOPFModelFactory, create_model_check_feasibility
+    export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory, optimize_model_with_plot, LinMPOPFModelFactory, NewACMPOPFModelFactory, create_model_check_feasibility
 
 ##############################################################################################
 # Factory Structs
@@ -173,6 +173,181 @@ module MPOPF
         optimize!(model.model)
         optimal_cost = objective_value(model.model)
         println("Optimal Cost: ", optimal_cost)
+        println()
+
+        if isa(model, MPOPFModelUncertainty)
+            data = model.data
+            T = model.time_periods
+            S = length(model.scenarios)
+            ref = PowerModels.build_ref(data)[:it][:pm][:nw][0]
+            error_check = 0
+
+            for t in 1:T    
+                for s in 1:S
+                    for b in keys(ref[:bus])
+                        sum_of_mu_plus = 0
+                        mu_minus = 0
+                        sum_of_mu_plus = sum(value(model.model[:mu_plus][t, g, s]) for g in ref[:bus_gens][b]; init = 0)
+                        mu_minus = value(model.model[:mu_minus][t, b, s])
+                        if sum_of_mu_plus >= 0.01 && mu_minus >= 0.01
+                            error_check = error_check + 1
+                            println("###############")
+                            println("#### Error ####")
+                            Println("###############")
+
+                            println("Scenario: $s Bus: $b")
+                            println("mu_plus: $sum_of_mu_plus")
+                            println("mu_minus: $mu_minus")
+                            println()
+                        end
+                    end
+                end
+            end
+            if error_check == 0
+                println("No mu_plus and mu_minus errors found")
+                println()
+            else
+                println("Found $error_check error(s)")
+                println()
+            end
+        end
+    end
+
+    # Optimized and graphs the given model using a callback function
+    function optimize_model_with_plot(model::AbstractMPOPFModel)
+        T = model.time_periods
+
+        if T == 1
+            objective_values = Float64[]
+            iterations = Int[]
+
+            function my_callback(
+                alg_mod::Cint, iter_count::Cint, obj_value::Float64,
+                inf_pr::Float64, inf_du::Float64, mu::Float64,
+                d_norm::Float64, regularization_size::Float64,
+                alpha_du::Float64, alpha_pr::Float64, ls_trials::Cint
+            )
+                push!(objective_values, obj_value)
+                push!(iterations, iter_count)
+                return true  # Return true to continue the optimization
+            end
+
+            MOI.set(model.model, Ipopt.CallbackFunction(), my_callback)
+            optimize!(model.model)
+            optimal_cost = objective_value(model.model)
+            println("Optimal Cost: ", optimal_cost)
+            
+            # Plotting Code
+            trace = scatter(
+                x=iterations, y=objective_values,
+                mode="lines+markers",
+                name="Objective Cost",
+                marker_color="blue",
+                hoverinfo="x+y", # Ensure hover displays both x and y values
+                hovertemplate="%{x}, %{y:.2f}<extra></extra>" # Custom hover text format
+            )
+
+            layout = Layout(
+                title="Plotting Objective Cost against Solver Iterations",
+                xaxis=attr(title="Iterations", tickangle=-45, tickmode="linear", tick0=0, dtick=1),
+                yaxis=attr(title="Objective Cost", hoverformat=".2f"),
+                showlegend=true
+            )
+
+            My_plot = plot([trace], layout)
+
+            display(My_plot)
+        else
+            optimize!(model.model)
+            optimal_cost = objective_value(model.model)
+            println("Optimal Cost: ", optimal_cost)
+        
+            # Extracting cost components
+            ref = PowerModels.build_ref(model.data)[:it][:pm][:nw][0]
+            pg = model.model[:pg]
+            ramp_up = model.model[:ramp_up]
+            ramp_down = model.model[:ramp_down]
+            ramping_cost = model.ramping_cost
+        
+            ramping_cost_per_period = [sum(ramping_cost * (value(ramp_up[t, g]) + value(ramp_down[t, g])) for g in keys(ref[:gen])) for t in 2:T]
+            ramping_up_per_period = [sum(ramping_cost * (value(ramp_up[t, g])) for g in keys(ref[:gen])) for t in 2:T]
+            ramping_down_per_period = [sum(ramping_cost * (value(ramp_down[t, g])) for g in keys(ref[:gen])) for t in 2:T]
+            
+            # Adjusting ramping cost array to match periods (adding zero for first period)
+            ramping_cost_per_period = [0.0; ramping_cost_per_period]
+            ramping_up_per_period = [0.0; ramping_up_per_period]
+            ramping_down_per_period = [0.0; ramping_down_per_period]
+    
+            cost_per_period_with_ramping_to_that_period = [sum(ref[:gen][g]["cost"][1]*value(pg[t,g])^2 + ref[:gen][g]["cost"][2]*value(pg[t,g]) + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) + ramping_cost_per_period[t] for t in 1:T]
+            cost_per_period_no_ramping = [sum(ref[:gen][g]["cost"][1]*value(pg[t,g])^2 + ref[:gen][g]["cost"][2]*value(pg[t,g]) + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T]
+            
+            roling_cost_per_period = zeros(Float64, T)  # Initialize the array with zeros
+            roling_cost_per_period[1] = cost_per_period_with_ramping_to_that_period[1]
+            for t in 2:T
+                roling_cost_per_period[t] = roling_cost_per_period[t-1] + cost_per_period_with_ramping_to_that_period[t]
+            end
+
+            # Plotting costs
+            trace_cost_per_period_no_ramping = scatter(
+                x=1:T,
+                y=cost_per_period_no_ramping,
+                mode="lines+markers",
+                name="Objective Cost no Ramping",
+                marker_color="black"
+            )
+    
+            trace_cost_per_period_with_ramping_to_that_period = scatter(
+                x=1:T,
+                y=cost_per_period_with_ramping_to_that_period,
+                mode="lines+markers",
+                name="Objective Cost With Ramping",
+                marker_color="blue"
+            )
+        
+            trace_ramping_cost_per_period = scatter(
+                x=1:T,
+                y=ramping_cost_per_period,
+                mode="lines+markers",
+                name="Ramping Cost",
+                marker_color="red"
+            )
+    
+            trace_ramping_up_per_period = scatter(
+                x=1:T,
+                y=ramping_up_per_period,
+                mode="lines+markers",
+                name="Ramping Up",
+                marker_color="green"
+            )
+    
+            trace_ramping_down_per_period = scatter(
+                x=1:T,
+                y=ramping_down_per_period,
+                mode="lines+markers",
+                name="Ramping Down",
+                marker_color="orange"
+            )
+
+            trace_roling_cost_per_period = scatter(
+                x=1:T,
+                y=roling_cost_per_period,
+                mode="lines+markers",
+                name="Roling Objective Cost",
+                marker_color="#FF4162",
+                visible = "legendonly"
+            )
+        
+            layout = Layout(
+                title="Plotting Objective Cost Against Time Periods With Ramping Costs",
+                xaxis=attr(title="Time Periods", tickangle=-45, tickmode="linear", tick0=1, dtick=1),
+                yaxis=attr(title="Objective Cost"),
+                showlegend=true
+            )
+    
+            My_plot = plot([trace_cost_per_period_no_ramping, trace_cost_per_period_with_ramping_to_that_period, trace_ramping_cost_per_period, trace_ramping_up_per_period, trace_ramping_down_per_period, trace_roling_cost_per_period], layout)
+    
+            display(My_plot)
+        end
     end
 
 end # module
