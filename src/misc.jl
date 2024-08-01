@@ -1,5 +1,6 @@
 using PlotlyJS
 
+
 # Function for generating scenario load factors
 # function generate_load_scenarios(num_scenarios::Int, num_buses::Int)
 #     load_scenarios_factors = Dict()
@@ -87,7 +88,7 @@ end
 # x_label: String - x-axis label
 # y_label: String - y-axis label
 # -------------------------------------------------------------
-function plot_graph(x, y, x_label, y_label)
+function save_graph(x::Array, y::Array, x_label::String, y_label::String, location::String)
 	trace = scatter(x=x, y=y,
 		mode="lines+markers",
 		name="Objective Cost",
@@ -102,14 +103,7 @@ function plot_graph(x, y, x_label, y_label)
 		showlegend=true)
 
 	My_plot = plot([trace], layout)
-
-	return My_plot
+	PlotlyJS.savefig(My_plot, location)
 end
 
-# graph = plot_graph([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], "X label", "Y label")
-# display(graph)
-
-using Plots
-x = 1:10; y = rand(10); 
-p = Plots.plot(x, y)
-savefig(p, "output/plots/plot.png")
+save_graph([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], "X label", "Y label", "output/graphs/graph.png")
