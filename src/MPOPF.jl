@@ -349,7 +349,6 @@ module MPOPF
             display(My_plot)
         end
     end
-
 end # module
 
 

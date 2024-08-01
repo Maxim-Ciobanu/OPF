@@ -80,3 +80,36 @@ function output_to_file(output::String, file_name::String="")
 		end
 	end
 end
+
+# Function for plotting the objective cost against solver iterations
+# x: Array{Int} - x-axis values
+# y: Array{Int} - y-axis values
+# x_label: String - x-axis label
+# y_label: String - y-axis label
+# -------------------------------------------------------------
+function plot_graph(x, y, x_label, y_label)
+	trace = scatter(x=x, y=y,
+		mode="lines+markers",
+		name="Objective Cost",
+		marker_color="blue",
+		hoverinfo="x+y", # Ensure hover displays both x and y values
+		hovertemplate="%{x}, %{y:.2f}<extra></extra>") # Custom hover text format
+
+	layout = Layout(
+		title="Plotting Objective Cost agaist Solver Iterations",
+		xaxis=attr(title=x_label, tickangle=-45, tickmode="linear", tick0=0, dtick=1),
+		yaxis=attr(title=y_label, hoverformat=".2f"),
+		showlegend=true)
+
+	My_plot = plot([trace], layout)
+
+	return My_plot
+end
+
+# graph = plot_graph([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], "X label", "Y label")
+# display(graph)
+
+using Plots
+x = 1:10; y = rand(10); 
+p = Plots.plot(x, y)
+savefig(p, "output/plots/plot.png")
