@@ -1,5 +1,5 @@
 module MPOPF
-    using PowerModels, JuMP, Ipopt, Gurobi, PlotlyJS
+    using PowerModels, JuMP, Ipopt, PlotlyJS#, Gurobi
     
     # Exporting these functions from the module so we dont have to prefix them with MPOPF.
     export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory, optimize_model_with_plot, LinMPOPFModelFactory, NewACMPOPFModelFactory, create_model_check_feasibility

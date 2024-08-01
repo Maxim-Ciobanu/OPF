@@ -7,7 +7,7 @@ include("MPOPF.jl")
 include("misc.jl")
 include("search_functions.jl")
 
-using PowerModels, JuMP, Ipopt, Gurobi, Plots
+using PowerModels, JuMP, Ipopt, Plots#, Gurobi
 using .MPOPF
 
 # Path to the case file
