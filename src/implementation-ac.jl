@@ -39,23 +39,30 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::A
     data = power_flow_model.data
     T = power_flow_model.time_periods
     ref = PowerModels.build_ref(data)[:it][:pm][:nw][0]
+
     gen_data = ref[:gen]
     load_data = ref[:load]
+
     va = model[:va]
     p = model[:p]
     q = model[:q]
     pg = model[:pg]
     qg = model[:qg]
     vm = model[:vm]
-    factors = power_flow_model.factors
-    ramp_up = model[:ramp_up]
+	ramp_up = model[:ramp_up]
     ramp_down = model[:ramp_down]
 
+    factors = power_flow_model.factors
+    
+	# power balance constraints for time periods
     for t in 1:T
+
+		# 
         for (i, bus) in ref[:ref_buses]
             @constraint(model, va[t,i] == 0)
         end
 
+		# 
         for (i, bus) in ref[:bus]
             bus_loads = [load_data[l] for l in ref[:bus_loads][i]]
             bus_shunts = [ref[:shunt][s] for s in ref[:bus_shunts][i]]
@@ -75,6 +82,7 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::A
             )
         end
 
+		# active ( p ) and reactive ( q ) power constraints
         for (i, branch) in ref[:branch]
             f_idx = (i, branch["f_bus"], branch["t_bus"])
             t_idx = (i, branch["t_bus"], branch["f_bus"])
@@ -113,6 +121,7 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::A
         end
     end
 
+	# ramp up and ramp down constraints
     for g in keys(gen_data)
         for t in 2:T
             @constraint(model, ramp_up[t, g] >= pg[t, g] - pg[t-1, g])
