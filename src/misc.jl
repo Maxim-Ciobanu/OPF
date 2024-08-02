@@ -1,5 +1,4 @@
-using PlotlyJS
-
+using PlotlyJS, Dates
 
 # Function for generating scenario load factors
 # function generate_load_scenarios(num_scenarios::Int, num_buses::Int)
@@ -63,9 +62,15 @@ function output_to_file(output::String, file_name::String="")
 		
 		# check if it already exists
 		if file_name in files
-			println("File already exists")
+			open("output/$(file_name)", "a") do io
+				write(io, string(now()))
+				write(io, "\n\n")
+				write(io, output)
+			end
 		else
 			open("output/$(file_name)", "w") do io
+				write(io, string(now()))
+				write(io, "\n\n")
 				write(io, output)
 			end
 		end
@@ -77,10 +82,16 @@ function output_to_file(output::String, file_name::String="")
 		num = length(files) + 1
 
 		open("output/output_$(num).txt", "w") do io
+			write(io, string(now()))
+			write(io, "\n\n")
 			write(io, output)
 		end
 	end
 end
+
+
+
+
 
 
 # struct for storing data about the graph
@@ -144,7 +155,7 @@ function create_plot(graph::Graph, title::String, x_label::String, y_label::Stri
 
 	# create the plot from the traces and the layout
 	print(graph.traces)
-	graph.plot = plot(graph.traces, layout)
+	graph.plot = PlotlyJS.plot(graph.traces, layout)
 end
 
 
@@ -184,8 +195,9 @@ function display_graph(graph::Graph)
 end
 
 
-graph = Graph("output/plot.html")
-print(graph)
-add_scatter(graph, [1, 2, 3, 4, 5], [1, 2, 3, 4, 5], "trace 1", "blue")
-create_plot(graph, "my plot", "x-axis", "y-axis")
-save_graph(graph)
+# graph = Graph("output/plot.html")
+# print(graph)
+# add_scatter(graph, ["a", "b", "c", "d", "e"], [1, 2, 3, 4, 5], "trace 1", "blue")
+# add_scatter(graph, ["a", "b", "c", "d", "e"], [5, 4, 3, 2, 1], "trace 2", "red")
+# create_plot(graph, "my plot", "x-axis", "y-axis")
+# save_graph(graph)
