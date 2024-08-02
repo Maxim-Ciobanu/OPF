@@ -66,12 +66,14 @@ function output_to_file(output::String, file_name::String="")
 				write(io, string(now()))
 				write(io, "\n\n")
 				write(io, output)
+				write(io, "\n\n")
 			end
 		else
 			open("output/$(file_name)", "w") do io
 				write(io, string(now()))
 				write(io, "\n\n")
 				write(io, output)
+				write(io, "\n\n")
 			end
 		end
 	
@@ -85,6 +87,7 @@ function output_to_file(output::String, file_name::String="")
 			write(io, string(now()))
 			write(io, "\n\n")
 			write(io, output)
+			write(io, "\n\n")
 		end
 	end
 end
