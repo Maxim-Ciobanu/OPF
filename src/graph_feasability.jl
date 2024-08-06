@@ -30,7 +30,7 @@ o_error_graph = Graph("output/graphs/o_error.html")
 # Example for AC
 # --------------------------------------------------------------------------
 for path in file_paths
-	pritnln(path)
+	println(path)
 	ac_factory = ACMPOPFModelFactory(path, Ipopt.Optimizer)
 	My_AC_model = create_model(ac_factory)
 	optimize_model(My_AC_model)
@@ -47,19 +47,19 @@ for path in file_paths
 	# calculate the error for va
 	val1 = value.(My_AC_model.model[:va])
 	val2 = value.(New_Model_AC.model[:va])
-	println(val1)
-	println(val2)
-	println(val1 - val2)
-	tmp = val1 - val2
-	tmp2 = abs.(tmp)
-	tmp3 = value.(My_AC_model.model[:va])
-	tmp4 = tmp2 / tmp3
-	tmp5 = sum(tmp4)
 
-	o_error_AC = tmp5
+	o_error_AC = 0
+	v_error_AC = 0
+	print(val1)
+	print(val2)
 
-	# calculate the error for vm
-	v_error_AC = sum(abs.(value.(My_AC_model.model[:vm]) - value.(New_Model_AC.model[:vm])) / value.(My_AC_model.model[:vm]))
+	for i in 1:length(val1)
+		o_error_AC += abs((val1[1, i] - val2[1, i]) / val2[1, i])
+	end
+
+	for i in 1:length(val1)
+		v_error_AC += abs((val1[1, i] - val2[1, i]) / val2[1, i])
+	end
 
 	# calculate sum of x over sum of pg from inital model -> result shows feasibility
 	sum_x_AC = sum(value.(New_Model_AC.model[:x]))
@@ -79,8 +79,8 @@ end
 
 
 add_scatter(feasability_graph, file_strings , costs, "AC", "black")
-# add_scatter(v_error_graph, file_strings , v_error, "Va Error AC", "black")
-# add_scatter(o_error_graph, file_strings , o_error, "Vm Error AC", "black")
+add_scatter(v_error_graph, file_strings , v_error, "Va Error AC", "black")
+add_scatter(o_error_graph, file_strings , o_error, "Vm Error AC", "black")
 
 output_to_file(join([string(costs), string(v_error), string(o_error)], "\n"), "feasibility.txt")
 
@@ -108,10 +108,19 @@ for path in file_paths
 	optimize_model(New_Model_DC)
 
 	# calculate the error for va
-	o_error_DC = sum(abs.(value.(My_DC_model.model[:va]) - value.(New_Model_DC.model[:va])) / value.(My_DC_model.model[:va]))
+	val1 = value.(My_DC_model.model[:va])
+	val2 = value.(New_Model_DC.model[:va])
 
-	# calculate the error for vm
-	v_error_DC = sum(abs.(value.(My_DC_model.model[:vm]) - value.(New_Model_DC.model[:vm])) / value.(My_DC_model.model[:vm]))
+	o_error_DC = 0
+	v_error_DC = 0
+
+	for i in 1:length(val1)
+		o_error_DC += abs(val1[1, i] - val2[1, i] / val2[1, i])
+	end
+
+	for i in 1:length(val1)
+		v_error_DC += abs(val1[1, i] - val2[1, i] / val2[1, i])
+	end
 
 	# calculate sum of x over sum of pg from inital model -> result shows feasibility
 	sum_x_DC = sum(value.(New_Model_DC.model[:x]))
@@ -131,8 +140,8 @@ end
 
 
 add_scatter(feasability_graph, file_strings , costs, "DC", "blue")
-# add_scatter(v_error_graph, file_strings , v_error, "Va Error DC", "blue")
-# add_scatter(o_error_graph, file_strings , o_error, "Vm Error DC", "blue")
+add_scatter(v_error_graph, file_strings , v_error, "Va Error DC", "blue")
+add_scatter(o_error_graph, file_strings , o_error, "Vm Error DC", "blue")
 
 output_to_file(join([string(costs), string(v_error), string(o_error)], "\n"), "feasibility.txt")
 
@@ -158,11 +167,21 @@ for path in file_paths
 	New_Model_Lin = create_model_check_feasibility(new_factory_Lin, new_pg_Lin, new_qg_Lin)
 	optimize_model(New_Model_Lin)
 
-	# calculate error for va
-	o_error_Lin = sum(abs.(value.(My_Linear_model.model[:va]) - value.(New_Model_Lin.model[:va])) / value.(My_Linear_model.model[:va]))
 
-	# calculate error for vm
-	v_error_Lin = sum(abs.(value.(My_Linear_model.model[:vm]) - value.(New_Model_Lin.model[:vm])) / value.(My_Linear_model.model[:vm]))
+	# calculate the error for va
+	val1 = value.(My_Linear_model.model[:va])
+	val2 = value.(New_Model_Lin.model[:va])
+
+	o_error_Lin = 0
+	v_error_Lin = 0
+
+	for i in 1:length(val1)
+		o_error_Lin += abs(val1[1, i] - val2[1, i] / val2[1, i])
+	end
+
+	for i in 1:length(val1)
+		v_error_Lin += abs(val1[1, i] - val2[1, i] / val2[1, i])
+	end
 
 	#calculate sum of x over sum of pg from inital model -> result shows feasibility
 	sum_x_Lin = sum(value.(New_Model_Lin.model[:x]))
@@ -187,16 +206,12 @@ add_scatter(feasability_graph, file_strings , costs, "Quadratic Lin", "red")
 create_plot(feasability_graph, "Feasibility of Various Linearized Models", "Cases", "Costs")
 save_graph(feasability_graph)
 
-#=
 # add and create the v_error graph
 add_scatter(v_error_graph, file_strings , v_error, "Va Error Lin", "red")
 create_plot(v_error_graph, "Error of Va for Various Linearized Models", "Cases", "Error")
 save_graph(v_error_graph)
-=#
 
-#=
 # add and create the o_error graph
 add_scatter(o_error_graph, file_strings , o_error, "Vm Error Lin", "red")
 create_plot(o_error_graph, "Error of Vm for Various Linearized Models", "Cases", "Error")
 save_graph(o_error_graph)
-=#
