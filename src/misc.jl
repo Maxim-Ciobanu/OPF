@@ -110,7 +110,6 @@ mutable struct Graph
 
 	# constructor for the Graph struct
 	function Graph(location::String)
-		print("creating function with variables")
 		new(nothing, Vector{GenericTrace}(), location)
 	end
 end
@@ -124,9 +123,9 @@ end
 # name: String - name of the trace ( optional )
 # color: String - color of the trace ( optional )
 # ------------------------------------------------------------
-function add_scatter(graph::Graph, x::Array, y::Array, name::String="default name", color::String="blue")
+function add_scatter(graph::Graph, x::Array, y::Array, name::String="default name", color::String="blue", mode::String="lines+markers")
 	trace = PlotlyJS.scatter(x=x, y=y,
-		mode="lines+markers",
+		mode=mode,
 		name=name,
 		marker_color=color,
 		hoverinfo="x+y", # Ensure hover displays both x and y values
@@ -198,9 +197,12 @@ function display_graph(graph::Graph)
 end
 
 
-# graph = Graph("output/plot.html")
-# print(graph)
-# add_scatter(graph, ["a", "b", "c", "d", "e"], [1, 2, 3, 4, 5], "trace 1", "blue")
-# add_scatter(graph, ["a", "b", "c", "d", "e"], [5, 4, 3, 2, 1], "trace 2", "red")
-# create_plot(graph, "my plot", "x-axis", "y-axis")
-# save_graph(graph)
+
+#=
+# test
+graph = Graph("output/plot2.html")
+add_scatter(graph, ["a", "b", "c", "d", "e"], [1, 2, 3, 4, 5], "trace 1", "blue")
+add_scatter(graph, ["a", "b", "c", "d", "e"], [5, 4, 3, 2, 1], "trace 2", "red")
+create_plot(graph, "my plot", "x-axis", "y-axis")
+save_graph(graph)
+=#

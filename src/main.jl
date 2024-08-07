@@ -11,7 +11,7 @@ using PowerModels, JuMP, Ipopt, Plots#, Gurobi
 using .MPOPF
 
 # Path to the case file
-file_path = "./Cases/case5.m"
+file_path = "./Cases/case300.m"
 
 #
 # Example for AC
@@ -21,23 +21,23 @@ My_AC_model = create_model(ac_factory)
 optimize_model(My_AC_model)
 # --------------------------------------------------------------------------
 
-#
+#=
 # Example for DC
 # --------------------------------------------------------------------------
 dc_factory = DCMPOPFModelFactory(file_path, Ipopt.Optimizer)
 My_DC_model = create_model(dc_factory)
 optimize_model(My_DC_model)
 # --------------------------------------------------------------------------
-#
+=#
 
-#
+#=
 # Example for Linearization 
 # --------------------------------------------------------------------------
 linear_factory = LinMPOPFModelFactory(file_path, Ipopt.Optimizer)
 My_Linear_model = create_model(linear_factory)
 optimize_model(My_Linear_model)
 # --------------------------------------------------------------------------
-#
+=#
 
 #=
 # Single Period Graphing Example for AC
@@ -88,6 +88,7 @@ New_Model_AC = create_model_check_feasibility(new_factory_AC, new_pg_AC, new_qg_
 optimize_model(New_Model_AC)
 # --------------------------------------------------------------------------
 
+#=
 #Check feasibility for DC
 # --------------------------------------------------------------------------
 # extract pg and qg value
@@ -99,8 +100,10 @@ new_factory_DC = NewACMPOPFModelFactory(file_path, Ipopt.Optimizer)
 New_Model_DC = create_model_check_feasibility(new_factory_DC, new_pg_DC, new_qg_DC)
 optimize_model(New_Model_DC)
 # --------------------------------------------------------------------------
+=#
 
 
+#=
 #Check feasibility for Linearization
 # --------------------------------------------------------------------------
 # extract pg and qg value
@@ -112,7 +115,7 @@ new_factory_Lin = NewACMPOPFModelFactory(file_path, Ipopt.Optimizer)
 New_Model_Lin = create_model_check_feasibility(new_factory_Lin, new_pg_Lin, new_qg_Lin)
 optimize_model(New_Model_Lin)
 # --------------------------------------------------------------------------
-
+=#
 
 
 # --------------------------------------------------------------------------
@@ -136,7 +139,7 @@ println("cost: ", cost_AC)
 println("Total cost AC: ", total_cost_AC)
 
 
-
+#=
 #DC
 # calculate sum of x over sum of pg from inital model -> result shows feasibility
 sum_x_DC = sum(value.(New_Model_DC.model[:x]))
@@ -151,9 +154,10 @@ cost_DC = objective_value(New_Model_DC.model)
 total_cost_DC = sum_total_DC * cost_DC
 println("cost: ", cost_DC)
 println("Total cost DC: ", total_cost_DC)
+=#
 
 
-
+#=
 # Lin1
 #calculate sum of x over sum of pg from inital model -> result shows feasibility
 sum_x_Lin = sum(value.(New_Model_Lin.model[:x]))
@@ -168,3 +172,4 @@ cost_Lin = objective_value(New_Model_Lin.model)
 total_cost_Lin = sum_total_Lin * cost_Lin
 println("cost: ", cost_Lin)
 println("Total cost Lin: ", total_cost_Lin)
+=#

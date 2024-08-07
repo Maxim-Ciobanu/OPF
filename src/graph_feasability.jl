@@ -48,17 +48,18 @@ for path in file_paths
 	val1 = value.(My_AC_model.model[:va])
 	val2 = value.(New_Model_AC.model[:va])
 
+	val3 = value.(My_AC_model.model[:vm])
+	val4 = value.(New_Model_AC.model[:vm])
+
 	o_error_AC = 0
 	v_error_AC = 0
-	print(val1)
-	print(val2)
 
 	for i in 1:length(val1)
 		o_error_AC += abs((val1[1, i] - val2[1, i]) / val2[1, i])
 	end
 
 	for i in 1:length(val1)
-		v_error_AC += abs((val1[1, i] - val2[1, i]) / val2[1, i])
+		v_error_AC += abs((val3[1, i] - val4[1, i]) / val4[1, i])
 	end
 
 	# calculate sum of x over sum of pg from inital model -> result shows feasibility
@@ -111,6 +112,9 @@ for path in file_paths
 	val1 = value.(My_DC_model.model[:va])
 	val2 = value.(New_Model_DC.model[:va])
 
+	val3 = [1] *  
+	val4 = 1
+
 	o_error_DC = 0
 	v_error_DC = 0
 
@@ -118,9 +122,9 @@ for path in file_paths
 		o_error_DC += abs(val1[1, i] - val2[1, i] / val2[1, i])
 	end
 
-	for i in 1:length(val1)
-		v_error_DC += abs(val1[1, i] - val2[1, i] / val2[1, i])
-	end
+	# for i in 1:length(val1)
+	# 	v_error_DC += abs(val3[1, i] - val4[1, i] / val4[1, i])
+	# end
 
 	# calculate sum of x over sum of pg from inital model -> result shows feasibility
 	sum_x_DC = sum(value.(New_Model_DC.model[:x]))
@@ -172,6 +176,9 @@ for path in file_paths
 	val1 = value.(My_Linear_model.model[:va])
 	val2 = value.(New_Model_Lin.model[:va])
 
+	val3 = value.(My_Linear_model.model[:vm])
+	val4 = value.(New_Model_Lin.model[:vm])
+
 	o_error_Lin = 0
 	v_error_Lin = 0
 
@@ -180,7 +187,7 @@ for path in file_paths
 	end
 
 	for i in 1:length(val1)
-		v_error_Lin += abs(val1[1, i] - val2[1, i] / val2[1, i])
+		v_error_Lin += abs(val3[1, i] - val4[1, i] / val4[1, i])
 	end
 
 	#calculate sum of x over sum of pg from inital model -> result shows feasibility
