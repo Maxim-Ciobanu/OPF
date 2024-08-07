@@ -44,23 +44,15 @@ for path in file_paths
 	New_Model_AC = create_model_check_feasibility(new_factory_AC, new_pg_AC, new_qg_AC)
 	optimize_model(New_Model_AC)
 
-	# calculate the error for va
-	val1 = value.(My_AC_model.model[:va])
-	val2 = value.(New_Model_AC.model[:va])
+	# calculate the error for va ( uses accurate indeces, fix for larger cases )
+	val1 = value.(getindex.((pairs(cat(My_AC_model.model[:va], dims=1)) |> collect)[1:length(My_AC_model.model[:va])], 2))
+	val2 = value.(getindex.((pairs(cat(New_Model_AC.model[:va], dims=1)) |> collect)[1:length(New_Model_AC.model[:va])], 2))
 
-	val3 = value.(My_AC_model.model[:vm])
-	val4 = value.(New_Model_AC.model[:vm])
+	val3 = value.(getindex.((pairs(cat(My_AC_model.model[:vm], dims=1)) |> collect)[1:length(My_AC_model.model[:va])], 2))
+	val4 = value.(getindex.((pairs(cat(New_Model_AC.model[:vm], dims=1)) |> collect)[1:length(New_Model_AC.model[:va])], 2))
 
-	o_error_AC = 0
-	v_error_AC = 0
-
-	for i in 1:length(val1)
-		o_error_AC += abs((val1[1, i] - val2[1, i]) / val2[1, i])
-	end
-
-	for i in 1:length(val1)
-		v_error_AC += abs((val3[1, i] - val4[1, i]) / val4[1, i])
-	end
+	o_error_AC = abs(sum((val1 - val2) / val2))
+	v_error_AC = abs(sum((val3 - val4) / val4))
 
 	# calculate sum of x over sum of pg from inital model -> result shows feasibility
 	sum_x_AC = sum(value.(New_Model_AC.model[:x]))
@@ -108,23 +100,15 @@ for path in file_paths
 	New_Model_DC = create_model_check_feasibility(new_factory_DC, new_pg_DC, new_qg_DC)
 	optimize_model(New_Model_DC)
 
-	# calculate the error for va
-	val1 = value.(My_DC_model.model[:va])
-	val2 = value.(New_Model_DC.model[:va])
+	# calculate the error for va ( uses accurate indeces, fix for larger cases )
+	val1 = value.(getindex.((pairs(cat(My_DC_model.model[:va], dims=1)) |> collect)[1:length(My_DC_model.model[:va])], 2))
+	val2 = value.(getindex.((pairs(cat(New_Model_DC.model[:va], dims=1)) |> collect)[1:length(New_Model_DC.model[:va])], 2))
 
-	val3 = [1] *  
-	val4 = 1
+	# val3 = value.(getindex.((pairs(cat(My_DC_model.model[:vm], dims=1)) |> collect)[1:length(My_DC_model.model[:va])], 2))
+	# val4 = value.(getindex.((pairs(cat(New_Model_DC.model[:vm], dims=1)) |> collect)[1:length(New_Model_DC.model[:va])], 2))
 
-	o_error_DC = 0
-	v_error_DC = 0
-
-	for i in 1:length(val1)
-		o_error_DC += abs(val1[1, i] - val2[1, i] / val2[1, i])
-	end
-
-	# for i in 1:length(val1)
-	# 	v_error_DC += abs(val3[1, i] - val4[1, i] / val4[1, i])
-	# end
+	o_error_DC = abs(sum((val1 - val2) / val2))
+	v_error_DC = 1
 
 	# calculate sum of x over sum of pg from inital model -> result shows feasibility
 	sum_x_DC = sum(value.(New_Model_DC.model[:x]))
@@ -134,7 +118,7 @@ for path in file_paths
 	# multiply value with cost
 	cost_DC = objective_value(New_Model_DC.model)
 	total_cost_DC = sum_total_DC * cost_DC
-
+	
 	# push the calculate values
 	push!(costs, total_cost_DC)
 	push!(v_error, v_error_DC)
@@ -172,23 +156,15 @@ for path in file_paths
 	optimize_model(New_Model_Lin)
 
 
-	# calculate the error for va
-	val1 = value.(My_Linear_model.model[:va])
-	val2 = value.(New_Model_Lin.model[:va])
+	# calculate the error for va ( uses accurate indeces, fix for larger cases )
+	val1 = value.(getindex.((pairs(cat(My_Linear_model.model[:va], dims=1)) |> collect)[1:length(My_Linear_model.model[:va])], 2))
+	val2 = value.(getindex.((pairs(cat(New_Model_Lin.model[:va], dims=1)) |> collect)[1:length(New_Model_Lin.model[:va])], 2))
 
-	val3 = value.(My_Linear_model.model[:vm])
-	val4 = value.(New_Model_Lin.model[:vm])
+	val3 = value.(getindex.((pairs(cat(My_Linear_model.model[:vm], dims=1)) |> collect)[1:length(My_Linear_model.model[:va])], 2))
+	val4 = value.(getindex.((pairs(cat(New_Model_Lin.model[:vm], dims=1)) |> collect)[1:length(New_Model_Lin.model[:va])], 2))
 
-	o_error_Lin = 0
-	v_error_Lin = 0
-
-	for i in 1:length(val1)
-		o_error_Lin += abs(val1[1, i] - val2[1, i] / val2[1, i])
-	end
-
-	for i in 1:length(val1)
-		v_error_Lin += abs(val3[1, i] - val4[1, i] / val4[1, i])
-	end
+	o_error_Lin = abs(sum((val1 - val2) / val2))
+	v_error_Lin = abs(sum((val3 - val4) / val4))
 
 	#calculate sum of x over sum of pg from inital model -> result shows feasibility
 	sum_x_Lin = sum(value.(New_Model_Lin.model[:x]))
