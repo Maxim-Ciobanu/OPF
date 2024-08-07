@@ -47,8 +47,6 @@ display(JuMP.value.(modelToAnalyse.model[:mu_plus]))
 display(JuMP.value.(modelToAnalyse.model[:mu_minus]))
 =#
 
-# initial optimal value: 7642.591774313989
-# initial pg values:  -8.95979e-9  -8.95981e-9  0.380323  -8.95969e-9  2.20968
 
 # Example usage:
 file_path = "./Cases/case14.m"
@@ -62,8 +60,8 @@ ramping_data = Dict(
 demands = [0.2 .* rand(300) for _ in 1:3]
 =#
 ramping_data = Dict(
-    "ramp_limits" => [0.5, 0.5, 0.5, 0.5, 0.5],
-    "costs" => [5000, 5000, 5000, 5000, 5000]
+    "ramp_limits" => [0.01, 0.01, 0.5, 0.5, 0.5],
+    "costs" => [30, 30, 30, 30, 30]
 )
 
 demands = [
@@ -87,22 +85,12 @@ My_DC_model = create_model(dc_factory)
 optimize_model(My_DC_model)
 =#
 
-#base_cost = build_search_model(search_factory, 3, ramping_data, demands)
-#println()
+# Base cost is the cost of all time periods meeting demand, not
+# taking ramping constraints into account
 
 
-#test_factory = DCMPOPFModelFactory(file_path, Ipopt.Optimizer)
-#test_model = create_model(test_factory, 3, [1.0, 1.03, 0.96], 7)
-#optimize_model(test_model)
-
-#7642.591774313989
-#7947.963615260874
-#7242.324576718763
-
-# Result of calculate base cost: 22834.022837074648
-
-best_solution, best_cost, best_models = decomposed_mpopf_local_search(search_factory, 3, ramping_data, demands)
-
+best_solution1, best_cost1, best_models1, base_cost1 = decomposed_mpopf_local_search(search_factory, 3, ramping_data, demands)
+#=
 if best_solution !== nothing
     println("Best cost: ", best_cost)
     for (i, model) in enumerate(best_models)
@@ -111,27 +99,48 @@ if best_solution !== nothing
     end
 else
     println("No feasible solution found.")
-end
-#=
-Best solution found:
-JuMP.Containers.DenseAxisArray{Float64, 2, Tuple{Base.OneTo{Int64}, Vector{Int64}}, Tuple{JuMP.Containers._AxisLookup{Base.OneTo{Int64}}, JuMP.Containers._AxisLookup{Dict{Int64, Int64}}}}[2-dimensional DenseAxisArray{Float64,2,...} with index sets:
-    Dimension 1, Base.OneTo(1)
-    Dimension 2, [5, 4, 2, 3, 1]
-And data, a 1×5 Matrix{Float64}:
- -9.027553214591143e-9  -9.655743229410181e-9  0.3803230378347274  -8.95983976567728e-9  2.2096768494044303, 2-dimensional DenseAxisArray{Float64,2,...} with index sets:
-    Dimension 1, Base.OneTo(1)
-    Dimension 2, [5, 4, 2, 3, 1]
-And data, a 1×5 Matrix{Float64}:
- -4.407706988873817e-9  -4.406015594435673e-9  0.391732727459049  -4.410630067551864e-9  2.2759671461187474, 2-dimensional DenseAxisArray{Float64,2,...} with index sets:
-    Dimension 1, Base.OneTo(1)
-    Dimension 2, [5, 4, 2, 3, 1]
-And data, a 1×5 Matrix{Float64}:
- -1.2479344408017945e-8  -1.1066063151395185e-8  0.3651101158636349  -1.1570981241030826e-8  2.1212897727547033]
-Best cost: 21613.064587807243
+end 
+=#
+best_solution2, best_cost2, best_models2, base_cost2, final_demands = decomposed_mpopf_demand_search(search_factory, 3, ramping_data, demands)
+
+best_cost = best_cost1 < best_cost2 ? best_cost1 : best_cost2
+best_solution = best_cost1 < best_cost2 ? best_solution1 : best_solution2
+
+
+println("Full model cost:, ", objective_value(search_model.model))
+println("Decomposed model cost: $best_cost")
+println("Base cost: $base_cost2")
+println("Full model pg values:")
+display(value.(search_model.model[:pg]))
+println("Decomposed model pg values:")
+display(best_solution)
+println("Base cost / best cost: ", base_cost2 / best_cost)
+
+#best_solution, best_cost, best_models, base_cost = decomposed_mpopf_downward_search(search_factory, 3, ramping_data, demands)
+
+#= Ramping rates
+It seems traditional gas/coal plants can ramp very quickly,
+to the point where its not much of a constraint
+Nuclear has very low ramping rates, treat as static
+(Moder nuclear plants can change up to 5% per minute, but only change once or twice per day)
+Renewable (solar/wind) have ramp rates that we cannot control
 =#
 
-#= 
-We are allowed to generate more power than necassary
-But not less than neccassary
-This can be cheaper if ramping is particularly expensive
+#= Ramping costs
+Solar = N/A
+Wind = N/A
+Gas/Coal = $2.43 - $4.68 (MWh)
+
 =#
+# Modify implementation to work with other cases where ID is not incremented 1 -> n
+
+# Hard to beat the initial solution by any meaningful amount
+#=
+Tried
+- Aggresive step sizes 
+- Top down approach (initialize all Ts to largest and work down)
+- Accepting worse solutions for n max_iterations
+=#
+
+# Output 1 unit of demand for 1 time period and see cost 
+# Use a general "cost" for generation and make ramping a % of that 
