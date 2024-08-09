@@ -1,4 +1,4 @@
-using PlotlyJS, Dates
+using PlotlyJS, Dates, Serialization 
 
 # Function for generating scenario load factors
 # function generate_load_scenarios(num_scenarios::Int, num_buses::Int)
@@ -48,7 +48,45 @@ function generate_load_scenarios(num_scenarios::Int, num_buses::Int)
     return load_scenarios_factors
 end
 
-function output_to_file(output::String, file_name::String="")
+
+# a function for serializing data to a file
+#
+# output: Any - the data to be saved
+# file_name: String - the name of the file to be saved
+function save(file_name::String, output::Any)
+	serialize(file_name, output)
+end
+
+
+# a function for deserializing data from a file, return false if not found
+#
+# file_name: String - the name of the file to be retrieved
+# case: Int - the case number corresponding the the dictionary key value
+function retreive(file_name::String, case::Int)
+	if isfile(file_name)
+		data::Dict = deserialize(file_name)
+		
+		if data isa Dict
+			if case in keys(data)
+				return data[case]
+			else
+				return false
+			end
+		else
+			return false
+		end
+	else
+		return false
+	end
+end
+
+
+# Function for outputing string to file
+#
+# output: String - the output to be saved
+# file_name: String - the name of the file to be saved
+# show_date: Bool - whether to show the date in the file above the output
+function output_to_file(output::String, file_name::String="", show_date::Bool=false)
 	# check if the output directory exists
 	if !isdir("output")
 		mkdir("output")
@@ -63,15 +101,13 @@ function output_to_file(output::String, file_name::String="")
 		# check if it already exists
 		if file_name in files
 			open("output/$(file_name)", "a") do io
-				write(io, string(now()))
-				write(io, "\n\n")
+				if show_date write(io, string(now())); write(io, "\n\n") end
 				write(io, output)
 				write(io, "\n\n")
 			end
 		else
 			open("output/$(file_name)", "w") do io
-				write(io, string(now()))
-				write(io, "\n\n")
+				if show_date write(io, string(now())); write(io, "\n\n") end
 				write(io, output)
 				write(io, "\n\n")
 			end
