@@ -128,11 +128,11 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::L
 			elseif Int(model_type) == 3
 
 				# Linear Model 3 -> with natural log
-				@constraint(model, p_fr == (g+g_fr)/ttm*(log(ℯ,vm_fr)-log(ℯ,vm_to)) + (-b*tr-g*ti)/ttm*(va_fr-va_to)) #add loss
-				@constraint(model, q_fr == (-(b+b_fr)/ttm*(log(ℯ,vm_fr)-log(ℯ,vm_to)) + (-g*tr+b*ti)/ttm*(va_fr-va_to))) #add loss
+				@constraint(model, p_fr == (g+g_fr)/ttm*(log(vm_fr)-log(vm_to)) + (-b*tr-g*ti)/ttm*(va_fr-va_to)) #add loss
+				@constraint(model, q_fr == (-(b+b_fr)/ttm*(log(vm_fr)-log(vm_to)) + (-g*tr+b*ti)/ttm*(va_fr-va_to))) #add loss
 
-				@constraint(model, p_to == (g+g_to)/ttm*(log(ℯ,vm_to)-log(ℯ,vm_fr)) + (-b*tr-g*ti)/ttm*(va_to-va_fr)) #add loss
-				@constraint(model, q_to == (-(b+b_to)/ttm*(log(ℯ,vm_to)-log(ℯ,vm_fr)) + (-g*tr+b*ti)/ttm*(va_to-va_fr))) #add loss
+				@constraint(model, p_to == (g+g_to)/ttm*(log(vm_to)-log(vm_fr)) + (-b*tr-g*ti)/ttm*(va_to-va_fr)) #add loss
+				@constraint(model, q_to == (-(b+b_to)/ttm*(log(vm_to)-log(vm_fr)) + (-g*tr+b*ti)/ttm*(va_to-va_fr))) #add loss
 			end
 
             @constraint(model, va_fr - va_to <= branch["angmax"])

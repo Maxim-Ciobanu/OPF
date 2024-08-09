@@ -28,9 +28,9 @@ v_error = []
 o_error = []
 
 # create the graph object
-feasability_graph = Graph("output/graphs/feasibility.html")
-v_error_graph = Graph("output/graphs/v_error.html")
-o_error_graph = Graph("output/graphs/o_error.html")
+#feasability_graph = Graph("output/graphs/feasibility.html")
+#v_error_graph = Graph("output/graphs/v_error.html")
+#o_error_graph = Graph("output/graphs/o_error.html")
 
 
 #=
@@ -148,118 +148,12 @@ o_error = []
 # [5.334018480403487e-22, 7.634077829776435e-9, 6.170849831534511e-6, 0.17723335432234452]
 # Example for Linearization 
 # --------------------------------------------------------------------------
-for path in file_paths
-
-	# select the model type to use ( Lin1, Lin2, Lin3 )
-
-	# initiate and optimize the linear model
-	model_type::MODEL_TYPE = Lin1 
-	linear_factory = LinMPOPFModelFactory(path, Ipopt.Optimizer)
-	My_Linear_model = create_model(linear_factory; model_type=model_type)
-	optimize_model(My_Linear_model)
-
-	# extract pg and qg value
-	new_pg_Lin = value.(My_Linear_model.model[:pg])
-	new_qg_Lin = value.(My_Linear_model.model[:qg])
-
-	# create new model with fixed pg and qg values
-	new_factory_Lin = NewACMPOPFModelFactory(path, Ipopt.Optimizer)
-	New_Model_Lin = create_model_check_feasibility(new_factory_Lin, new_pg_Lin, new_qg_Lin)
-	optimize_model(New_Model_Lin)
-
-
-	# calculate the error for va ( uses accurate indeces, fix for larger cases )
-	val1 = value.(getindex.((pairs(cat(My_Linear_model.model[:va], dims=1)) |> collect)[1:length(My_Linear_model.model[:va])], 2))
-	val2 = value.(getindex.((pairs(cat(New_Model_Lin.model[:va], dims=1)) |> collect)[1:length(New_Model_Lin.model[:va])], 2))
-
-	val3 = value.(getindex.((pairs(cat(My_Linear_model.model[:vm], dims=1)) |> collect)[1:length(My_Linear_model.model[:va])], 2))
-	val4 = value.(getindex.((pairs(cat(New_Model_Lin.model[:vm], dims=1)) |> collect)[1:length(New_Model_Lin.model[:va])], 2))
-
-	o_error_Lin = abs(sum((val1 - val2) / val2))
-	v_error_Lin = abs(sum((val3 - val4) / val4))
-
-	#calculate sum of x over sum of pg from inital model -> result shows feasibility
-	sum_x_Lin = sum(value.(New_Model_Lin.model[:x]))
-	sum_pg_Lin = sum(new_pg_Lin)
-	sum_total_Lin = sum_x_Lin / sum_pg_Lin
-
-	# multiply value with cost
-	cost_Lin = objective_value(New_Model_Lin.model)
-	total_cost_Lin = sum_total_Lin * cost_Lin
-
-	# push the calculate values
-	push!(costs, total_cost_Lin)
-	push!(v_error, v_error_Lin)
-	push!(o_error, o_error_Lin)
-end
-
-add_scatter(feasability_graph, file_strings , costs, "Lin1", "blue")
-add_scatter(v_error_graph, file_strings , v_error, "Va Error Lin1", "blue")
-add_scatter(o_error_graph, file_strings , o_error, "Vm Error Lin1", "blue")
-
-costs = []
-v_error = []
-o_error = []
-
-for path in file_paths
-
-	# select the model type to use ( Lin1, Lin2, Lin3 )
-
-	# initiate and optimize the linear model
-	model_type::MODEL_TYPE = Lin2
-	linear_factory = LinMPOPFModelFactory(path, Ipopt.Optimizer)
-	My_Linear_model = create_model(linear_factory; model_type=model_type)
-	optimize_model(My_Linear_model)
-
-	# extract pg and qg value
-	new_pg_Lin = value.(My_Linear_model.model[:pg])
-	new_qg_Lin = value.(My_Linear_model.model[:qg])
-
-	# create new model with fixed pg and qg values
-	new_factory_Lin = NewACMPOPFModelFactory(path, Ipopt.Optimizer)
-	New_Model_Lin = create_model_check_feasibility(new_factory_Lin, new_pg_Lin, new_qg_Lin)
-	optimize_model(New_Model_Lin)
-
-
-	# calculate the error for va ( uses accurate indeces, fix for larger cases )
-	val1 = value.(getindex.((pairs(cat(My_Linear_model.model[:va], dims=1)) |> collect)[1:length(My_Linear_model.model[:va])], 2))
-	val2 = value.(getindex.((pairs(cat(New_Model_Lin.model[:va], dims=1)) |> collect)[1:length(New_Model_Lin.model[:va])], 2))
-
-	val3 = value.(getindex.((pairs(cat(My_Linear_model.model[:vm], dims=1)) |> collect)[1:length(My_Linear_model.model[:va])], 2))
-	val4 = value.(getindex.((pairs(cat(New_Model_Lin.model[:vm], dims=1)) |> collect)[1:length(New_Model_Lin.model[:va])], 2))
-
-	o_error_Lin = abs(sum((val1 - val2) / val2))
-	v_error_Lin = abs(sum((val3 - val4) / val4))
-
-	#calculate sum of x over sum of pg from inital model -> result shows feasibility
-	sum_x_Lin = sum(value.(New_Model_Lin.model[:x]))
-	sum_pg_Lin = sum(new_pg_Lin)
-	sum_total_Lin = sum_x_Lin / sum_pg_Lin
-
-	# multiply value with cost
-	cost_Lin = objective_value(New_Model_Lin.model)
-	total_cost_Lin = sum_total_Lin * cost_Lin
-
-	# push the calculate values
-	push!(costs, total_cost_Lin)
-	push!(v_error, v_error_Lin)
-	push!(o_error, o_error_Lin)
-end
-
-# add_scatter(feasability_graph, file_strings , costs, "Lin2", "blue")
-# add_scatter(v_error_graph, file_strings , v_error, "Va Error Lin2", "blue")
-# add_scatter(o_error_graph, file_strings , o_error, "Vm Error Lin2", "blue")
-
-# costs = []
-# v_error = []
-# o_error = []
-
 # for path in file_paths
 
 # 	# select the model type to use ( Lin1, Lin2, Lin3 )
 
 # 	# initiate and optimize the linear model
-# 	model_type::MODEL_TYPE = Lin3
+# 	model_type::MODEL_TYPE = Lin1 
 # 	linear_factory = LinMPOPFModelFactory(path, Ipopt.Optimizer)
 # 	My_Linear_model = create_model(linear_factory; model_type=model_type)
 # 	optimize_model(My_Linear_model)
@@ -299,21 +193,127 @@ end
 # 	push!(o_error, o_error_Lin)
 # end
 
+# add_scatter(feasability_graph, file_strings , costs, "Lin1", "blue")
+# add_scatter(v_error_graph, file_strings , v_error, "Va Error Lin1", "blue")
+# add_scatter(o_error_graph, file_strings , o_error, "Vm Error Lin1", "blue")
+
+# costs = []
+# v_error = []
+# o_error = []
+
+# for path in file_paths
+
+# 	# select the model type to use ( Lin1, Lin2, Lin3 )
+
+# 	# initiate and optimize the linear model
+# 	model_type::MODEL_TYPE = Lin2
+# 	linear_factory = LinMPOPFModelFactory(path, Ipopt.Optimizer)
+# 	My_Linear_model = create_model(linear_factory; model_type=model_type)
+# 	optimize_model(My_Linear_model)
+
+# 	# extract pg and qg value
+# 	new_pg_Lin = value.(My_Linear_model.model[:pg])
+# 	new_qg_Lin = value.(My_Linear_model.model[:qg])
+
+# 	# create new model with fixed pg and qg values
+# 	new_factory_Lin = NewACMPOPFModelFactory(path, Ipopt.Optimizer)
+# 	New_Model_Lin = create_model_check_feasibility(new_factory_Lin, new_pg_Lin, new_qg_Lin)
+# 	optimize_model(New_Model_Lin)
+
+
+# 	# calculate the error for va ( uses accurate indeces, fix for larger cases )
+# 	val1 = value.(getindex.((pairs(cat(My_Linear_model.model[:va], dims=1)) |> collect)[1:length(My_Linear_model.model[:va])], 2))
+# 	val2 = value.(getindex.((pairs(cat(New_Model_Lin.model[:va], dims=1)) |> collect)[1:length(New_Model_Lin.model[:va])], 2))
+
+# 	val3 = value.(getindex.((pairs(cat(My_Linear_model.model[:vm], dims=1)) |> collect)[1:length(My_Linear_model.model[:va])], 2))
+# 	val4 = value.(getindex.((pairs(cat(New_Model_Lin.model[:vm], dims=1)) |> collect)[1:length(New_Model_Lin.model[:va])], 2))
+
+# 	o_error_Lin = abs(sum((val1 - val2) / val2))
+# 	v_error_Lin = abs(sum((val3 - val4) / val4))
+
+# 	#calculate sum of x over sum of pg from inital model -> result shows feasibility
+# 	sum_x_Lin = sum(value.(New_Model_Lin.model[:x]))
+# 	sum_pg_Lin = sum(new_pg_Lin)
+# 	sum_total_Lin = sum_x_Lin / sum_pg_Lin
+
+# 	# multiply value with cost
+# 	cost_Lin = objective_value(New_Model_Lin.model)
+# 	total_cost_Lin = sum_total_Lin * cost_Lin
+
+# 	# push the calculate values
+# 	push!(costs, total_cost_Lin)
+# 	push!(v_error, v_error_Lin)
+# 	push!(o_error, o_error_Lin)
+# end
+
+# add_scatter(feasability_graph, file_strings , costs, "Lin2", "blue")
+# add_scatter(v_error_graph, file_strings , v_error, "Va Error Lin2", "blue")
+# add_scatter(o_error_graph, file_strings , o_error, "Vm Error Lin2", "blue")
+
+# costs = []
+# v_error = []
+# o_error = []
+
+for path in file_paths
+
+	# select the model type to use ( Lin1, Lin2, Lin3 )
+
+	# initiate and optimize the linear model
+	model_type::MODEL_TYPE = Lin3
+	linear_factory = LinMPOPFModelFactory(path, Ipopt.Optimizer)
+	My_Linear_model = create_model(linear_factory; model_type=model_type)
+	optimize_model(My_Linear_model)
+
+	# extract pg and qg value
+	new_pg_Lin = value.(My_Linear_model.model[:pg])
+	new_qg_Lin = value.(My_Linear_model.model[:qg])
+
+	# create new model with fixed pg and qg values
+	new_factory_Lin = NewACMPOPFModelFactory(path, Ipopt.Optimizer)
+	New_Model_Lin = create_model_check_feasibility(new_factory_Lin, new_pg_Lin, new_qg_Lin)
+	optimize_model(New_Model_Lin)
+
+
+	# calculate the error for va ( uses accurate indeces, fix for larger cases )
+	val1 = value.(getindex.((pairs(cat(My_Linear_model.model[:va], dims=1)) |> collect)[1:length(My_Linear_model.model[:va])], 2))
+	val2 = value.(getindex.((pairs(cat(New_Model_Lin.model[:va], dims=1)) |> collect)[1:length(New_Model_Lin.model[:va])], 2))
+
+	val3 = value.(getindex.((pairs(cat(My_Linear_model.model[:vm], dims=1)) |> collect)[1:length(My_Linear_model.model[:va])], 2))
+	val4 = value.(getindex.((pairs(cat(New_Model_Lin.model[:vm], dims=1)) |> collect)[1:length(New_Model_Lin.model[:va])], 2))
+
+	o_error_Lin = abs(sum((val1 - val2) / val2))
+	v_error_Lin = abs(sum((val3 - val4) / val4))
+
+	#calculate sum of x over sum of pg from inital model -> result shows feasibility
+	sum_x_Lin = sum(value.(New_Model_Lin.model[:x]))
+	sum_pg_Lin = sum(new_pg_Lin)
+	sum_total_Lin = sum_x_Lin / sum_pg_Lin
+
+	# multiply value with cost
+	cost_Lin = objective_value(New_Model_Lin.model)
+	total_cost_Lin = sum_total_Lin * cost_Lin
+
+	# push the calculate values
+	push!(costs, total_cost_Lin)
+	push!(v_error, v_error_Lin)
+	push!(o_error, o_error_Lin)
+end
+
 #
 # output_to_file(join([string(costs), string(v_error), string(o_error)], "\n"), "feasibility.txt")
 
-# add and create the feasability graph
-add_scatter(feasability_graph, file_strings , costs, "Quadratic Lin2", "red")
-create_plot(feasability_graph, "Feasibility of Various Linearized Models", "Cases", "Costs")
-save_graph(feasability_graph)
+# # add and create the feasability graph
+# add_scatter(feasability_graph, file_strings , costs, "Quadratic Lin2", "red")
+# create_plot(feasability_graph, "Feasibility of Various Linearized Models", "Cases", "Costs")
+# save_graph(feasability_graph)
 
-# add and create the v_error graph
-add_scatter(v_error_graph, file_strings , v_error, "Va Error Lin2", "red")
-create_plot(v_error_graph, "Error of Va for Various Linearized Models", "Cases", "Error")
-save_graph(v_error_graph)
+# # add and create the v_error graph
+# add_scatter(v_error_graph, file_strings , v_error, "Va Error Lin2", "red")
+# create_plot(v_error_graph, "Error of Va for Various Linearized Models", "Cases", "Error")
+# save_graph(v_error_graph)
 
-# add and create the o_error graph
-add_scatter(o_error_graph, file_strings , o_error, "Vm Error Lin2", "red")
-create_plot(o_error_graph, "Error of Vm for Various Linearized Models", "Cases", "Error")
-save_graph(o_error_graph)
-#
+# # add and create the o_error graph
+# add_scatter(o_error_graph, file_strings , o_error, "Vm Error Lin2", "red")
+# create_plot(o_error_graph, "Error of Vm for Various Linearized Models", "Cases", "Error")
+# save_graph(o_error_graph)
+# #
