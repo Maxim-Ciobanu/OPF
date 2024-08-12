@@ -6,6 +6,7 @@ using PowerModels, JuMP, Ipopt#, Gurobi
 include("MPOPF.jl")
 include("misc.jl")
 include("search_functions.jl")
+include("graphing_class.jl")
 
 using PowerModels, JuMP, Ipopt, Plots#, Gurobi
 using .MPOPF
@@ -144,6 +145,9 @@ v_error = []
 o_error = []
 =#
 
+
+	
+
 #
 # Example for Linearization 1
 # --------------------------------------------------------------------------
@@ -165,7 +169,6 @@ for path in file_paths
 	new_factory_Lin = NewACMPOPFModelFactory(path, Ipopt.Optimizer)
 	New_Model_Lin = create_model_check_feasibility(new_factory_Lin, new_pg_Lin, new_qg_Lin)
 	optimize_model(New_Model_Lin)
-
 
 	# calculate the error for va, vm ( uses accurate indices to fix for larger cases )
 	val1 = value.(getindex.((pairs(cat(My_Linear_model.model[:va], dims=1)) |> collect)[1:length(My_Linear_model.model[:va])], 2))
