@@ -75,7 +75,7 @@ function generalised(factory::Union{ACMPOPFModelFactory, DCMPOPFModelFactory, Li
 	v_error[path] = new_v_error
 	o_error[path] = new_o_error
 
-	return total_cost, v_error, o_error
+	return costs, v_error, o_error
 end
 
 
@@ -113,12 +113,16 @@ for path in file_paths
 	push!(lin3_models[1], cost_lin_log); push!(lin3_models[2], v_error_lin_log); push!(lin3_models[3], o_error_lin_log)
 end
 
+# save the data to the output folder
+# TODO: modify the save function to append the data to the dictionary
+# TODO: write code here to save the computed error values to the file using this function
+
 # add the traces to the feasability graph
-add_scatter(feasability_graph, file_strings, ac_models[1], "AC", "blue")
-add_scatter(feasability_graph, file_strings, dc_models[1], "DC", "red")
-add_scatter(feasability_graph, file_strings, lin1_models[1], "Lin1", "green")
-add_scatter(feasability_graph, file_strings, lin2_models[1], "Lin2", "yellow")
-add_scatter(feasability_graph, file_strings, lin3_models[1], "Lin3", "purple")
+add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in ac_models[1]], "AC", "blue")
+add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in dc_models[1]], "DC", "red")
+add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in lin1_models[1]], "Lin1", "green")
+add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in lin2_models[1]], "Lin2", "yellow")
+add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in lin3_models[1]], "Lin3", "purple")
 
 # add the traces to the v_error graph
 add_scatter(v_error_graph, file_strings, [collect(values(i))[1] for i in ac_models[2]], "AC", "blue")
