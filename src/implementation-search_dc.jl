@@ -45,49 +45,50 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::D
     ramp_up = model[:ramp_up]
     ramp_down = model[:ramp_down]
 
-    p_expr = Dict()
+    p_expr = Dict(t => Dict() for t in 1:T)
+
     for t in 1:T
-        p_expr[t] = Dict()
-    end
-    for t in 1:T
-        p_expr[t] = Dict([((l, i, j), 1.0 * p[t, (l, i, j)]) for (l, i, j) in ref[:arcs_from]])
-        p_expr[t] = merge(p_expr[t], Dict([((l, j, i), -1.0 * p[t, (l, i, j)]) for (l, i, j) in ref[:arcs_from]]))
+        for (l, i, j) in ref[:arcs_from]
+            p_expr[t][(l, i, j)] = 1.0 * p[t, (l, i, j)]
+            p_expr[t][(l, j, i)] = -1.0 * p[t, (l, i, j)]
+        end
     end
 
     for t in 1:T
+        # Reference bus constraint
         for (i, bus) in ref[:ref_buses]
             @constraint(model, va[t,i] == 0)
         end
 
+        # Bus power balance constraint
         for (i, bus) in ref[:bus]
             bus_loads = [load_data[l] for l in ref[:bus_loads][i]]
             bus_shunts = [ref[:shunt][s] for s in ref[:bus_shunts][i]]
-
+            
             @constraint(model,
                 sum(p_expr[t][a] for a in ref[:bus_arcs][i]) <=
                 sum(pg[t, g] for g in ref[:bus_gens][i]) -
-                sum(demands[t][i]) - #epsilon
-                sum(shunt["gs"] for shunt in bus_shunts)*1.0^2
+                sum(get(demands[t], i, 0)) - #epsilon
+                sum(shunt["gs"] for shunt in bus_shunts) * 1.0^2
             )
         end
 
-        for (i,branch) in ref[:branch]
+        # Branch power flow constraints
+        for (i, branch) in ref[:branch]
             f_idx = (i, branch["f_bus"], branch["t_bus"])
-    
             p_fr = p[t,f_idx]
-    
             va_fr = va[t,branch["f_bus"]]
             va_to = va[t,branch["t_bus"]]
-    
+            
             g, b = PowerModels.calc_branch_y(branch)
-    
+            
             @constraint(model, p_fr == -b*(va_fr - va_to))
-        
             @constraint(model, va_fr - va_to <= branch["angmax"])
             @constraint(model, va_fr - va_to >= branch["angmin"])
         end
     end
 
+    # Generator ramping constraints
     for g in keys(gen_data)
         for t in 2:T
             @constraint(model, ramp_up[t, g] >= pg[t, g] - pg[t-1, g])

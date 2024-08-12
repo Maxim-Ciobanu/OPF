@@ -159,12 +159,14 @@ function decomposed_mpopf_local_search(factory, time_periods, ramping_data, dema
     escape_iterations = 0
     escape_attempts = 0
 
+    total_iterations = 0
+
     for iteration in 1:max_iterations
         if time() - start_time > max_time
             println("Time limit reached. Stopping search.")
             break
         end
-        
+        total_iterations += 1
         # Choose a random time period to adjust
         t = rand(1:time_periods)
         
@@ -205,7 +207,7 @@ function decomposed_mpopf_local_search(factory, time_periods, ramping_data, dema
             no_improvement_count = 0
             escape_mode = false
             escape_iterations = 0
-        elseif escape_mode || (new_cost <= current_cost && is_feasible_solution(new_models))
+        elseif escape_mode || (new_cost <= current_cost && is_feasible_solution(new_models)) && is_feasible_solution(new_models)
             current_solution = new_solution
             current_cost = new_cost
             current_models = new_models
@@ -295,12 +297,14 @@ function decomposed_mpopf_demand_search(factory, time_periods, ramping_data, dem
     max_demand_period = argmax([sum(d) for d in demands])
     max_total_demand = sum(demands[max_demand_period])
 
+    total_iterations = 0
+
     for iteration in 1:max_iterations
         if time() - start_time > max_time
             println("Time limit reached. Stopping search.")
             break
         end
-        
+        total_iterations += 1
         # Choose a random time period to adjust, excluding the max demand period
         available_periods = setdiff(1:time_periods, max_demand_period)
         t = rand(available_periods)
@@ -362,7 +366,7 @@ function decomposed_mpopf_demand_search(factory, time_periods, ramping_data, dem
         end
     end
     
-    return best_solution, best_cost, best_models, base_cost, current_demands
+    return best_solution, best_cost, best_models, base_cost, current_demands, total_iterations
 end
 
 
