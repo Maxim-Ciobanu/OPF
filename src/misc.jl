@@ -50,28 +50,32 @@ end
 
 
 # a function for serializing data to a file
+# updates the values if the file already exists
 #
 # output: Any - the data to be saved
 # file_name: String - the name of the file to be saved
 function save(file_name::String, output::Any)
-	serialize(file_name, output)
+
+	# check if the output directory exists
+	if retreive(file_name) !== false
+		data = retreive(file_name)
+		data = merge(data, output)
+		serialize(file_name, data)
+	else
+		serialize(file_name, output)
+	end
 end
 
 
 # a function for deserializing data from a file, return false if not found
 #
 # file_name: String - the name of the file to be retrieved
-# case: Int - the case number corresponding the the dictionary key value
-function retreive(file_name::String, case::Int)
+function retreive(file_name::String)
 	if isfile(file_name)
 		data::Dict = deserialize(file_name)
 		
 		if data isa Dict
-			if case in keys(data)
-				return data[case]
-			else
-				return false
-			end
+			return data
 		else
 			return false
 		end
