@@ -119,7 +119,6 @@ save("output/feasability_saved/dc/feasability", cost_dc); save("output/feasabili
 save("output/feasability_saved/lin1/feasability", cost_lin_regular); save("output/feasability_saved/lin1/v_error", v_error_lin_regular); save("output/feasability_saved/lin1/o_error", o_error_lin_regular)
 save("output/feasability_saved/lin2/feasability", cost_lin_quadratic); save("output/feasability_saved/lin2/v_error", v_error_lin_quadratic); save("output/feasability_saved/lin2/o_error", o_error_lin_quadratic)
 save("output/feasability_saved/lin3/feasability", cost_lin_log); save("output/feasability_saved/lin3/v_error", v_error_lin_log); save("output/feasability_saved/lin3/o_error", o_error_lin_log)
-# TODO: write code here to save the computed error values to the file using this function
 
 # add the traces to the feasability graph
 add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in ac_models[1]], "AC", "blue")
@@ -130,7 +129,7 @@ add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in lin
 
 # add the traces to the v_error graph
 add_scatter(v_error_graph, file_strings, [collect(values(i))[1] for i in ac_models[2]], "AC", "blue")
-add_scatter(v_error_graph, file_strings, [collect(values(i))[1] for i in dc_models[2]], "DC", "red")
+# add_scatter(v_error_graph, file_strings, [collect(values(i))[1] for i in dc_models[2]], "DC", "red")
 add_scatter(v_error_graph, file_strings, [collect(values(i))[1] for i in lin1_models[2]], "Lin1", "green")
 add_scatter(v_error_graph, file_strings, [collect(values(i))[1] for i in lin2_models[2]], "Lin2", "yellow")
 add_scatter(v_error_graph, file_strings, [collect(values(i))[1] for i in lin3_models[2]], "Lin3", "purple")
