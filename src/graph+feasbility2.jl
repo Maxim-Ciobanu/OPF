@@ -114,7 +114,11 @@ for path in file_paths
 end
 
 # save the data to the output folder
-# TODO: modify the save function to append the data to the dictionary
+save("output/feasability_saved/ac/feasability", cost_ac); save("output/feasability_saved/ac/v_error", v_error_ac); save("output/feasability_saved/ac/o_error", o_error_ac)
+save("output/feasability_saved/dc/feasability", cost_dc); save("output/feasability_saved/dc/v_error", v_error_dc); save("output/feasability_saved/dc/o_error", o_error_dc)
+save("output/feasability_saved/lin1/feasability", cost_lin_regular); save("output/feasability_saved/lin1/v_error", v_error_lin_regular); save("output/feasability_saved/lin1/o_error", o_error_lin_regular)
+save("output/feasability_saved/lin2/feasability", cost_lin_quadratic); save("output/feasability_saved/lin2/v_error", v_error_lin_quadratic); save("output/feasability_saved/lin2/o_error", o_error_lin_quadratic)
+save("output/feasability_saved/lin3/feasability", cost_lin_log); save("output/feasability_saved/lin3/v_error", v_error_lin_log); save("output/feasability_saved/lin3/o_error", o_error_lin_log)
 # TODO: write code here to save the computed error values to the file using this function
 
 # add the traces to the feasability graph
