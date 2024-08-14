@@ -22,6 +22,56 @@ feasability_graph = Graph("output/graphs/feasibility.html")
 v_error_graph = Graph("output/graphs/v_error.html")
 o_error_graph = Graph("output/graphs/o_error.html")
 
+# create a function for retreiveing the data, if it exists
+# 
+# factory: Union{ACMPOPFModelFactory, DCMPOPFModelFactory, LinMPOPFModelFactory} - the model factory to use
+# model_type: MODEL_TYPE - the type of model to use
+function retreive_data(factory::Union{ACMPOPFModelFactory, DCMPOPFModelFactory, LinMPOPFModelFactory}, path::String; model_type=false)
+
+	# check if the costs and error already exists
+	if factory isa ACMPOPFModelFactory
+		feasability = retreive("output/feasability_saved/ac/feasability")
+		v_error = retreive("output/feasability_saved/ac/v_error")
+		o_error = retreive("output/feasability_saved/ac/o_error")
+
+	elseif factory isa DCMPOPFModelFactory
+		feasability = retreive("output/feasability_saved/dc/feasability")
+		v_error = retreive("output/feasability_saved/dc/v_error")
+		o_error = retreive("output/feasability_saved/dc/o_error")
+
+	elseif factory isa LinMPOPFModelFactory
+		if model_type == Lin1
+			feasability = retreive("output/feasability_saved/lin1/feasability")
+			v_error = retreive("output/feasability_saved/lin1/v_error")
+			o_error = retreive("output/feasability_saved/lin1/o_error")
+
+		elseif model_type == Lin2
+			feasability = retreive("output/feasability_saved/lin2/feasability")
+			v_error = retreive("output/feasability_saved/lin2/v_error")
+			o_error = retreive("output/feasability_saved/lin2/o_error")
+
+		elseif model_type == Lin3
+			feasability = retreive("output/feasability_saved/lin3/feasability")
+			v_error = retreive("output/feasability_saved/lin3/v_error")
+			o_error = retreive("output/feasability_saved/lin3/o_error")
+		end
+	end
+
+	# check if the data exists
+	if feasability != false && v_error != false && o_error != false
+
+		# only return if the case exists in the data
+		if haskey(feasability, path) && haskey(v_error, path) && haskey(o_error, path)
+			return feasability[path], v_error[path], o_error[path]
+		else
+			return false
+		end
+	else
+		println("no solution found")
+		return false
+	end
+end
+
 
 
 # a general function for executing a specific model and checking its feasability
@@ -35,8 +85,23 @@ function generalised(factory::Union{ACMPOPFModelFactory, DCMPOPFModelFactory, Li
 	v_error = Dict()
 	o_error = Dict()
 
-	# check if the cost and error already exists
+	# check if the costs and errors already exists
+	if retreive_data(factory, path; model_type=model_type) != false
 
+		# get the data
+		feasability, new_v_error, new_o_error = retreive_data(factory, path; model_type=model_type)
+		println(path)
+		println(model_type)
+		println(feasability)
+		println(v_error)
+		println(o_error)
+		println("found!")
+		costs[path] = feasability
+		v_error[path] = new_v_error
+		o_error[path] = new_o_error
+		
+		return costs, v_error, o_error
+	end
 
 	# initiate and optimize the model
 	model_type !== false ? model = create_model(factory; model_type=model_type) : model = create_model(factory)
@@ -114,11 +179,15 @@ for path in file_paths
 end
 
 # save the data to the output folder
-save("output/feasability_saved/ac/feasability", cost_ac); save("output/feasability_saved/ac/v_error", v_error_ac); save("output/feasability_saved/ac/o_error", o_error_ac)
-save("output/feasability_saved/dc/feasability", cost_dc); save("output/feasability_saved/dc/v_error", v_error_dc); save("output/feasability_saved/dc/o_error", o_error_dc)
-save("output/feasability_saved/lin1/feasability", cost_lin_regular); save("output/feasability_saved/lin1/v_error", v_error_lin_regular); save("output/feasability_saved/lin1/o_error", o_error_lin_regular)
-save("output/feasability_saved/lin2/feasability", cost_lin_quadratic); save("output/feasability_saved/lin2/v_error", v_error_lin_quadratic); save("output/feasability_saved/lin2/o_error", o_error_lin_quadratic)
-save("output/feasability_saved/lin3/feasability", cost_lin_log); save("output/feasability_saved/lin3/v_error", v_error_lin_log); save("output/feasability_saved/lin3/o_error", o_error_lin_log)
+save("output/feasability_saved/ac/feasability", merge(ac_models[1]...)); save("output/feasability_saved/ac/v_error", merge(ac_models[2]...)); save("output/feasability_saved/ac/o_error", merge(ac_models[3]...))
+save("output/feasability_saved/dc/feasability", merge(dc_models[1]...)); save("output/feasability_saved/dc/v_error", merge(dc_models[2]...)); save("output/feasability_saved/dc/o_error", merge(dc_models[3]...))
+save("output/feasability_saved/lin1/feasability", merge(lin1_models[1]...)); save("output/feasability_saved/lin1/v_error", merge(lin1_models[2]...)); save("output/feasability_saved/lin1/o_error", merge(lin1_models[3]...))
+save("output/feasability_saved/lin2/feasability", merge(lin2_models[1]...)); save("output/feasability_saved/lin2/v_error", merge(lin2_models[2]...)); save("output/feasability_saved/lin2/o_error", merge(lin2_models[3]...))
+save("output/feasability_saved/lin3/feasability", merge(lin3_models[1]...)); save("output/feasability_saved/lin3/v_error", merge(lin3_models[2]...)); save("output/feasability_saved/lin3/o_error", merge(lin3_models[3]...))
+
+# create a function for scanning the data
+# this will for each case, evaluate all previous cases from that point 
+# to see which model performs best for all previous cases
 
 # add the traces to the feasability graph
 add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in ac_models[1]], "AC", "blue")
@@ -150,3 +219,16 @@ create_plot(o_error_graph, "Voltage Angle ( Va ) Error of Various Models", "Case
 save_graph(feasability_graph)
 save_graph(v_error_graph)
 save_graph(o_error_graph)
+
+
+#=
+println(file_paths[1])
+ac_factory = ACMPOPFModelFactory(file_paths[1], Ipopt.Optimizer)
+if retreive_data(ac_factory, file_paths[1]) != false
+	feasability, v_error, o_error = retreive_data(ac_factory, file_paths[1])
+	println(feasability)
+	println(v_error)
+	println(o_error)
+	println("found")
+end
+=#
