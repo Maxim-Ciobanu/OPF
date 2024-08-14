@@ -90,12 +90,6 @@ function generalised(factory::Union{ACMPOPFModelFactory, DCMPOPFModelFactory, Li
 
 		# get the data
 		feasability, new_v_error, new_o_error = retreive_data(factory, path; model_type=model_type)
-		println(path)
-		println(model_type)
-		println(feasability)
-		println(v_error)
-		println(o_error)
-		println("found!")
 		costs[path] = feasability
 		v_error[path] = new_v_error
 		o_error[path] = new_o_error
