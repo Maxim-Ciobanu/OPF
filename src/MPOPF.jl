@@ -2,7 +2,7 @@ module MPOPF
     using PowerModels, JuMP, Ipopt, PlotlyJS#, Gurobi
     
     # Exporting these functions from the module so we dont have to prefix them with MPOPF.
-    export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory, optimize_model_with_plot, LinMPOPFModelFactory, NewACMPOPFModelFactory, create_model_check_feasibility
+    export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory, optimize_model_with_plot, LinMPOPFModelFactory, NewACMPOPFModelFactory, create_model_check_feasibility, get_ref
 
 ##############################################################################################
 # Factory Structs
@@ -348,6 +348,12 @@ module MPOPF
     
             display(My_plot)
         end
+    end
+
+    # Function to return the built reference from a data dictionary
+    # Useful if we want to look up specific values in the data
+    function get_ref(data::Dict{String, Any})
+        return PowerModels.build_ref(data)[:it][:pm][:nw][0]
     end
 end # module
 
