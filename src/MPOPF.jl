@@ -1,5 +1,5 @@
 module MPOPF
-    using PowerModels, JuMP, Ipopt, PlotlyJS#, Gurobi
+    using PowerModels, JuMP, Ipopt, PlotlyJS, Gurobi
     
     # Exporting these functions from the module so we dont have to prefix them with MPOPF.
     export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory, optimize_model_with_plot, LinMPOPFModelFactory, NewACMPOPFModelFactory, create_model_check_feasibility
@@ -221,7 +221,7 @@ module MPOPF
             objective_values = Float64[]
             iterations = Int[]
 
-            function my_callback(
+            function ipopt_callback(
                 alg_mod::Cint, iter_count::Cint, obj_value::Float64,
                 inf_pr::Float64, inf_du::Float64, mu::Float64,
                 d_norm::Float64, regularization_size::Float64,
@@ -232,7 +232,38 @@ module MPOPF
                 return true  # Return true to continue the optimization
             end
 
-            MOI.set(model.model, Ipopt.CallbackFunction(), my_callback)
+            # Note: The callback does not work without a new package
+            # https://github.com/jump-dev/Gurobi.jl#callbacks
+            function gurobi_callback(cb_data, where)
+                if where == GRB_CB_MIP
+                    iteration = Ref{Cint}()
+                    GRBcbget(cb_data, where, GRB_CB_MIP_NODCNT, iteration)
+                    
+                    objbst = Ref{Cdouble}()
+                    GRBcbget(cb_data, where, GRB_CB_MIP_OBJBST, objbst)
+                    
+                    push!(iterations, iteration[])
+                    push!(objective_values, objbst[])
+                    
+                    println("Iteration: $(iteration[]), Best Obj: $(objbst[])")
+                end
+            end
+
+            if solver_name(model.model) == "Ipopt"
+                MOI.set(model.model, Ipopt.CallbackFunction(), ipopt_callback)
+            elseif solver_name(model.model) == "Gurobi"
+                error("At the moment there is no graphing for gurobi if Time_periods = 1")
+                # MOI.set(model.model, MOI.RawOptimizerAttribute("LazyConstraints"), 1)
+                # MOI.set(model.model, Gurobi.CallbackFunction(), gurobi_callback)
+                # if MOI.get(model.model, MOI.NumberOfVariables()) > 0
+                #     println("Callback has been set for Gurobi")
+                # else
+                #     println("No variables in the model. Callback may not be triggered.")
+                # end
+            else
+                error("Optimizer must be either Ipopt or Gurobi")
+            end
+
             optimize!(model.model)
             optimal_cost = objective_value(model.model)
             println("Optimal Cost: ", optimal_cost)
@@ -254,9 +285,9 @@ module MPOPF
                 showlegend=true
             )
 
-            My_plot = plot([trace], layout)
+            Plot = plot([trace], layout)
 
-            display(My_plot)
+            display(Plot)
         else
             optimize!(model.model)
             optimal_cost = objective_value(model.model)
@@ -344,9 +375,9 @@ module MPOPF
                 showlegend=true
             )
     
-            My_plot = plot([trace_cost_per_period_no_ramping, trace_cost_per_period_with_ramping_to_that_period, trace_ramping_cost_per_period, trace_ramping_up_per_period, trace_ramping_down_per_period, trace_roling_cost_per_period], layout)
+            Plot = plot([trace_cost_per_period_no_ramping, trace_cost_per_period_with_ramping_to_that_period, trace_ramping_cost_per_period, trace_ramping_up_per_period, trace_ramping_down_per_period, trace_roling_cost_per_period], layout)
     
-            display(My_plot)
+            display(Plot)
         end
     end
 end # module
