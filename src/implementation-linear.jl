@@ -1,4 +1,5 @@
 using PowerModels, JuMP, Ipopt#, Gurobi
+include("misc.jl")
 
 function set_model_variables!(power_flow_model::AbstractMPOPFModel, factory::LinMPOPFModelFactory)
     model = power_flow_model.model
@@ -35,7 +36,8 @@ function set_model_objective_function!(power_flow_model::AbstractMPOPFModel, fac
     )
 end
 
-function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::LinMPOPFModelFactory)
+function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::LinMPOPFModelFactory, model_type=0) #Can add an ENUM here. Then use an if/else case?
+	print("Model Type: ", model_type)
     model = power_flow_model.model
     data = power_flow_model.data
     T = power_flow_model.time_periods
@@ -99,12 +101,41 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::L
             b_fr = branch["b_fr"]
             g_to = branch["g_to"]
             b_to = branch["b_to"]
+			
+			
+			# select the linear model based on the model type
+			if Int(model_type) == 0
+				error("invalid model type")
+				exit()
 
-            @constraint(model, p_fr == (g+g_fr)/ttm*(vm_fr^2-vm_to^2)/2 + (-b*tr-g*ti)/ttm*(va_fr-va_to) + (g+g_fr)/ttm*((va_fr-va_to)^2/2+(vm_fr-vm_to)^2/2))
-            @constraint(model, q_fr == (-(b+b_fr)/ttm*(vm_fr^2-vm_to^2)/2 + (-g*tr+b*ti)/ttm*(va_fr-va_to) + (-(b+b_fr)/ttm*((va_fr-va_to)^2/2+(vm_fr-vm_to)^2/2))))
+			elseif Int(model_type) == 1
 
-            @constraint(model, p_to == (g+g_to)/ttm*(vm_to^2-vm_fr^2)/2 + (-b*tr-g*ti)/ttm*(va_to-va_fr) + (g+g_to)/ttm*((va_to-va_fr)^2/2+(vm_to-vm_fr)^2/2))
-            @constraint(model, q_to == (-(b+b_to)/ttm*(vm_to^2-vm_fr^2)/2 + (-g*tr+b*ti)/ttm*(va_to-va_fr) + (-(b+b_to)/ttm*((va_to-va_fr)^2/2+(vm_to-vm_fr)^2/2))))
+				# Linear Model 1
+				@constraint(model, p_fr == (g+g_fr)/ttm*(vm_fr-vm_to) + (-b*tr-g*ti)/ttm*(va_fr-va_to)) #add loss
+				@constraint(model, q_fr == (-(b+b_fr)/ttm*(vm_fr-vm_to) + (-g*tr+b*ti)/ttm*(va_fr-va_to))) #add loss
+
+				@constraint(model, p_to == (g+g_to)/ttm*(vm_to-vm_fr) + (-b*tr-g*ti)/ttm*(va_to-va_fr)) #add loss
+				@constraint(model, q_to == (-(b+b_to)/ttm*(vm_to-vm_fr) + (-g*tr+b*ti)/ttm*(va_to-va_fr))) #add loss
+				
+			elseif Int(model_type) == 2
+
+				#Linear Model 2 (quadratic)
+				@constraint(model, p_fr == (g+g_fr)/ttm*(vm_fr^2-vm_to^2)/2 + (-b*tr-g*ti)/ttm*(va_fr-va_to) + (g+g_fr)/ttm*((va_fr-va_to)^2/2+(vm_fr-vm_to)^2/2))
+				@constraint(model, q_fr == (-(b+b_fr)/ttm*(vm_fr^2-vm_to^2)/2 + (-g*tr+b*ti)/ttm*(va_fr-va_to) + (-(b+b_fr)/ttm*((va_fr-va_to)^2/2+(vm_fr-vm_to)^2/2))))
+
+				@constraint(model, p_to == (g+g_to)/ttm*(vm_to^2-vm_fr^2)/2 + (-b*tr-g*ti)/ttm*(va_to-va_fr) + (g+g_to)/ttm*((va_to-va_fr)^2/2+(vm_to-vm_fr)^2/2))
+				@constraint(model, q_to == (-(b+b_to)/ttm*(vm_to^2-vm_fr^2)/2 + (-g*tr+b*ti)/ttm*(va_to-va_fr) + (-(b+b_to)/ttm*((va_to-va_fr)^2/2+(vm_to-vm_fr)^2/2))))
+			elseif Int(model_type) == 3
+
+				# Linear Model 3 -> with natural log
+				@constraint(model, p_fr == (g+g_fr)/ttm*(log(vm_fr)-log(vm_to)) + (-b*tr-g*ti)/ttm*(va_fr-va_to)) #add loss
+				@constraint(model, q_fr == (-(b+b_fr)/ttm*(log(vm_fr)-log(vm_to)) + (-g*tr+b*ti)/ttm*(va_fr-va_to))) #add loss
+
+				@constraint(model, p_to == (g+g_to)/ttm*(log(vm_to)-log(vm_fr)) + (-b*tr-g*ti)/ttm*(va_to-va_fr)) #add loss
+				@constraint(model, q_to == (-(b+b_to)/ttm*(log(vm_to)-log(vm_fr)) + (-g*tr+b*ti)/ttm*(va_to-va_fr))) #add loss
+			end
+
+			# include a linear model here with the use of some type of support vector regression or machine learning to try and improve it even further
 
             @constraint(model, va_fr - va_to <= branch["angmax"])
             @constraint(model, va_fr - va_to >= branch["angmin"])

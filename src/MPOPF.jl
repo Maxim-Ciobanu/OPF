@@ -2,7 +2,7 @@ module MPOPF
     using PowerModels, JuMP, Ipopt, PlotlyJS, Gurobi
     
     # Exporting these functions from the module so we dont have to prefix them with MPOPF.
-    export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory, optimize_model_with_plot, LinMPOPFModelFactory, NewACMPOPFModelFactory, create_model_check_feasibility
+    export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory, optimize_model_with_plot, LinMPOPFModelFactory, NewACMPOPFModelFactory, create_model_check_feasibility, get_ref
 
 ##############################################################################################
 # Factory Structs
@@ -102,7 +102,7 @@ module MPOPF
     # The first create_model fucntion creates a PowerFlowModel object
     # It creates the right model depending on the factory passed as the first paramenter
     # For Example: If the factory passed is an AC factory the function will return an AC model
-    function create_model(factory::AbstractMPOPFModelFactory, time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0)::MPOPFModel
+    function create_model(factory::AbstractMPOPFModelFactory; time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0, model_type=undef)::MPOPFModel
         data = PowerModels.parse_file(factory.file_path)
         PowerModels.standardize_cost_terms!(data, order=2)
         PowerModels.calc_thermal_limits!(data)
@@ -113,7 +113,7 @@ module MPOPF
 
         set_model_variables!(power_flow_model, factory)
         set_model_objective_function!(power_flow_model, factory)
-        set_model_constraints!(power_flow_model, factory)
+        model_type !== undef ? set_model_constraints!(power_flow_model, factory, model_type) : set_model_constraints!(power_flow_model, factory)
 
         return power_flow_model
     end
@@ -379,6 +379,12 @@ module MPOPF
     
             display(Plot)
         end
+    end
+
+    # Function to return the built reference from a data dictionary
+    # Useful if we want to look up specific values in the data
+    function get_ref(data::Dict{String, Any})
+        return PowerModels.build_ref(data)[:it][:pm][:nw][0]
     end
 end # module
 
