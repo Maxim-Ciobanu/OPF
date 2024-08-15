@@ -101,6 +101,10 @@ function generalised(factory::Union{ACMPOPFModelFactory, DCMPOPFModelFactory, Li
 	model_type !== false ? model = create_model(factory; model_type=model_type) : model = create_model(factory)
 	optimize_model(model)
 
+	# get the length of the buses
+	test_ref = get_ref(model.data)
+	bus_len = length(test_ref[:bus])
+
 	# extract the pg and qg values
 	pg = value.(model.model[:pg])
 	qg = factory isa DCMPOPFModelFactory ? 0 : value.(model.model[:qg])
@@ -113,12 +117,12 @@ function generalised(factory::Union{ACMPOPFModelFactory, DCMPOPFModelFactory, Li
 	# get va values from the model ( it is horrible as bus indices are not always linearly increasing )
 	val1 = value.(getindex.((pairs(cat(model.model[:va], dims=1)) |> collect)[1:length(model.model[:va])], 2))
 	val2 = value.(getindex.((pairs(cat(ac_model.model[:va], dims=1)) |> collect)[1:length(ac_model.model[:va])], 2))
-	new_o_error = abs(sum((val1 - val2) / val2))
+	new_o_error = abs(sum((val1 - val2) / val2) / bus_len) 
 
 	# get vm values from the model, dc models do not have vm values, so default to 1
 	val3 = factory isa DCMPOPFModelFactory ? 0 : value.(getindex.((pairs(cat(model.model[:vm], dims=1)) |> collect)[1:length(model.model[:va])], 2))
 	val4 = factory isa DCMPOPFModelFactory ? 0 : value.(getindex.((pairs(cat(ac_model.model[:vm], dims=1)) |> collect)[1:length(ac_model.model[:va])], 2))
-	new_v_error = factory isa DCMPOPFModelFactory ? 1 : abs(sum((val3 - val4) / val4))
+	new_v_error = factory isa DCMPOPFModelFactory ? 1 : abs(sum((val3 - val4) / val4) / bus_len)
 
 	# calculate sum of x over sum of pg from inital model to show feasibility
 	sum_x = sum(value.(ac_model.model[:x]))
