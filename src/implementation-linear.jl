@@ -135,6 +135,8 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::L
 				@constraint(model, q_to == (-(b+b_to)/ttm*(log(vm_to)-log(vm_fr)) + (-g*tr+b*ti)/ttm*(va_to-va_fr))) #add loss
 			end
 
+			# include a linear model here with the use of some type of support vector regression or machine learning to try and improve it even further
+
             @constraint(model, va_fr - va_to <= branch["angmax"])
             @constraint(model, va_fr - va_to >= branch["angmin"])
 
