@@ -4,7 +4,7 @@ using .MPOPF
 using Documenter
 
 makedocs(
-    sitename = "MPOPF.jl",
+    sitename = "MPOPF Documentation",
     format = Documenter.HTML(),
     modules = [MPOPF],
     pages = [
