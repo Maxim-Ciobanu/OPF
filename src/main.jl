@@ -50,23 +50,43 @@ display(JuMP.value.(modelToAnalyse.model[:mu_minus]))
 
 # Example usage:
 file_path = "./Cases/case14.m"
-#= # Case 300, figure out bus id problem
-ramp_limits = 0.1 .+ 0.2 .* rand(5)
-costs = 20 .+ 80 .* rand(5)
+# Case 300, figure out bus id problem
+#=
+ramp_limits = 0.4 .+ 0.2 .* rand(69)
+costs = 700 .+ 100 .* rand(69)
 ramping_data = Dict(
     "ramp_limits" => ramp_limits,
     "costs" => costs
 )
-demands = [0.2 .* rand(300) for _ in 1:3]
+demands = [0.3 .+ 0.2 .* rand(300) for _ in 1:24]
 =#
+
 ramping_data = Dict(
-    #"ramp_limits" => [0.261308, 0.179846, 0.127649, 0.256349, 0.124095], # These ramp limits arent working?
+    #"ramp_limits" => [0.261308, 0.179846, 0.127649, 0.256349, 0.124095], # These ramp limits arent working
     "ramp_limits" => [0.05, 0.05, 0.05, 0.5, 0.5],
     #"costs" => [27.1089, 59.3871, 79.9998, 27.0244, 48.7984]
-    "costs" => [400, 100, 500, 900, 300]
+    "costs" => [40000, 40000, 40000, 40000, 40000]
 )
 
 demands = [
+    [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+    [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+    [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+    [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+    [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+    [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+    [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+    [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+    [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+    [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+    [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+    [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+    [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+    [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+    [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+    [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+    [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
+    [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
     [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
     [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
     [0.217, 0.942, 0.478, 0.076, 0.112, 0.295, 0.09, 0.035, 0.061, 0.135, 0.149],
@@ -79,11 +99,29 @@ demands[3] .*= 1.4
 demands[4] .*= 1.8
 demands[5] .*= 1.1
 demands[6] .*= 0.9
+demands[7] .*= 1.2
+demands[8] .*= 1.4
+demands[9] .*= 1.8
+demands[10] .*= 1.1
+demands[11] .*= 0.9
+demands[12] .*= 1.2
+demands[13] .*= 1.4
+demands[14] .*= 1.8
+demands[15] .*= 1.1
+demands[16] .*= 0.9
+demands[17] .*= 1.2
+demands[18] .*= 1.4
+demands[19] .*= 1.8
+demands[20] .*= 1.1
+demands[21] .*= 0.9
+demands[22] .*= 1.2
+demands[23] .*= 1.3
+demands[24] .*= 0.9
 
 
 # Total demand for initial case adjusted order=2 is 2.59
-search_factory = DCMPOPFSearchFactory(file_path, Ipopt.Optimizer)
-search_model = create_search_model(search_factory, 6, ramping_data, demands)
+search_factory = DCMPOPFSearchFactory(file_path, Gurobi.Optimizer)
+search_model = create_search_model(search_factory, 24, ramping_data, demands)
 
 
 #println(value.(search_model.model[:pg]))
@@ -110,7 +148,7 @@ else
     println("No feasible solution found.")
 end 
 =#
-best_solution2, best_cost2, best_models2, base_cost2, final_demands, total_iterations = decomposed_mpopf_demand_search(search_factory, 6, ramping_data, demands)
+best_solution2, best_cost2, best_models2, base_cost2, final_demands, total_iterations = decomposed_mpopf_demand_search(search_factory, 24, ramping_data, demands)
 
 #best_cost = best_cost1 < best_cost2 ? best_cost1 : best_cost2
 #best_solution = best_cost1 < best_cost2 ? best_solution1 : best_solution2
@@ -125,6 +163,7 @@ display(value.(search_model.model[:pg]))
 println("Decomposed model pg values:")
 display(best_solution2)
 println("Base cost / best cost: ", base_cost2 / best_cost2)
+println("Optimal / found solution: ", objective_value(search_model.model) / best_cost2)
 #println(total_iterations)
 
 #best_solution, best_cost, best_models, base_cost = decomposed_mpopf_downward_search(search_factory, 3, ramping_data, demands)
@@ -157,11 +196,38 @@ Tried
 # Use a general "cost" for generation and make ramping a % of that 
 
 ############
-# Read Lethbridge Herald article Aug 7th paper
 
 #=
 Full model cost:, 28067.150137891884
 Decomposed model cost: 28067.150136635013
 Base cost: 28067.150139926704
 31981
+=#
+
+#= Case 14 at 24 time periods 
+Full model cost:, 269834.22609894746
+Decomposed model cost: 274737.40779792494
+Base cost: 274737.40779792494
+=#
+
+#= Case 300 at 24 time periods
+Ramping costs: 20-80 
+Full model cost:, 272316.2489880663
+Decomposed model cost: 229133.59746773235
+Base cost: 272640.1597531013
+
+Ramping costs (100-800)
+Full model cost:, 280363.425256928
+Decomposed model cost: 227464.14590942685
+Base cost: 280753.1479667707
+
+High ramping costs (30,000) increased demands
+Full model cost:, 940265.7732253394
+Decomposed model cost: 983726.9662926146
+Base cost: 1.0204254492877845e6
+
+Case where solution retured cheaper for both base and final cost
+Full model cost:, 931762.7961142109
+Decomposed model cost: 925419.5975321555
+Base cost: 930688.569357676
 =#
