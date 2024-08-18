@@ -1,29 +1,25 @@
-# MPOPF.jl
+# Multiperiod Optimal Power Flow (MPOPF)
 
-Documentation for MPOPF.jl
+Welcome to the documentation for the MPOPF project. This Julia package provides tools for analyzing and optimizing power flow in electrical networks over multiple time periods.
 
-## Overview
+!!! note
 
-MPOPF.jl is a Julia package for Multi-Period Optimal Power Flow modeling and optimization.
+    If you are unsure about power flow concepts, please read through the [background page](@ref Background-Information-for-OPF-(Optimal-Power-Flow)).
+    It will go over the background on this project such AC and DC Power Flow caluclations as well as different linearization formulas used.
+    Additionally, Key terms and variabels along with additional resources for further reading will be provided there.
 
 ## Features
 
-- Create MPOPF models using different factory types (AC, DC, Linear, etc.)
-- Optimize MPOPF models
-- Handle uncertainty in MPOPF models
-- Visualize optimization results
+- Support for AC and DC power flow models
+- Multi-period optimization
+- Uncertainty modeling
+- Linearization techniques
+- Local search optimization
+- Feasibility checking
 
-## Manual
+## Contents
 
 ```@contents
-Pages = [
-    "manual/getting_started.md",
-    "manual/types.md",
-    "manual/functions.md"
-]
+Pages = ["class_diagram.md", "getting_started.md", "background.md", "implementation_details.md", "linearization.md", "feasibility.md", "future_development.md", "design_philosophy.md", "api.md"]
 Depth = 2
 ```
-
-## API Reference
-
-See the [MPOPF API Reference](@ref) section for detailed documentation of the package's functions and types.

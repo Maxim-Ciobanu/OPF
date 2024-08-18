@@ -1,7 +1,6 @@
-include("../src/MPOPF.jl")
-using .MPOPF
-
 using Documenter
+using DocumenterMermaid
+using MPOPF
 
 makedocs(
     sitename = "MPOPF Documentation",
@@ -9,11 +8,17 @@ makedocs(
     modules = [MPOPF],
     pages = [
         "Home" => "index.md",
-        "Manual" => [
-            "Getting Started" => "manual/getting_started.md",
-            "Types" => "manual/types.md",
-            "Functions" => "manual/functions.md",
-        ],
-        "API" => "api.md"
+        "Class Diagram" => "class_diagram.md",
+        "Getting Started" => "getting_started.md",
+        "Background" => "background.md",
+        "Implementation Details" => "implementation_details.md",
+        "Linearization Techniques" => "linearization.md",
+        "Future Development" => "future_development.md",
+        "Design Philosophy" => "design_philosophy.md",
+        "API Reference" => "api.md"
     ]
 )
+
+# deploydocs(
+#     repo = "github.com/Maxim-Ciobanu/OPF.git",
+# )

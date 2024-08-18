@@ -4,10 +4,17 @@
 CurrentModule = MPOPF
 ```
 
+## Contents
+
+```@contents
+Pages = ["api.md"]
+Depth = 2:2
+```
+
 ## Index
 
 ```@index
-Modules = [MPOPF]
+Pages = ["api.md"]
 ```
 
 ## Module Documentation
