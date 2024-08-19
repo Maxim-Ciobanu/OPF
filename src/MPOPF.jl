@@ -1,18 +1,54 @@
+"""
+# MPOPF
+
+A module for Multi-Period Optimal Power Flow (MPOPF) modeling and optimization.
+
+This module provides tools to create, optimize, and analyze MPOPF models using various formulations including AC, DC, and linearized versions.
+
+## Main Features
+
+- Create MPOPF models using different factory types (AC, DC, Linear, etc.)
+- Optimize MPOPF models
+- Handle uncertainty in MPOPF models
+- Visualize optimization results
+"""
 module MPOPF
-    using PowerModels, JuMP, Ipopt, PlotlyJS, Gurobi
+    using PowerModels, JuMP, Dates, Serialization, PlotlyJS
     
     # Exporting these functions from the module so we dont have to prefix them with MPOPF.
+    
+    # Export of this file
     export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory, optimize_model_with_plot, LinMPOPFModelFactory, NewACMPOPFModelFactory, create_model_check_feasibility, get_ref
+    
+    # Export of Graphing_class.jl functions
+    export Graph, add_scatter, create_plot, save_graph, display_graph
+    
+    # Export of misc.jl functions
+    export generate_load_scenarios, save, retreive, output_to_file
 
 ##############################################################################################
 # Factory Structs
 # They are used as parameters so that Julias multiple dispatch knows which functions to call
 ##############################################################################################
 
-    # Abstract type as a base so that we can use this type as a parameter in fucntions
+    # Abstract type as a base so that we can use this type as a parameter in functions
+    """
+        AbstractMPOPFModelFactory
+
+    An abstract type serving as a base for all MPOPF model factories.
+    """
     abstract type AbstractMPOPFModelFactory end
 
     # This struct "inherits" from PowerFlowModelFactory
+    """
+        ACMPOPFModelFactory <: AbstractMPOPFModelFactory
+
+    Factory for creating AC MPOPF models.
+
+    # Fields
+    - `file_path::String`: Path to the input data file.
+    - `optimizer::Type`: The optimizer to be used (e.g., Ipopt.Optimizer).
+    """
     mutable struct ACMPOPFModelFactory <: AbstractMPOPFModelFactory
         file_path::String
         optimizer::Type
@@ -23,6 +59,15 @@ module MPOPF
     end
 
     # This struct "inherits" from PowerFlowModelFactory
+    """
+        DCMPOPFModelFactory <: AbstractMPOPFModelFactory
+
+    Factory for creating DC MPOPF models.
+
+    # Fields
+    - `file_path::String`: Path to the input data file.
+    - `optimizer::Type`: The optimizer to be used.
+    """
     mutable struct DCMPOPFModelFactory <: AbstractMPOPFModelFactory
         file_path::String
         optimizer::Type
@@ -32,6 +77,17 @@ module MPOPF
         end
     end
 
+    """
+        LinMPOPFModelFactory <: AbstractMPOPFModelFactory
+
+    Factory for creating linearized MPOPF models.
+    If this factory is used then `model_type` needs to be specified
+    in the `create_model()` function.
+
+    # Fields
+    - `file_path::String`: Path to the input data file.
+    - `optimizer::Type`: The optimizer to be used.
+    """
     mutable struct LinMPOPFModelFactory <: AbstractMPOPFModelFactory
         file_path::String
         optimizer::Type
@@ -41,6 +97,16 @@ module MPOPF
         end
     end
 
+    """
+        NewACMPOPFModelFactory <: AbstractMPOPFModelFactory
+
+    Factory for creating new AC MPOPF models.
+    This is only used when computing for feasibility
+
+    # Fields
+    - `file_path::String`: Path to the input data file.
+    - `optimizer::Type`: The optimizer to be used.
+    """
     mutable struct NewACMPOPFModelFactory <: AbstractMPOPFModelFactory
         file_path::String
         optimizer::Type
@@ -52,13 +118,30 @@ module MPOPF
 
 ##############################################################################################
 # Concrete Model Structs
-# They are used as objects, passed around with variabels that are specific to each model
+# They are used as objects, passed around with variables that are specific to each model
 ##############################################################################################
 
-    # Abstract type as a base so that we can use this type as a parameter in fucntions
+    # Abstract type as a base so that we can use this type as a parameter in functions
+    """
+        AbstractMPOPFModel
+
+    An abstract type serving as a base for all MPOPF model types.
+    """
     abstract type AbstractMPOPFModel end
 
-    # The actual PowerFlowModel struct that "inherits" forrm AbstractPowerFlowModel
+    # The actual PowerFlowModel struct that "inherits" from AbstractPowerFlowModel
+    """
+        MPOPFModel <: AbstractMPOPFModel
+
+    Represents a Multi-Period Optimal Power Flow model.
+
+    # Fields
+    - `model::JuMP.Model`: The underlying JuMP model.
+    - `data::Dict`: Dictionary containing the power system data.
+    - `time_periods::Int64`: Number of time periods in the model.
+    - `factors::Vector{Float64}`: Scaling factors for each time period.
+    - `ramping_cost::Int64`: Cost associated with generator ramping.
+    """
     mutable struct MPOPFModel <: AbstractMPOPFModel
         model::JuMP.Model
         data::Dict
@@ -71,7 +154,20 @@ module MPOPF
         end
     end
 
-    # Similar PowerFlowModel object but with an additional scenrios variable for uncertainty
+    # Similar PowerFlowModel object but with an additional scenarios variable for uncertainty
+    """
+        MPOPFModelUncertainty <: AbstractMPOPFModel
+
+    Represents a Multi-Period Optimal Power Flow model with uncertainty considerations.
+
+    # Fields
+    - `model::JuMP.Model`: The underlying JuMP model.
+    - `data::Dict`: Dictionary containing the power system data.
+    - `scenarios::Dict`: Dictionary of scenarios for uncertainty analysis.
+    - `time_periods::Int64`: Number of time periods in the model.
+    - `factors::Vector{Float64}`: Scaling factors for each time period.
+    - `ramping_cost::Int64`: Cost associated with generator ramping.
+    """
     mutable struct MPOPFModelUncertainty <: AbstractMPOPFModel
         model::JuMP.Model
         data::Dict
@@ -87,21 +183,40 @@ module MPOPF
 
 ##############################################################################################
 # Create Model Functions
-# First function returns PowerFlowModel object
-# Second function returns PowerFlowModelUncertainty object
+# These functions return PowerFlowModel objects with or without uncertainty
 ##############################################################################################
 
     # Here we include our implementation files
     # They hold the implementations of the functions utilized in the create_model functions
+    include("graphing_class.jl")
     include("implementation-ac.jl")
     include("implementation-dc.jl")
     include("implementation_uncertainty.jl")
     include("implementation-linear.jl")
     include("implementation-new_ac.jl")
+    include("misc.jl")
 
     # The first create_model fucntion creates a PowerFlowModel object
     # It creates the right model depending on the factory passed as the first paramenter
     # For Example: If the factory passed is an AC factory the function will return an AC model
+    """
+        create_model(factory::AbstractMPOPFModelFactory; time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0, model_type=undef)::MPOPFModel
+
+    Create a Multi-Period Optimal Power Flow (MPOPF) model.
+    The factory passed in defines the type of model that will be returned
+
+    If `LinMPOPFModelFactory` is passed in as the factory then `model_type` needs to be specified.
+
+    # Arguments
+    - `factory`: The factory used to create the specific type of MPOPF model.
+    - `time_periods`: Number of time periods to consider in the model. Default is 1.
+    - `factors`: Scaling factors for each time period. Default is [1.0].
+    - `ramping_cost`: Cost associated with ramping generation up or down. Default is 0.
+    - `model_type`: Optional parameter to specify a particular model type. Default is undef.
+
+    # Returns
+    An `MPOPFModel` object representing the created MPOPF model.
+    """
     function create_model(factory::AbstractMPOPFModelFactory; time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0, model_type=undef)::MPOPFModel
         data = PowerModels.parse_file(factory.file_path)
         PowerModels.standardize_cost_terms!(data, order=2)
@@ -121,6 +236,21 @@ module MPOPF
     # The second create_model fucntion creates a PowerFlowModelUncertainty object
     # Similarly it creates the right model depending on the factory passed as the first paramenter
     # However now we are passing the scenarios as parameters too
+    """
+        create_model(factory::AbstractMPOPFModelFactory, scenarios::Dict, time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0)::MPOPFModelUncertainty
+
+    Create a Multi-Period Optimal Power Flow (MPOPF) model with uncertainty considerations.
+
+    # Arguments
+    - `factory`: The factory used to create the specific type of MPOPF model.
+    - `scenarios`: Dictionary of scenarios for uncertainty analysis.
+    - `time_periods`: Number of time periods to consider in the model. Default is 1.
+    - `factors`: Scaling factors for each time period. Default is [1.0].
+    - `ramping_cost`: Cost associated with ramping generation up or down. Default is 0.
+
+    # Returns
+    An `MPOPFModelUncertainty` object representing the created MPOPF model with uncertainty.
+    """
     function create_model(factory::AbstractMPOPFModelFactory, scenarios::Dict, time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0)::MPOPFModelUncertainty
         data = PowerModels.parse_file(factory.file_path)
         PowerModels.standardize_cost_terms!(data, order=2)
@@ -140,6 +270,25 @@ module MPOPF
 
     # A new create model to create a secondary model that asseses how feasible the first solution was
     # It uses the pg values from a previous model and fixes it, then asses if it works referencing AC OPF
+    """
+        create_model_check_feasibility(factory::NewACMPOPFModelFactory, new_pg=false, new_qg=false, v=false, theta=false, time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0)::MPOPFModel
+
+    Create a secondary model to assess the feasibility of a solution
+    when comparing to the AC model.
+
+    # Arguments
+    - `factory`: The factory used to create the specific type of MPOPF model.
+    - `new_pg`: Fixed values for active power generation, or `false` to skip fixing.
+    - `new_qg`: Fixed values for reactive power generation, or `false` to skip fixing.
+    - `v`: Fixed values for bus voltages, or `false` to skip fixing.
+    - `theta`: Fixed values for bus angles, or `false` to skip fixing.
+    - `time_periods`: Number of time periods to consider in the model. Default is 1.
+    - `factors`: Scaling factors for each time period. Default is [1.0].
+    - `ramping_cost`: Cost associated with ramping generation up or down. Default is 0.
+
+    # Returns
+    An `MPOPFModel` object representing the created MPOPF model.
+    """
     function create_model_check_feasibility(factory::NewACMPOPFModelFactory, new_pg=false, new_qg=false, v=false, theta=false, time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0)::MPOPFModel
         data = PowerModels.parse_file(factory.file_path)
         PowerModels.standardize_cost_terms!(data, order=2)
@@ -164,11 +313,29 @@ module MPOPF
     end
 
 ##############################################################################################
-# Optimization function
+# Optimization functions
 ##############################################################################################
 
     # This function simply optimizes any model given as a parameter
     # It prints the Optimial cost
+    """
+        optimize_model(model::AbstractMPOPFModel)
+
+    Optimize the given MPOPF model and print the optimal cost.
+    
+    !!! note
+
+        If the model being optimized is of type `MPOPFModelUncertainty`
+        then extra computation will be executed to determine if there are
+        any unbalaced power at each bus for every scenario
+        when consitering mu_plus and mu_minus.
+
+        That is if `sum_of_mu_plus` and `mu_minus` are both > 0.01
+        at any given bus then an error message is printed.
+
+    # Arguments
+    - `model`: The MPOPF model to optimize.
+    """
     function optimize_model(model::AbstractMPOPFModel)
         optimize!(model.model)
         optimal_cost = objective_value(model.model)
@@ -193,7 +360,7 @@ module MPOPF
                             error_check = error_check + 1
                             println("###############")
                             println("#### Error ####")
-                            Println("###############")
+                            println("###############")
 
                             println("Scenario: $s Bus: $b")
                             println("mu_plus: $sum_of_mu_plus")
@@ -214,80 +381,95 @@ module MPOPF
     end
 
     # Optimized and graphs the given model using a callback function
+    """
+        optimize_model_with_plot(model::AbstractMPOPFModel)
+
+    Optimize the given MPOPF model, print the optimal cost, 
+    and generate a PlotlyJS graph/plot of the optimization process.
+    
+    !!! note
+
+        if `time_periods = 1` then the graph will represent the iterations taken by the solver
+        otherwize the graph will represent each time period.
+
+    # Arguments
+    - `model`: The MPOPF model to optimize and plot.
+    """
     function optimize_model_with_plot(model::AbstractMPOPFModel)
         T = model.time_periods
 
         if T == 1
-            objective_values = Float64[]
-            iterations = Int[]
+            error("Graphing for Time Periods = 1 not supported")
+            # objective_values = Float64[]
+            # iterations = Int[]
 
-            function ipopt_callback(
-                alg_mod::Cint, iter_count::Cint, obj_value::Float64,
-                inf_pr::Float64, inf_du::Float64, mu::Float64,
-                d_norm::Float64, regularization_size::Float64,
-                alpha_du::Float64, alpha_pr::Float64, ls_trials::Cint
-            )
-                push!(objective_values, obj_value)
-                push!(iterations, iter_count)
-                return true  # Return true to continue the optimization
-            end
+            # function ipopt_callback(
+            #     alg_mod::Cint, iter_count::Cint, obj_value::Float64,
+            #     inf_pr::Float64, inf_du::Float64, mu::Float64,
+            #     d_norm::Float64, regularization_size::Float64,
+            #     alpha_du::Float64, alpha_pr::Float64, ls_trials::Cint
+            # )
+            #     push!(objective_values, obj_value)
+            #     push!(iterations, iter_count)
+            #     return true  # Return true to continue the optimization
+            # end
 
-            # Note: The callback does not work without a new package
-            # https://github.com/jump-dev/Gurobi.jl#callbacks
-            function gurobi_callback(cb_data, where)
-                if where == GRB_CB_MIP
-                    iteration = Ref{Cint}()
-                    GRBcbget(cb_data, where, GRB_CB_MIP_NODCNT, iteration)
+            # # Note: The callback does not work without a new package
+            # # https://github.com/jump-dev/Gurobi.jl#callbacks
+            # function gurobi_callback(cb_data, where)
+            #     if where == GRB_CB_MIP
+            #         iteration = Ref{Cint}()
+            #         GRBcbget(cb_data, where, GRB_CB_MIP_NODCNT, iteration)
                     
-                    objbst = Ref{Cdouble}()
-                    GRBcbget(cb_data, where, GRB_CB_MIP_OBJBST, objbst)
+            #         objbst = Ref{Cdouble}()
+            #         GRBcbget(cb_data, where, GRB_CB_MIP_OBJBST, objbst)
                     
-                    push!(iterations, iteration[])
-                    push!(objective_values, objbst[])
+            #         push!(iterations, iteration[])
+            #         push!(objective_values, objbst[])
                     
-                    println("Iteration: $(iteration[]), Best Obj: $(objbst[])")
-                end
-            end
+            #         println("Iteration: $(iteration[]), Best Obj: $(objbst[])")
+            #     end
+            # end
 
-            if solver_name(model.model) == "Ipopt"
-                MOI.set(model.model, Ipopt.CallbackFunction(), ipopt_callback)
-            elseif solver_name(model.model) == "Gurobi"
-                error("At the moment there is no graphing for gurobi if Time_periods = 1")
-                # MOI.set(model.model, MOI.RawOptimizerAttribute("LazyConstraints"), 1)
-                # MOI.set(model.model, Gurobi.CallbackFunction(), gurobi_callback)
-                # if MOI.get(model.model, MOI.NumberOfVariables()) > 0
-                #     println("Callback has been set for Gurobi")
-                # else
-                #     println("No variables in the model. Callback may not be triggered.")
-                # end
-            else
-                error("Optimizer must be either Ipopt or Gurobi")
-            end
+            # if solver_name(model.model) == "Ipopt"
+            #     MOI.set(model.model, Ipopt.CallbackFunction(), Ipopt.Optimizer)
+            # elseif solver_name(model.model) == "Gurobi"
+            #     error("At the moment there is no graphing for gurobi if Time_periods = 1")
+            #     # MOI.set(model.model, MOI.RawOptimizerAttribute("LazyConstraints"), 1)
+            #     # MOI.set(model.model, Gurobi.CallbackFunction(), gurobi_callback)
+            #     # if MOI.get(model.model, MOI.NumberOfVariables()) > 0
+            #     #     println("Callback has been set for Gurobi")
+            #     # else
+            #     #     println("No variables in the model. Callback may not be triggered.")
+            #     # end
+            # else
+            #     error("Optimizer must be either Ipopt or Gurobi")
+            # end
 
-            optimize!(model.model)
-            optimal_cost = objective_value(model.model)
-            println("Optimal Cost: ", optimal_cost)
+            # optimize!(model.model)
+            # optimal_cost = objective_value(model.model)
+            # println("Optimal Cost: ", optimal_cost)
             
-            # Plotting Code
-            trace = scatter(
-                x=iterations, y=objective_values,
-                mode="lines+markers",
-                name="Objective Cost",
-                marker_color="blue",
-                hoverinfo="x+y", # Ensure hover displays both x and y values
-                hovertemplate="%{x}, %{y:.2f}<extra></extra>" # Custom hover text format
-            )
+            # # Plotting Code
+            # trace = scatter(
+            #     x=iterations, y=objective_values,
+            #     mode="lines+markers",
+            #     name="Objective Cost",
+            #     marker_color="blue",
+            #     hoverinfo="x+y", # Ensure hover displays both x and y values
+            #     hovertemplate="%{x}, %{y:.2f}<extra></extra>" # Custom hover text format
+            # )
 
-            layout = Layout(
-                title="Plotting Objective Cost against Solver Iterations",
-                xaxis=attr(title="Iterations", tickangle=-45, tickmode="linear", tick0=0, dtick=1),
-                yaxis=attr(title="Objective Cost", hoverformat=".2f"),
-                showlegend=true
-            )
+            # layout = Layout(
+            #     title="Plotting Objective Cost against Solver Iterations",
+            #     xaxis=attr(title="Iterations", tickangle=-45, tickmode="linear", tick0=0, dtick=1),
+            #     yaxis=attr(title="Objective Cost", hoverformat=".2f"),
+            #     showlegend=true
+            # )
 
-            Plot = plot([trace], layout)
+            # Plot = plot([trace], layout)
 
-            display(Plot)
+            # return Plot
         else
             optimize!(model.model)
             optimal_cost = objective_value(model.model)
@@ -312,10 +494,10 @@ module MPOPF
             cost_per_period_with_ramping_to_that_period = [sum(ref[:gen][g]["cost"][1]*value(pg[t,g])^2 + ref[:gen][g]["cost"][2]*value(pg[t,g]) + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) + ramping_cost_per_period[t] for t in 1:T]
             cost_per_period_no_ramping = [sum(ref[:gen][g]["cost"][1]*value(pg[t,g])^2 + ref[:gen][g]["cost"][2]*value(pg[t,g]) + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T]
             
-            roling_cost_per_period = zeros(Float64, T)  # Initialize the array with zeros
-            roling_cost_per_period[1] = cost_per_period_with_ramping_to_that_period[1]
+            rolling_cost_per_period = zeros(Float64, T)  # Initialize the array with zeros
+            rolling_cost_per_period[1] = cost_per_period_with_ramping_to_that_period[1]
             for t in 2:T
-                roling_cost_per_period[t] = roling_cost_per_period[t-1] + cost_per_period_with_ramping_to_that_period[t]
+                rolling_cost_per_period[t] = rolling_cost_per_period[t-1] + cost_per_period_with_ramping_to_that_period[t]
             end
 
             # Plotting costs
@@ -359,11 +541,11 @@ module MPOPF
                 marker_color="orange"
             )
 
-            trace_roling_cost_per_period = scatter(
+            trace_rolling_cost_per_period = scatter(
                 x=1:T,
-                y=roling_cost_per_period,
+                y=rolling_cost_per_period,
                 mode="lines+markers",
-                name="Roling Objective Cost",
+                name="rolling Objective Cost",
                 marker_color="#FF4162",
                 visible = "legendonly"
             )
@@ -375,18 +557,30 @@ module MPOPF
                 showlegend=true
             )
     
-            Plot = plot([trace_cost_per_period_no_ramping, trace_cost_per_period_with_ramping_to_that_period, trace_ramping_cost_per_period, trace_ramping_up_per_period, trace_ramping_down_per_period, trace_roling_cost_per_period], layout)
+            Plot = plot([trace_cost_per_period_no_ramping, trace_cost_per_period_with_ramping_to_that_period, trace_ramping_cost_per_period, trace_ramping_up_per_period, trace_ramping_down_per_period, trace_rolling_cost_per_period], layout)
     
-            display(Plot)
+            return Plot
         end
     end
 
+##############################################################################################
+# Utility Functions
+##############################################################################################
+
     # Function to return the built reference from a data dictionary
     # Useful if we want to look up specific values in the data
+    """
+        get_ref(data::Dict{String, Any})
+
+    Build and return a reference object from the given power system data dictionary.
+
+    # Arguments
+    - `data`: Dictionary containing the power system data for a given case file.
+
+    # Returns
+    A reference object containing processed power system data.
+    """
     function get_ref(data::Dict{String, Any})
         return PowerModels.build_ref(data)[:it][:pm][:nw][0]
     end
 end # module
-
-
-methods(MPOPF.create_model_check_feasibility)

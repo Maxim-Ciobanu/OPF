@@ -1,4 +1,3 @@
-using PowerModels, JuMP, Ipopt#, Gurobi
 function set_model_uncertainty_variables!(power_flow_model::MPOPFModelUncertainty)
     model = power_flow_model.model
     T = power_flow_model.time_periods

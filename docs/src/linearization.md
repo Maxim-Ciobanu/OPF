@@ -1,9 +1,14 @@
-using PowerModels, JuMP, Ipopt, Plots#, Gurobi
-include("MPOPF.jl")
-include("misc.jl")
-include("search_functions.jl")
-include("graphing_class.jl")
-using .MPOPF
+!!! danger
+
+    Should fill this in :)
+
+# Linearization Techniques for MPOPF
+
+```@example
+using JuMP, Ipopt, Gurobi
+using MPOPF
+using PlotlyDocumenter
+
 
 # create enum for linear models
 @enum MODEL_TYPE begin
@@ -14,8 +19,8 @@ using .MPOPF
 end
 
 # extract the raw file names from cases folder, then add the path to file_paths array
-file_strings = [string(i) for i in sort([parse(Int, join(filter(isdigit, collect(s)))) for s in readdir("./Cases")])]
-file_paths = map((x) -> join(["./Cases/case", x, ".m"]), file_strings)
+file_strings = [string(i) for i in sort([parse(Int, join(filter(isdigit, collect(s)))) for s in readdir("Cases")])]
+file_paths = map((x) -> join(["Cases/case", x, ".m"]), file_strings)
 
 # create the graph object
 feasability_graph = Graph("output/graphs/feasibility.html")
@@ -213,20 +218,5 @@ create_plot(feasability_graph, "Feasibility of Various Linearized Models", "Case
 create_plot(v_error_graph, "Voltage Magnitude ( Vm ) Error of Various Models", "Cases", "Magnitude Error")
 create_plot(o_error_graph, "Voltage Angle ( Va ) Error of Various Models", "Cases", "Angle Error")
 
-# save the graphs
-save_graph(feasability_graph)
-save_graph(v_error_graph)
-save_graph(o_error_graph)
-
-
-#=
-println(file_paths[1])
-ac_factory = ACMPOPFModelFactory(file_paths[1], Ipopt.Optimizer)
-if retreive_data(ac_factory, file_paths[1]) != false
-	feasability, v_error, o_error = retreive_data(ac_factory, file_paths[1])
-	println(feasability)
-	println(v_error)
-	println(o_error)
-	println("found")
-end
-=#
+to_documenter(feasability_graph.plot)
+```

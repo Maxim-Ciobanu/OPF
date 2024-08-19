@@ -1,40 +1,17 @@
-using PlotlyJS, Dates, Serialization 
+"""
+    generate_load_scenarios(num_scenarios::Int, num_buses::Int)
 
-# Function for generating scenario load factors
-# function generate_load_scenarios(num_scenarios::Int, num_buses::Int)
-#     load_scenarios_factors = Dict()
-#     for scenario in 1:num_scenarios
-#         bus_factors = Dict()
-#         for bus in 1:num_buses
-#             factor = 1.0
-#             if scenario == 1
-#                 factor = 1.0
-#             elseif scenario == 2
-#                 factor = 1.01
-#             elseif scenario == 3
-#                 factor = 0.99
-#             elseif scenario == 4
-#                 factor = 0.98
-#             elseif scenario == 5
-#                 factor = 1.02
-#             elseif scenario == 6
-#                 factor = 0.97
-#             elseif scenario == 7
-#                 factor = 1.03
-#             elseif scenario == 8
-#                 factor = 0.96
-#             elseif scenario == 9
-#                 factor = 1.04
-#             elseif scenario == 10
-#                 factor = 0.95
-#             end
-#             bus_factors[bus] = factor
-#         end
-#         load_scenarios_factors[scenario] = bus_factors
-#     end
-#     return load_scenarios_factors
-# end
+Generate load scenarios for a given number of scenarios and buses.
 
+# Arguments
+- `num_scenarios::Int`: The number of scenarios to generate.
+- `num_buses::Int`: The number of buses in the case file.
+
+# Returns
+- `Dict{Int, Dict{Int, Float64}}`: A dictionary where each key 
+is a scenario number and the value is another dictionary 
+mapping bus numbers to load factors.
+"""
 function generate_load_scenarios(num_scenarios::Int, num_buses::Int)
     load_scenarios_factors = Dict()
     for scenario in 1:num_scenarios
@@ -55,6 +32,9 @@ end
 # output: Any - the data to be saved
 # file_name: String - the name of the file to be saved
 function save(file_name::String, output::Any)
+
+	# Cretes the directory if it does not already exist
+	mkpath(dirname(file_name))
 
 	# check if the output directory exists
 	if retreive(file_name) !== false
