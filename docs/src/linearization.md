@@ -5,12 +5,9 @@
 # Linearization Techniques for MPOPF
 
 ```@example
-using MPOPF, Ipopt
+using JuMP, Ipopt, Gurobi
+using MPOPF
 using PlotlyDocumenter
-using PowerModels, JuMP, Ipopt, Gurobi
-include("../../src/misc.jl")
-include("../../src/search_functions.jl")
-include("../../src/graphing_class.jl")
 
 
 # create enum for linear models
