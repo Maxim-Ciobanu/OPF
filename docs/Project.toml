@@ -2,6 +2,8 @@
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 DocumenterMermaid = "a078cd44-4d9c-4618-b545-3ab9d77f9177"
 MPOPF = "5d5de75f-0061-42b2-903b-48cf68eefc2d"
+PlotlyDocumenter = "9b90f1cd-2639-4507-8b17-2fbe371ceceb"
+PlotlyJS = "f0f68f2c-4968-5e81-91da-67840de0976a"
 
 [compat]
 Documenter = "1.5"
