@@ -27,4 +27,5 @@ makedocs(
 
 deploydocs(
     repo = "github.com/Maxim-Ciobanu/OPF.git",
+    devbranch = "Documentation"
 )
