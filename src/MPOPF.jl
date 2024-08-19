@@ -175,6 +175,17 @@ module MPOPF
 # These functions return PowerFlowModel objects with or without uncertainty
 ##############################################################################################
 
+    # Here we include our implementation files
+    # They hold the implementations of the functions utilized in the create_model functions
+    include("implementation-ac.jl")
+    include("implementation-dc.jl")
+    include("implementation_uncertainty.jl")
+    include("implementation-linear.jl")
+    include("implementation-new_ac.jl")
+
+    # The first create_model fucntion creates a PowerFlowModel object
+    # It creates the right model depending on the factory passed as the first paramenter
+    # For Example: If the factory passed is an AC factory the function will return an AC model
     """
         create_model(factory::AbstractMPOPFModelFactory; time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0, model_type=undef)::MPOPFModel
 
@@ -206,6 +217,9 @@ module MPOPF
         return power_flow_model
     end
 
+    # The second create_model fucntion creates a PowerFlowModelUncertainty object
+    # Similarly it creates the right model depending on the factory passed as the first paramenter
+    # However now we are passing the scenarios as parameters too
     """
         create_model(factory::AbstractMPOPFModelFactory, scenarios::Dict, time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0)::MPOPFModelUncertainty
 
@@ -238,6 +252,8 @@ module MPOPF
         return power_flow_model
     end
 
+    # A new create model to create a secondary model that asseses how feasible the first solution was
+    # It uses the pg values from a previous model and fixes it, then asses if it works referencing AC OPF
     """
         create_model_check_feasibility(factory::NewACMPOPFModelFactory, new_pg=false, new_qg=false, v=false, theta=false, time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0)::MPOPFModel
 
@@ -270,8 +286,8 @@ module MPOPF
         # fix values that have been declared
         if (new_pg !== false) fix.(power_flow_model.model[:pg], new_pg; force=true) end
         if (new_qg !== false) fix.(power_flow_model.model[:qg], new_qg; force=true) end
-        if (v !== false) fix.(power_flow_model.model[:v], v; force=true) end
-        if (theta !== false) fix.(power_flow_model.model[:theta], theta; force=true) end
+		if (v !== false) fix.(power_flow_model.model[:v], v; force=true) end
+		if (theta !== false) fix.(power_flow_model.model[:theta], theta; force=true) end
 
         set_model_objective_function!(power_flow_model, factory)
         set_model_constraints!(power_flow_model, factory)
@@ -280,9 +296,11 @@ module MPOPF
     end
 
 ##############################################################################################
-# Optimization function
+# Optimization functions
 ##############################################################################################
 
+    # This function simply optimizes any model given as a parameter
+    # It prints the Optimial cost
     """
         optimize_model(model::AbstractMPOPFModel)
 
@@ -335,10 +353,7 @@ module MPOPF
         end
     end
 
-##############################################################################################
-# Optimization with Plot function
-##############################################################################################
-
+    # Optimized and graphs the given model using a callback function
     """
         optimize_model_with_plot(model::AbstractMPOPFModel)
 
@@ -365,8 +380,34 @@ module MPOPF
                 return true  # Return true to continue the optimization
             end
 
+            # Note: The callback does not work without a new package
+            # https://github.com/jump-dev/Gurobi.jl#callbacks
+            function gurobi_callback(cb_data, where)
+                if where == GRB_CB_MIP
+                    iteration = Ref{Cint}()
+                    GRBcbget(cb_data, where, GRB_CB_MIP_NODCNT, iteration)
+                    
+                    objbst = Ref{Cdouble}()
+                    GRBcbget(cb_data, where, GRB_CB_MIP_OBJBST, objbst)
+                    
+                    push!(iterations, iteration[])
+                    push!(objective_values, objbst[])
+                    
+                    println("Iteration: $(iteration[]), Best Obj: $(objbst[])")
+                end
+            end
+
             if solver_name(model.model) == "Ipopt"
                 MOI.set(model.model, Ipopt.CallbackFunction(), ipopt_callback)
+            elseif solver_name(model.model) == "Gurobi"
+                error("At the moment there is no graphing for gurobi if Time_periods = 1")
+                # MOI.set(model.model, MOI.RawOptimizerAttribute("LazyConstraints"), 1)
+                # MOI.set(model.model, Gurobi.CallbackFunction(), gurobi_callback)
+                # if MOI.get(model.model, MOI.NumberOfVariables()) > 0
+                #     println("Callback has been set for Gurobi")
+                # else
+                #     println("No variables in the model. Callback may not be triggered.")
+                # end
             else
                 error("Optimizer must be either Ipopt or Gurobi")
             end
@@ -394,7 +435,7 @@ module MPOPF
 
             Plot = plot([trace], layout)
 
-            display(Plot)
+            return Plot
         else
             optimize!(model.model)
             optimal_cost = objective_value(model.model)
@@ -419,10 +460,10 @@ module MPOPF
             cost_per_period_with_ramping_to_that_period = [sum(ref[:gen][g]["cost"][1]*value(pg[t,g])^2 + ref[:gen][g]["cost"][2]*value(pg[t,g]) + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) + ramping_cost_per_period[t] for t in 1:T]
             cost_per_period_no_ramping = [sum(ref[:gen][g]["cost"][1]*value(pg[t,g])^2 + ref[:gen][g]["cost"][2]*value(pg[t,g]) + ref[:gen][g]["cost"][3] for g in keys(ref[:gen])) for t in 1:T]
             
-            roling_cost_per_period = zeros(Float64, T)  # Initialize the array with zeros
-            roling_cost_per_period[1] = cost_per_period_with_ramping_to_that_period[1]
+            rolling_cost_per_period = zeros(Float64, T)  # Initialize the array with zeros
+            rolling_cost_per_period[1] = cost_per_period_with_ramping_to_that_period[1]
             for t in 2:T
-                roling_cost_per_period[t] = roling_cost_per_period[t-1] + cost_per_period_with_ramping_to_that_period[t]
+                rolling_cost_per_period[t] = rolling_cost_per_period[t-1] + cost_per_period_with_ramping_to_that_period[t]
             end
 
             # Plotting costs
@@ -433,7 +474,7 @@ module MPOPF
                 name="Objective Cost no Ramping",
                 marker_color="black"
             )
-
+    
             trace_cost_per_period_with_ramping_to_that_period = scatter(
                 x=1:T,
                 y=cost_per_period_with_ramping_to_that_period,
@@ -441,7 +482,7 @@ module MPOPF
                 name="Objective Cost With Ramping",
                 marker_color="blue"
             )
-
+        
             trace_ramping_cost_per_period = scatter(
                 x=1:T,
                 y=ramping_cost_per_period,
@@ -449,7 +490,7 @@ module MPOPF
                 name="Ramping Cost",
                 marker_color="red"
             )
-
+    
             trace_ramping_up_per_period = scatter(
                 x=1:T,
                 y=ramping_up_per_period,
@@ -457,7 +498,7 @@ module MPOPF
                 name="Ramping Up",
                 marker_color="green"
             )
-
+    
             trace_ramping_down_per_period = scatter(
                 x=1:T,
                 y=ramping_down_per_period,
@@ -470,21 +511,21 @@ module MPOPF
                 x=1:T,
                 y=rolling_cost_per_period,
                 mode="lines+markers",
-                name="Rolling Objective Cost",
+                name="rolling Objective Cost",
                 marker_color="#FF4162",
                 visible = "legendonly"
             )
-
+        
             layout = Layout(
                 title="Plotting Objective Cost Against Time Periods With Ramping Costs",
                 xaxis=attr(title="Time Periods", tickangle=-45, tickmode="linear", tick0=1, dtick=1),
                 yaxis=attr(title="Objective Cost"),
                 showlegend=true
             )
-
+    
             Plot = plot([trace_cost_per_period_no_ramping, trace_cost_per_period_with_ramping_to_that_period, trace_ramping_cost_per_period, trace_ramping_up_per_period, trace_ramping_down_per_period, trace_rolling_cost_per_period], layout)
-
-            display(Plot)
+    
+            return Plot
         end
     end
 
@@ -492,6 +533,8 @@ module MPOPF
 # Utility Functions
 ##############################################################################################
 
+    # Function to return the built reference from a data dictionary
+    # Useful if we want to look up specific values in the data
     """
         get_ref(data::Dict{String, Any})
 
@@ -506,5 +549,4 @@ module MPOPF
     function get_ref(data::Dict{String, Any})
         return PowerModels.build_ref(data)[:it][:pm][:nw][0]
     end
-
 end # module

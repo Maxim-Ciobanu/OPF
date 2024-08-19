@@ -69,6 +69,9 @@ end
 # graph: Graph - the graph to be saved
 # ------------------------------------------------------------
 function save_graph(graph::Graph)
+
+	# Cretes the directory if it does not already exist
+	mkpath(dirname(graph.location))
 	
 	print(graph.location)
 	# minimum conditions to be met before saving

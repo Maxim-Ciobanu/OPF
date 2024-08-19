@@ -56,6 +56,9 @@ end
 # file_name: String - the name of the file to be saved
 function save(file_name::String, output::Any)
 
+	# Cretes the directory if it does not already exist
+	mkpath(dirname(file_name))
+
 	# check if the output directory exists
 	if retreive(file_name) !== false
 		data = retreive(file_name)
