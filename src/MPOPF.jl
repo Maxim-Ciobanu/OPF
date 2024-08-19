@@ -13,10 +13,18 @@ This module provides tools to create, optimize, and analyze MPOPF models using v
 - Visualize optimization results
 """
 module MPOPF
-    using PowerModels, JuMP, Ipopt, PlotlyJS, Gurobi
+    using PowerModels, JuMP, Ipopt, Gurobi, Dates, Serialization, PlotlyJS
     
     # Exporting these functions from the module so we dont have to prefix them with MPOPF.
+    
+    # Export of this file
     export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory, optimize_model_with_plot, LinMPOPFModelFactory, NewACMPOPFModelFactory, create_model_check_feasibility, get_ref
+    
+    # Export of Graphing_class.jl functions
+    export Graph, add_scatter, create_plot, save_graph, display_graph
+    
+    # Export of misc.jl functions
+    export generate_load_scenarios, save, retreive, output_to_file
 
 ##############################################################################################
 # Factory Structs
@@ -73,6 +81,8 @@ module MPOPF
         LinMPOPFModelFactory <: AbstractMPOPFModelFactory
 
     Factory for creating linearized MPOPF models.
+    If this factory is used then `model_type` needs to be specified
+    in the `create_model()` function.
 
     # Fields
     - `file_path::String`: Path to the input data file.
@@ -91,6 +101,7 @@ module MPOPF
         NewACMPOPFModelFactory <: AbstractMPOPFModelFactory
 
     Factory for creating new AC MPOPF models.
+    This is only used when computing for feasibility
 
     # Fields
     - `file_path::String`: Path to the input data file.
@@ -177,11 +188,13 @@ module MPOPF
 
     # Here we include our implementation files
     # They hold the implementations of the functions utilized in the create_model functions
+    include("graphing_class.jl")
     include("implementation-ac.jl")
     include("implementation-dc.jl")
     include("implementation_uncertainty.jl")
     include("implementation-linear.jl")
     include("implementation-new_ac.jl")
+    include("misc.jl")
 
     # The first create_model fucntion creates a PowerFlowModel object
     # It creates the right model depending on the factory passed as the first paramenter
@@ -189,7 +202,10 @@ module MPOPF
     """
         create_model(factory::AbstractMPOPFModelFactory; time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0, model_type=undef)::MPOPFModel
 
-    Create a Multi-Period Optimal Power Flow (MPOPF) model based on the provided factory.
+    Create a Multi-Period Optimal Power Flow (MPOPF) model.
+    The factory passed in defines the type of model that will be returned
+
+    If `LinMPOPFModelFactory` is passed in as the factory then `model_type` needs to be specified.
 
     # Arguments
     - `factory`: The factory used to create the specific type of MPOPF model.
@@ -257,7 +273,8 @@ module MPOPF
     """
         create_model_check_feasibility(factory::NewACMPOPFModelFactory, new_pg=false, new_qg=false, v=false, theta=false, time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0)::MPOPFModel
 
-    Create a secondary model to assess the feasibility of a previous solution.
+    Create a secondary model to assess the feasibility of a solution
+    when comparing to the AC model.
 
     # Arguments
     - `factory`: The factory used to create the specific type of MPOPF model.
@@ -305,6 +322,16 @@ module MPOPF
         optimize_model(model::AbstractMPOPFModel)
 
     Optimize the given MPOPF model and print the optimal cost.
+    
+    !!! note
+
+        If the model being optimized is of type `MPOPFModelUncertainty`
+        then extra computation will be executed to determine if there are
+        any unbalaced power at each bus for every scenario
+        when consitering mu_plus and mu_minus.
+
+        That is if `sum_of_mu_plus` and `mu_minus` are both > 0.01
+        at any given bus then an error message is printed.
 
     # Arguments
     - `model`: The MPOPF model to optimize.
@@ -357,7 +384,13 @@ module MPOPF
     """
         optimize_model_with_plot(model::AbstractMPOPFModel)
 
-    Optimize the given MPOPF model, print the optimal cost, and generate a plot of the optimization process.
+    Optimize the given MPOPF model, print the optimal cost, 
+    and generate a PlotlyJS graph/plot of the optimization process.
+    
+    !!! note
+
+        if `time_periods = 1` then the graph will represent the iterations taken by the solver
+        otherwize the graph will represent each time period.
 
     # Arguments
     - `model`: The MPOPF model to optimize and plot.
@@ -541,7 +574,7 @@ module MPOPF
     Build and return a reference object from the given power system data dictionary.
 
     # Arguments
-    - `data`: Dictionary containing the power system data.
+    - `data`: Dictionary containing the power system data for a given case file.
 
     # Returns
     A reference object containing processed power system data.

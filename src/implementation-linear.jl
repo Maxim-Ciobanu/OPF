@@ -1,6 +1,3 @@
-using PowerModels, JuMP, Ipopt#, Gurobi
-include("misc.jl")
-
 function set_model_variables!(power_flow_model::AbstractMPOPFModel, factory::LinMPOPFModelFactory)
     model = power_flow_model.model
     T = power_flow_model.time_periods

@@ -1,5 +1,3 @@
-using PlotlyJS, Dates, Serialization 
-
 # struct for storing data about the graph
 #
 # plot: Any - the plotly plot
