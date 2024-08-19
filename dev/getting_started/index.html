@@ -83,7 +83,7 @@ Number of inequality constraint evaluations          = 12
 Number of equality constraint Jacobian evaluations   = 1
 Number of inequality constraint Jacobian evaluations = 1
 Number of Lagrangian Hessian evaluations             = 1
-Total seconds in IPOPT                               = 0.253
+Total seconds in IPOPT                               = 0.265
 
 EXIT: Optimal Solution Found.
 Optimal Cost: 7642.591774313989
@@ -138,7 +138,7 @@ Number of inequality constraint evaluations          = 13
 Number of equality constraint Jacobian evaluations   = 13
 Number of inequality constraint Jacobian evaluations = 13
 Number of Lagrangian Hessian evaluations             = 12
-Total seconds in IPOPT                               = 2.196
+Total seconds in IPOPT                               = 2.280
 
 EXIT: Optimal Solution Found.
 Optimal Cost: 8081.524735301364</code></pre><h3 id="Multi-Period-Example"><a class="docs-heading-anchor" href="#Multi-Period-Example">Multi-Period Example</a><a id="Multi-Period-Example-1"></a><a class="docs-heading-anchor-permalink" href="#Multi-Period-Example" title="Permalink"></a></h3><p>To create a model with multiple periods we just specify the number of periods, the factors for the loads (multiplied to the current load to create different demand for the next period), and the ramping cost. They are specified in the <code>create_model</code> function</p><pre><code class="language-julia hljs">using PowerModels, JuMP, Ipopt, Gurobi, PlotlyJS
@@ -210,7 +210,7 @@ Number of inequality constraint evaluations          = 15
 Number of equality constraint Jacobian evaluations   = 1
 Number of inequality constraint Jacobian evaluations = 1
 Number of Lagrangian Hessian evaluations             = 1
-Total seconds in IPOPT                               = 0.021
+Total seconds in IPOPT                               = 0.020
 
 EXIT: Optimal Solution Found.
 Optimal Cost: 23033.297630150264</code></pre><h2 id="Further-Reading"><a class="docs-heading-anchor" href="#Further-Reading">Further Reading</a><a id="Further-Reading-1"></a><a class="docs-heading-anchor-permalink" href="#Further-Reading" title="Permalink"></a></h2><p>Curious about the implementation of this project? Visit the <a href="../implementation_details/#Implementation-Details">Implementation Details</a> page.</p><script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
@@ -218,4 +218,4 @@ mermaid.initialize({
     startOnLoad: true,
     theme: "neutral"
 });
-</script></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../class_diagram/">« Class Diagram</a><a class="docs-footer-nextpage" href="../background/">Background »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.5.0 on <span class="colophon-date" title="Monday 19 August 2024 16:37">Monday 19 August 2024</span>. Using Julia version 1.6.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
+</script></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../class_diagram/">« Class Diagram</a><a class="docs-footer-nextpage" href="../background/">Background »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.5.0 on <span class="colophon-date" title="Monday 19 August 2024 17:34">Monday 19 August 2024</span>. Using Julia version 1.6.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
