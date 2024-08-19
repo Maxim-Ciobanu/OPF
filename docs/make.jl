@@ -1,3 +1,9 @@
+###############################################################################
+# How to run this file locally:
+# In the docs/ directory:
+# julia --color=yes --project make.jl
+###############################################################################
+
 using Documenter
 using DocumenterMermaid
 using MPOPF
@@ -19,6 +25,6 @@ makedocs(
     ]
 )
 
-# deploydocs(
-#     repo = "github.com/Maxim-Ciobanu/OPF/tree/Doc-test.git",
-# )
+deploydocs(
+    repo = "github.com/Maxim-Ciobanu/OPF.git",
+)
