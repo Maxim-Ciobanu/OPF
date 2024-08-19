@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Linearization Techniques · MPOPF Documentation</title><meta name="title" content="Linearization Techniques · MPOPF Documentation"/><meta property="og:title" content="Linearization Techniques · MPOPF Documentation"/><meta property="twitter:title" content="Linearization Techniques · MPOPF Documentation"/><meta name="description" content="Documentation for MPOPF Documentation."/><meta property="og:description" content="Documentation for MPOPF Documentation."/><meta property="twitter:description" content="Documentation for MPOPF Documentation."/><script data-outdated-warner src="../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.050/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL=".."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../assets/documenter.js"></script><script src="../search_index.js"></script><script src="../siteinfo.js"></script><script src="../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../">MPOPF Documentation</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../">Home</a></li><li><a class="tocitem" href="../class_diagram/">Class Diagram</a></li><li><a class="tocitem" href="../getting_started/">Getting Started</a></li><li><a class="tocitem" href="../background/">Background</a></li><li><a class="tocitem" href="../implementation_details/">Implementation Details</a></li><li class="is-active"><a class="tocitem" href>Linearization Techniques</a></li><li><a class="tocitem" href="../future_development/">Future Development</a></li><li><a class="tocitem" href="../design_philosophy/">Design Philosophy</a></li><li><a class="tocitem" href="../api/">API Reference</a></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li class="is-active"><a href>Linearization Techniques</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Linearization Techniques</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/Maxim-Ciobanu/OPF" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/Maxim-Ciobanu/OPF/blob/main/docs/src/linearization.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><div class="admonition is-danger"><header class="admonition-header">Danger</header><div class="admonition-body"><p>Should fill this in :)</p></div></div><h1 id="Linearization-Techniques-for-MPOPF"><a class="docs-heading-anchor" href="#Linearization-Techniques-for-MPOPF">Linearization Techniques for MPOPF</a><a id="Linearization-Techniques-for-MPOPF-1"></a><a class="docs-heading-anchor-permalink" href="#Linearization-Techniques-for-MPOPF" title="Permalink"></a></h1><pre><code class="language-julia hljs">using MPOPF, Ipopt
+using PlotlyDocumenter
+using PowerModels, JuMP, Ipopt, Gurobi
+include(&quot;../../src/misc.jl&quot;)
+include(&quot;../../src/search_functions.jl&quot;)
+include(&quot;../../src/graphing_class.jl&quot;)
+
+
+# create enum for linear models
+@enum MODEL_TYPE begin
+	Undef=0
+	Lin1=1
+	Lin2=2
+	Lin3=3
+end
+
+# extract the raw file names from cases folder, then add the path to file_paths array
+file_strings = [string(i) for i in sort([parse(Int, join(filter(isdigit, collect(s)))) for s in readdir(&quot;Cases&quot;)])]
+file_paths = map((x) -&gt; join([&quot;Cases/case&quot;, x, &quot;.m&quot;]), file_strings)
+
+# create the graph object
+feasability_graph = Graph(&quot;output/graphs/feasibility.html&quot;)
+v_error_graph = Graph(&quot;output/graphs/v_error.html&quot;)
+o_error_graph = Graph(&quot;output/graphs/o_error.html&quot;)
+
+# create a function for retreiveing the data, if it exists
+#
+# factory: Union{ACMPOPFModelFactory, DCMPOPFModelFactory, LinMPOPFModelFactory} - the model factory to use
+# model_type: MODEL_TYPE - the type of model to use
+function retreive_data(factory::Union{ACMPOPFModelFactory, DCMPOPFModelFactory, LinMPOPFModelFactory}, path::String; model_type=false)
+
+	# check if the costs and error already exists
+	if factory isa ACMPOPFModelFactory
+		feasability = retreive(&quot;output/feasability_saved/ac/feasability&quot;)
+		v_error = retreive(&quot;output/feasability_saved/ac/v_error&quot;)
+		o_error = retreive(&quot;output/feasability_saved/ac/o_error&quot;)
+
+	elseif factory isa DCMPOPFModelFactory
+		feasability = retreive(&quot;output/feasability_saved/dc/feasability&quot;)
+		v_error = retreive(&quot;output/feasability_saved/dc/v_error&quot;)
+		o_error = retreive(&quot;output/feasability_saved/dc/o_error&quot;)
+
+	elseif factory isa LinMPOPFModelFactory
+		if model_type == Lin1
+			feasability = retreive(&quot;output/feasability_saved/lin1/feasability&quot;)
+			v_error = retreive(&quot;output/feasability_saved/lin1/v_error&quot;)
+			o_error = retreive(&quot;output/feasability_saved/lin1/o_error&quot;)
+
+		elseif model_type == Lin2
+			feasability = retreive(&quot;output/feasability_saved/lin2/feasability&quot;)
+			v_error = retreive(&quot;output/feasability_saved/lin2/v_error&quot;)
+			o_error = retreive(&quot;output/feasability_saved/lin2/o_error&quot;)
+
+		elseif model_type == Lin3
+			feasability = retreive(&quot;output/feasability_saved/lin3/feasability&quot;)
+			v_error = retreive(&quot;output/feasability_saved/lin3/v_error&quot;)
+			o_error = retreive(&quot;output/feasability_saved/lin3/o_error&quot;)
+		end
+	end
+
+	# check if the data exists
+	if feasability != false &amp;&amp; v_error != false &amp;&amp; o_error != false
+
+		# only return if the case exists in the data
+		if haskey(feasability, path) &amp;&amp; haskey(v_error, path) &amp;&amp; haskey(o_error, path)
+			return feasability[path], v_error[path], o_error[path]
+		else
+			return false
+		end
+	else
+		println(&quot;no solution found&quot;)
+		return false
+	end
+end
+
+
+
+# a general function for executing a specific model and checking its feasability
+# dc models have no vm values, so default to 1 and qg values are 0
+#
+# factory: Union{ACMPOPFModelFactory, DCMPOPFModelFactory, LinMPOPFModelFactory} - the model factory to use
+# model_type: MODEL_TYPE - the type of model to use
+function generalised(factory::Union{ACMPOPFModelFactory, DCMPOPFModelFactory, LinMPOPFModelFactory}, path::String, model_type=false)
+
+	costs = Dict()
+	v_error = Dict()
+	o_error = Dict()
+
+	# check if the costs and errors already exists
+	if retreive_data(factory, path; model_type=model_type) != false
+
+		# get the data
+		feasability, new_v_error, new_o_error = retreive_data(factory, path; model_type=model_type)
+		costs[path] = feasability
+		v_error[path] = new_v_error
+		o_error[path] = new_o_error
+
+		return costs, v_error, o_error
+	end
+
+	# initiate and optimize the model
+	model_type !== false ? model = create_model(factory; model_type=model_type) : model = create_model(factory)
+	optimize_model(model)
+
+	# get the length of the buses
+	test_ref = get_ref(model.data)
+	bus_len = length(test_ref[:bus])
+
+	# extract the pg and qg values
+	pg = value.(model.model[:pg])
+	qg = factory isa DCMPOPFModelFactory ? 0 : value.(model.model[:qg])
+
+	# create ac model with fixed pg and qg values
+	ac_factory = NewACMPOPFModelFactory(path, Ipopt.Optimizer)
+	ac_model = create_model_check_feasibility(ac_factory, pg, qg)
+	optimize_model(ac_model)
+
+	# get va values from the model ( it is horrible as bus indices are not always linearly increasing )
+	val1 = value.(getindex.((pairs(cat(model.model[:va], dims=1)) |&gt; collect)[1:length(model.model[:va])], 2))
+	val2 = value.(getindex.((pairs(cat(ac_model.model[:va], dims=1)) |&gt; collect)[1:length(ac_model.model[:va])], 2))
+	new_o_error = abs(sum((val1 - val2) / val2) / bus_len)
+
+	# get vm values from the model, dc models do not have vm values, so default to 1
+	val3 = factory isa DCMPOPFModelFactory ? 0 : value.(getindex.((pairs(cat(model.model[:vm], dims=1)) |&gt; collect)[1:length(model.model[:va])], 2))
+	val4 = factory isa DCMPOPFModelFactory ? 0 : value.(getindex.((pairs(cat(ac_model.model[:vm], dims=1)) |&gt; collect)[1:length(ac_model.model[:va])], 2))
+	new_v_error = factory isa DCMPOPFModelFactory ? 1 : abs(sum((val3 - val4) / val4) / bus_len)
+
+	# calculate sum of x over sum of pg from inital model to show feasibility
+	sum_x = sum(value.(ac_model.model[:x]))
+	sum_pg = sum(pg)
+	sum_total = sum_x / sum_pg
+
+	# multiply value with cost
+	cost_Lin = objective_value(ac_model.model)
+	total_cost = sum_total * cost_Lin
+
+	# push the calculate values
+	costs[path] = total_cost
+	v_error[path] = new_v_error
+	o_error[path] = new_o_error
+
+	return costs, v_error, o_error
+end
+
+
+# initiate the different models arrays
+ac_models = [[], [], []]
+dc_models = [[], [], []]
+lin1_models = [[], [], []]
+lin2_models = [[], [], []]
+lin3_models = [[], [], []]
+
+
+# loop through all the cases
+for path in file_paths
+	println(&quot;Case: &quot;, path)
+
+	# create the model factories
+	ac_factory = ACMPOPFModelFactory(path, Ipopt.Optimizer)
+	dc_factory = DCMPOPFModelFactory(path, Ipopt.Optimizer)
+	lin1_factory = LinMPOPFModelFactory(path, Ipopt.Optimizer)
+	lin2_factory = LinMPOPFModelFactory(path, Ipopt.Optimizer)
+	lin3_factory = LinMPOPFModelFactory(path, Ipopt.Optimizer)
+
+	# get the cost of each model
+	cost_ac, v_error_ac, o_error_ac = generalised(ac_factory, path)
+	cost_dc, v_error_dc, o_error_dc = generalised(dc_factory, path)
+	cost_lin_regular, v_error_lin_regular, o_error_lin_regular = generalised(lin1_factory, path, Lin1)
+	cost_lin_quadratic, v_error_lin_quadratic, o_error_lin_quadratic = generalised(lin2_factory, path, Lin2)
+	cost_lin_log, v_error_lin_log, o_error_lin_log = generalised(lin3_factory, path, Lin3)
+
+	# add the nodes to the graph
+	push!(ac_models[1], cost_ac); push!(ac_models[2], v_error_ac); push!(ac_models[3], o_error_ac)
+	push!(dc_models[1], cost_dc); push!(dc_models[2], v_error_dc); push!(dc_models[3], o_error_dc)
+	push!(lin1_models[1], cost_lin_regular); push!(lin1_models[2], v_error_lin_regular); push!(lin1_models[3], o_error_lin_regular)
+	push!(lin2_models[1], cost_lin_quadratic); push!(lin2_models[2], v_error_lin_quadratic); push!(lin2_models[3], o_error_lin_quadratic)
+	push!(lin3_models[1], cost_lin_log); push!(lin3_models[2], v_error_lin_log); push!(lin3_models[3], o_error_lin_log)
+end
+
+# save the data to the output folder
+save(&quot;output/feasability_saved/ac/feasability&quot;, merge(ac_models[1]...)); save(&quot;output/feasability_saved/ac/v_error&quot;, merge(ac_models[2]...)); save(&quot;output/feasability_saved/ac/o_error&quot;, merge(ac_models[3]...))
+save(&quot;output/feasability_saved/dc/feasability&quot;, merge(dc_models[1]...)); save(&quot;output/feasability_saved/dc/v_error&quot;, merge(dc_models[2]...)); save(&quot;output/feasability_saved/dc/o_error&quot;, merge(dc_models[3]...))
+save(&quot;output/feasability_saved/lin1/feasability&quot;, merge(lin1_models[1]...)); save(&quot;output/feasability_saved/lin1/v_error&quot;, merge(lin1_models[2]...)); save(&quot;output/feasability_saved/lin1/o_error&quot;, merge(lin1_models[3]...))
+save(&quot;output/feasability_saved/lin2/feasability&quot;, merge(lin2_models[1]...)); save(&quot;output/feasability_saved/lin2/v_error&quot;, merge(lin2_models[2]...)); save(&quot;output/feasability_saved/lin2/o_error&quot;, merge(lin2_models[3]...))
+save(&quot;output/feasability_saved/lin3/feasability&quot;, merge(lin3_models[1]...)); save(&quot;output/feasability_saved/lin3/v_error&quot;, merge(lin3_models[2]...)); save(&quot;output/feasability_saved/lin3/o_error&quot;, merge(lin3_models[3]...))
+
+# create a function for scanning the data
+# this will for each case, evaluate all previous cases from that point
+# to see which model performs best for all previous cases
+
+# add the traces to the feasability graph
+add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in ac_models[1]], &quot;AC&quot;, &quot;blue&quot;)
+add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in dc_models[1]], &quot;DC&quot;, &quot;red&quot;)
+add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in lin1_models[1]], &quot;Lin1&quot;, &quot;green&quot;)
+add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in lin2_models[1]], &quot;Lin2&quot;, &quot;yellow&quot;)
+add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in lin3_models[1]], &quot;Lin3&quot;, &quot;purple&quot;)
+
+# add the traces to the v_error graph
+add_scatter(v_error_graph, file_strings, [collect(values(i))[1] for i in ac_models[2]], &quot;AC&quot;, &quot;blue&quot;)
+# add_scatter(v_error_graph, file_strings, [collect(values(i))[1] for i in dc_models[2]], &quot;DC&quot;, &quot;red&quot;)
+add_scatter(v_error_graph, file_strings, [collect(values(i))[1] for i in lin1_models[2]], &quot;Lin1&quot;, &quot;green&quot;)
+add_scatter(v_error_graph, file_strings, [collect(values(i))[1] for i in lin2_models[2]], &quot;Lin2&quot;, &quot;yellow&quot;)
+add_scatter(v_error_graph, file_strings, [collect(values(i))[1] for i in lin3_models[2]], &quot;Lin3&quot;, &quot;purple&quot;)
+
+# add the traces to the o_error graph
+add_scatter(o_error_graph, file_strings, [collect(values(i))[1] for i in ac_models[3]], &quot;AC&quot;, &quot;blue&quot;)
+add_scatter(o_error_graph, file_strings, [collect(values(i))[1] for i in dc_models[3]], &quot;DC&quot;, &quot;red&quot;)
+add_scatter(o_error_graph, file_strings, [collect(values(i))[1] for i in lin1_models[3]], &quot;Lin1&quot;, &quot;green&quot;)
+add_scatter(o_error_graph, file_strings, [collect(values(i))[1] for i in lin2_models[3]], &quot;Lin2&quot;, &quot;yellow&quot;)
+add_scatter(o_error_graph, file_strings, [collect(values(i))[1] for i in lin3_models[3]], &quot;Lin3&quot;, &quot;purple&quot;)
+
+# create layouts
+create_plot(feasability_graph, &quot;Feasibility of Various Linearized Models&quot;, &quot;Cases&quot;, &quot;Costs&quot;)
+create_plot(v_error_graph, &quot;Voltage Magnitude ( Vm ) Error of Various Models&quot;, &quot;Cases&quot;, &quot;Magnitude Error&quot;)
+create_plot(o_error_graph, &quot;Voltage Angle ( Va ) Error of Various Models&quot;, &quot;Cases&quot;, &quot;Angle Error&quot;)
+
+to_documenter(feasability_graph.plot)</code></pre><div id='YA6DrhS2pj' class='' style=';'></div>
+<script type="module">
+    import Plotly from "https://esm.sh/plotly.js-dist-min@2.24.2"
+    const PLOT = document.getElementById("YA6DrhS2pj")
+    const plot_obj = {"data": [{"marker":{"color":"blue"},"mode":"lines+markers","y":[9.233786231435573e-25,9.577648721021212e-16,3.6661633377884816e-14,1.345513547955365e-14],"type":"scatter","name":"AC","hoverinfo":"x+y","hovertemplate":"%{x}, %{y:.2f}<extra></extra>","x":["3","5","14","300"]},{"marker":{"color":"red"},"mode":"lines+markers","y":[0.0021351970659757662,0.010619853065359628,0.0024629703539908246,0.6285990253234732],"type":"scatter","name":"DC","hoverinfo":"x+y","hovertemplate":"%{x}, %{y:.2f}<extra></extra>","x":["3","5","14","300"]},{"marker":{"color":"green"},"mode":"lines+markers","y":[1.5589729740375345e-5,0.00010063639649175543,0.0003318807606625123,0.5681545766069396],"type":"scatter","name":"Lin1","hoverinfo":"x+y","hovertemplate":"%{x}, %{y:.2f}<extra></extra>","x":["3","5","14","300"]},{"marker":{"color":"yellow"},"mode":"lines+markers","y":[5.334018543404026e-22,7.634077829770069e-9,6.170849831533297e-6,0.1772333450129001],"type":"scatter","name":"Lin2","hoverinfo":"x+y","hovertemplate":"%{x}, %{y:.2f}<extra></extra>","x":["3","5","14","300"]},{"marker":{"color":"purple"},"mode":"lines+markers","y":[1.558752293652104e-5,9.98660264247819e-5,0.0003332514094692369,0.5647802082456053],"type":"scatter","name":"Lin3","hoverinfo":"x+y","hovertemplate":"%{x}, %{y:.2f}<extra></extra>","x":["3","5","14","300"]}], "layout": {"showlegend":true,"xaxis":{"tickangle":-45,"dtick":1,"tickmode":"linear","title":"Cases","tick0":0},"template":{"data":{"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"ticks":"","outlinewidth":0}}}],"carpet":[{"baxis":{"gridcolor":"white","endlinecolor":"#2a3f5f","minorgridcolor":"white","startlinecolor":"#2a3f5f","linecolor":"white"},"type":"carpet","aaxis":{"gridcolor":"white","endlinecolor":"#2a3f5f","minorgridcolor":"white","startlinecolor":"#2a3f5f","linecolor":"white"}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"ticks":"","outlinewidth":0}}}],"parcoords":[{"line":{"colorbar":{"ticks":"","outlinewidth":0}},"type":"parcoords"}],"scatter":[{"type":"scatter","marker":{"colorbar":{"ticks":"","outlinewidth":0}}}],"histogram2dcontour":[{"colorbar":{"ticks":"","outlinewidth":0},"type":"histogram2dcontour","colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contour":[{"colorbar":{"ticks":"","outlinewidth":0},"type":"contour","colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"ticks":"","outlinewidth":0}}}],"mesh3d":[{"colorbar":{"ticks":"","outlinewidth":0},"type":"mesh3d"}],"surface":[{"colorbar":{"ticks":"","outlinewidth":0},"type":"surface","colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"ticks":"","outlinewidth":0}}}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"ticks":"","outlinewidth":0}}}],"histogram":[{"type":"histogram","marker":{"colorbar":{"ticks":"","outlinewidth":0}}}],"pie":[{"type":"pie","automargin":true}],"choropleth":[{"colorbar":{"ticks":"","outlinewidth":0},"type":"choropleth"}],"heatmapgl":[{"colorbar":{"ticks":"","outlinewidth":0},"type":"heatmapgl","colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"bar":[{"type":"bar","error_y":{"color":"#2a3f5f"},"error_x":{"color":"#2a3f5f"},"marker":{"line":{"color":"#E5ECF6","width":0.5}}}],"heatmap":[{"colorbar":{"ticks":"","outlinewidth":0},"type":"heatmap","colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"colorbar":{"ticks":"","outlinewidth":0},"type":"contourcarpet"}],"table":[{"type":"table","header":{"line":{"color":"white"},"fill":{"color":"#C8D4E3"}},"cells":{"line":{"color":"white"},"fill":{"color":"#EBF0F8"}}}],"scatter3d":[{"line":{"colorbar":{"ticks":"","outlinewidth":0}},"type":"scatter3d","marker":{"colorbar":{"ticks":"","outlinewidth":0}}}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"ticks":"","outlinewidth":0}}}],"histogram2d":[{"colorbar":{"ticks":"","outlinewidth":0},"type":"histogram2d","colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"ticks":"","outlinewidth":0}}}],"barpolar":[{"type":"barpolar","marker":{"line":{"color":"#E5ECF6","width":0.5}}}]},"layout":{"xaxis":{"gridcolor":"white","zerolinewidth":2,"title":{"standoff":15},"ticks":"","zerolinecolor":"white","automargin":true,"linecolor":"white"},"hovermode":"closest","paper_bgcolor":"white","geo":{"showlakes":true,"showland":true,"landcolor":"#E5ECF6","bgcolor":"white","subunitcolor":"white","lakecolor":"white"},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]},"yaxis":{"gridcolor":"white","zerolinewidth":2,"title":{"standoff":15},"ticks":"","zerolinecolor":"white","automargin":true,"linecolor":"white"},"shapedefaults":{"line":{"color":"#2a3f5f"}},"font":{"color":"#2a3f5f"},"annotationdefaults":{"arrowhead":0,"arrowwidth":1,"arrowcolor":"#2a3f5f"},"plot_bgcolor":"#E5ECF6","title":{"x":0.05},"coloraxis":{"colorbar":{"ticks":"","outlinewidth":0}},"hoverlabel":{"align":"left"},"mapbox":{"style":"light"},"polar":{"angularaxis":{"gridcolor":"white","ticks":"","linecolor":"white"},"bgcolor":"#E5ECF6","radialaxis":{"gridcolor":"white","ticks":"","linecolor":"white"}},"autotypenumbers":"strict","ternary":{"aaxis":{"gridcolor":"white","ticks":"","linecolor":"white"},"bgcolor":"#E5ECF6","caxis":{"gridcolor":"white","ticks":"","linecolor":"white"},"baxis":{"gridcolor":"white","ticks":"","linecolor":"white"}},"scene":{"xaxis":{"gridcolor":"white","gridwidth":2,"backgroundcolor":"#E5ECF6","ticks":"","showbackground":true,"zerolinecolor":"white","linecolor":"white"},"zaxis":{"gridcolor":"white","gridwidth":2,"backgroundcolor":"#E5ECF6","ticks":"","showbackground":true,"zerolinecolor":"white","linecolor":"white"},"yaxis":{"gridcolor":"white","gridwidth":2,"backgroundcolor":"#E5ECF6","ticks":"","showbackground":true,"zerolinecolor":"white","linecolor":"white"}},"colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"]}},"margin":{"l":50,"b":50,"r":50,"t":60},"title":"Feasibility of Various Linearized Models","yaxis":{"hoverformat":".2f","title":"Costs"}}, "config": {"showLink":false,"editable":false,"responsive":true,"staticPlot":false,"scrollZoom":true}}
+    Plotly.newPlot(PLOT, plot_obj)
+
+    // If width is not specified, set it to 100%
+    PLOT.style.width = plot_obj.layout.width ? "" : "100%"
+    
+    // For the height we have to also put a fixed value in case the plot is put on a non-fixed-size container (like the default wrapper)
+    PLOT.style.height = plot_obj.layout.height ? "" : "100%"
+</script>
+<script type="module">import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+mermaid.initialize({
+    startOnLoad: true,
+    theme: "neutral"
+});
+</script></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../implementation_details/">« Implementation Details</a><a class="docs-footer-nextpage" href="../future_development/">Future Development »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.5.0 on <span class="colophon-date" title="Monday 19 August 2024 15:26">Monday 19 August 2024</span>. Using Julia version 1.6.7.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
