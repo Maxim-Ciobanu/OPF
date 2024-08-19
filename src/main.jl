@@ -25,14 +25,6 @@ optimize_model(My_DC_model)
 # --------------------------------------------------------------------------
 
 
-# Single Period Graphing Example for AC
-# --------------------------------------------------------------------------
-ac_factory = ACMPOPFModelFactory(file_path, Ipopt.Optimizer)
-My_AC_model_Graphing_single_period = create_model(ac_factory)
-optimize_model_with_plot(My_AC_model_Graphing_single_period)
-# --------------------------------------------------------------------------
-
-
 # Multi Period Graphing Example for AC
 # --------------------------------------------------------------------------
 ac_factory = ACMPOPFModelFactory(file_path, Ipopt.Optimizer)

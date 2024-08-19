@@ -13,7 +13,7 @@ This module provides tools to create, optimize, and analyze MPOPF models using v
 - Visualize optimization results
 """
 module MPOPF
-    using PowerModels, JuMP, Ipopt, Gurobi, Dates, Serialization, PlotlyJS
+    using PowerModels, JuMP, Dates, Serialization, PlotlyJS
     
     # Exporting these functions from the module so we dont have to prefix them with MPOPF.
     
@@ -399,76 +399,77 @@ module MPOPF
         T = model.time_periods
 
         if T == 1
-            objective_values = Float64[]
-            iterations = Int[]
+            error("Graphing for Time Periods = 1 not supported")
+            # objective_values = Float64[]
+            # iterations = Int[]
 
-            function ipopt_callback(
-                alg_mod::Cint, iter_count::Cint, obj_value::Float64,
-                inf_pr::Float64, inf_du::Float64, mu::Float64,
-                d_norm::Float64, regularization_size::Float64,
-                alpha_du::Float64, alpha_pr::Float64, ls_trials::Cint
-            )
-                push!(objective_values, obj_value)
-                push!(iterations, iter_count)
-                return true  # Return true to continue the optimization
-            end
+            # function ipopt_callback(
+            #     alg_mod::Cint, iter_count::Cint, obj_value::Float64,
+            #     inf_pr::Float64, inf_du::Float64, mu::Float64,
+            #     d_norm::Float64, regularization_size::Float64,
+            #     alpha_du::Float64, alpha_pr::Float64, ls_trials::Cint
+            # )
+            #     push!(objective_values, obj_value)
+            #     push!(iterations, iter_count)
+            #     return true  # Return true to continue the optimization
+            # end
 
-            # Note: The callback does not work without a new package
-            # https://github.com/jump-dev/Gurobi.jl#callbacks
-            function gurobi_callback(cb_data, where)
-                if where == GRB_CB_MIP
-                    iteration = Ref{Cint}()
-                    GRBcbget(cb_data, where, GRB_CB_MIP_NODCNT, iteration)
+            # # Note: The callback does not work without a new package
+            # # https://github.com/jump-dev/Gurobi.jl#callbacks
+            # function gurobi_callback(cb_data, where)
+            #     if where == GRB_CB_MIP
+            #         iteration = Ref{Cint}()
+            #         GRBcbget(cb_data, where, GRB_CB_MIP_NODCNT, iteration)
                     
-                    objbst = Ref{Cdouble}()
-                    GRBcbget(cb_data, where, GRB_CB_MIP_OBJBST, objbst)
+            #         objbst = Ref{Cdouble}()
+            #         GRBcbget(cb_data, where, GRB_CB_MIP_OBJBST, objbst)
                     
-                    push!(iterations, iteration[])
-                    push!(objective_values, objbst[])
+            #         push!(iterations, iteration[])
+            #         push!(objective_values, objbst[])
                     
-                    println("Iteration: $(iteration[]), Best Obj: $(objbst[])")
-                end
-            end
+            #         println("Iteration: $(iteration[]), Best Obj: $(objbst[])")
+            #     end
+            # end
 
-            if solver_name(model.model) == "Ipopt"
-                MOI.set(model.model, Ipopt.CallbackFunction(), ipopt_callback)
-            elseif solver_name(model.model) == "Gurobi"
-                error("At the moment there is no graphing for gurobi if Time_periods = 1")
-                # MOI.set(model.model, MOI.RawOptimizerAttribute("LazyConstraints"), 1)
-                # MOI.set(model.model, Gurobi.CallbackFunction(), gurobi_callback)
-                # if MOI.get(model.model, MOI.NumberOfVariables()) > 0
-                #     println("Callback has been set for Gurobi")
-                # else
-                #     println("No variables in the model. Callback may not be triggered.")
-                # end
-            else
-                error("Optimizer must be either Ipopt or Gurobi")
-            end
+            # if solver_name(model.model) == "Ipopt"
+            #     MOI.set(model.model, Ipopt.CallbackFunction(), Ipopt.Optimizer)
+            # elseif solver_name(model.model) == "Gurobi"
+            #     error("At the moment there is no graphing for gurobi if Time_periods = 1")
+            #     # MOI.set(model.model, MOI.RawOptimizerAttribute("LazyConstraints"), 1)
+            #     # MOI.set(model.model, Gurobi.CallbackFunction(), gurobi_callback)
+            #     # if MOI.get(model.model, MOI.NumberOfVariables()) > 0
+            #     #     println("Callback has been set for Gurobi")
+            #     # else
+            #     #     println("No variables in the model. Callback may not be triggered.")
+            #     # end
+            # else
+            #     error("Optimizer must be either Ipopt or Gurobi")
+            # end
 
-            optimize!(model.model)
-            optimal_cost = objective_value(model.model)
-            println("Optimal Cost: ", optimal_cost)
+            # optimize!(model.model)
+            # optimal_cost = objective_value(model.model)
+            # println("Optimal Cost: ", optimal_cost)
             
-            # Plotting Code
-            trace = scatter(
-                x=iterations, y=objective_values,
-                mode="lines+markers",
-                name="Objective Cost",
-                marker_color="blue",
-                hoverinfo="x+y", # Ensure hover displays both x and y values
-                hovertemplate="%{x}, %{y:.2f}<extra></extra>" # Custom hover text format
-            )
+            # # Plotting Code
+            # trace = scatter(
+            #     x=iterations, y=objective_values,
+            #     mode="lines+markers",
+            #     name="Objective Cost",
+            #     marker_color="blue",
+            #     hoverinfo="x+y", # Ensure hover displays both x and y values
+            #     hovertemplate="%{x}, %{y:.2f}<extra></extra>" # Custom hover text format
+            # )
 
-            layout = Layout(
-                title="Plotting Objective Cost against Solver Iterations",
-                xaxis=attr(title="Iterations", tickangle=-45, tickmode="linear", tick0=0, dtick=1),
-                yaxis=attr(title="Objective Cost", hoverformat=".2f"),
-                showlegend=true
-            )
+            # layout = Layout(
+            #     title="Plotting Objective Cost against Solver Iterations",
+            #     xaxis=attr(title="Iterations", tickangle=-45, tickmode="linear", tick0=0, dtick=1),
+            #     yaxis=attr(title="Objective Cost", hoverformat=".2f"),
+            #     showlegend=true
+            # )
 
-            Plot = plot([trace], layout)
+            # Plot = plot([trace], layout)
 
-            return Plot
+            # return Plot
         else
             optimize!(model.model)
             optimal_cost = objective_value(model.model)
