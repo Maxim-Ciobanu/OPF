@@ -2,7 +2,9 @@
 
     Should fill this in :)
 
-# Linearization Techniques for MPOPF
+# Approximation Techniques for MPOPF
+
+Currently this is a simple example showcasing how code can be run and a dynamic graph can be displayed on the docs.
 
 ```@example
 using JuMP, Ipopt, Gurobi
@@ -220,3 +222,4 @@ create_plot(o_error_graph, "Voltage Angle ( Va ) Error of Various Models", "Case
 
 to_documenter(feasability_graph.plot)
 ```
+This is a simple example showcasing how code can be run and a dynamic graph can be displayed on the docs.

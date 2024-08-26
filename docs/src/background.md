@@ -63,7 +63,7 @@ Currently we have a refactored version of the code that is easy to modify. It is
 
 As mentioned above, AC, used real world application, uses many different non-linear variables which can be easily calculated and optimized at a small scale but cannot be done with large networks. Instead, we use a type of linear approximation. Currently most uses in industry are built upon using Direct Current, or DC, models. We are looking into a different linear approximation that may be more accurate given the way AC works, and the losses associated with it. We are also looking into the uncertainty that is introduced between predictions and actual results and attempting to account for and minimize those differences over multiple time periods. Another area of work in this particular project is local search. Which calculates a local minimum and then compares it to a larger area to see if there is yet a better value. 
 
-### Linearization
+### Approximation
 
 Currently still trying to figure out certain assumptions made in the equations written in the appendix.
 

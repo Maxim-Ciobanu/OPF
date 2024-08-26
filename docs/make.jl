@@ -18,7 +18,7 @@ makedocs(
         "Getting Started" => "getting_started.md",
         "Background" => "background.md",
         "Implementation Details" => "implementation_details.md",
-        "Linearization Techniques" => "linearization.md",
+        "Approximation Techniques" => "approximation.md",
         "Future Development" => "future_development.md",
         "Design Philosophy" => "design_philosophy.md",
         "API Reference" => "api.md"
