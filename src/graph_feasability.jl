@@ -196,7 +196,7 @@ for path in file_paths
 end
 
 # save calculated values
-output_to_file(join([string(costs), string(v_error), string(o_error)], "\n"), "output.txt", true)
+# output_to_file(join([string(costs), string(v_error), string(o_error)], "\n"), "output.txt", true)
 save("output/feasability_saved/lin1/feasability", costs)
 save("output/feasability_saved/lin1/v_error", v_error)
 save("output/feasability_saved/lin1/o_error", o_error)
@@ -263,7 +263,7 @@ for path in file_paths
 end
 
 # save calculated values
-output_to_file(join([string(costs), string(v_error), string(o_error)], "\n"), "output.txt")
+# output_to_file(join([string(costs), string(v_error), string(o_error)], "\n"), "output.txt")
 save("output/feasability_saved/lin2/feasability", costs)
 save("output/feasability_saved/lin2/v_error", v_error)
 save("output/feasability_saved/lin2/o_error", o_error)
@@ -331,7 +331,7 @@ end
 
 
 # save calculated values
-output_to_file(join([string(costs), string(v_error), string(o_error)], "\n"), "output.txt")
+# output_to_file(join([string(costs), string(v_error), string(o_error)], "\n"), "output.txt")
 save("output/feasability_saved/lin3/feasability", costs)
 save("output/feasability_saved/lin3/v_error", v_error)
 save("output/feasability_saved/lin3/o_error", o_error)
