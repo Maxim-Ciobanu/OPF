@@ -145,8 +145,25 @@ function generalised(factory::Union{ACMPOPFModelFactory, DCMPOPFModelFactory, Li
 	return costs, v_error, o_error
 end
 
-# performs a feasibility check on a specific model and path test case, then returns the updated graph
-# user can specify which models they would like to be ran
+"""
+	perform_feasibility(models::Array, finish_save::Bool=false)
+
+# Fields
+- `models::Array` : an array of 5, where each element is a model to be performed
+	- 1 = AC, 2 = DC, 3 = Lin1, 4 = Lin2, 5 = Lin3
+	- toggle 1 = on, 0 = off
+- `finish_save::Bool=false` : a boolean to determine if the graphs should be saved
+
+# Description
+- This function allows the user to execute feasibility tests on the different models provided
+	- AC
+	- DC
+	- Lin1
+	- Lin2
+	- Lin3
+- for each case in the cases folder the function will loop over them and perform the feasibility tests
+for each model that has been toggled to be on
+"""
 function perform_feasibility(models::Array, finish_save::Bool=false)
 
 	# extract the raw file names from cases folder, then add the path to file_paths array
@@ -263,5 +280,7 @@ function perform_feasibility(models::Array, finish_save::Bool=false)
 	return feasability_graph, v_error_graph, o_error_graph
 end
 
-
+# takes an array of 5
+# 1 = AC, 2 = DC, 3 = Lin1, 4 = Lin2, 5 = Lin3
+# toggle 1 = on, 0 = off
 graph1, gaph2, graph3 = perform_feasibility([0, 0, 0, 0, 1])
