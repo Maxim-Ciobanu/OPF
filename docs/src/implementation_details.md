@@ -125,7 +125,7 @@ end
 
 !!! note
 
-    The `model_type` variable is only relevant for linearization and will be discussed here: [Linearization Techniques for MPOPF](@ref)
+    The `model_type` variable is only relevant for approximation techniques and will be discussed here: [Approximation Techniques for MPOPF](@ref)
 
 
 Here is an example of the AC and DC `set_model_variables!` functions. Take note of the factory type accepted.

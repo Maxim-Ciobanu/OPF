@@ -70,11 +70,9 @@ end
 # output: String - the output to be saved
 # file_name: String - the name of the file to be saved
 # show_date: Bool - whether to show the date in the file above the output
-function output_to_file(output::String, file_name::String="", show_date::Bool=false)
-	# check if the output directory exists
-	if !isdir("output")
-		mkdir("output")
-	end
+function output_to_file(data::String, file_name::String="", show_date::Bool=false)
+
+	mkpath(dirname("output/" * file_name))
 
 	# list all of the files in this directory
 	files = readdir("output")
@@ -86,13 +84,13 @@ function output_to_file(output::String, file_name::String="", show_date::Bool=fa
 		if file_name in files
 			open("output/$(file_name)", "a") do io
 				if show_date write(io, string(now())); write(io, "\n\n") end
-				write(io, output)
+				write(io, data)
 				write(io, "\n\n")
 			end
 		else
 			open("output/$(file_name)", "w") do io
 				if show_date write(io, string(now())); write(io, "\n\n") end
-				write(io, output)
+				write(io, data)
 				write(io, "\n\n")
 			end
 		end
@@ -106,7 +104,7 @@ function output_to_file(output::String, file_name::String="", show_date::Bool=fa
 		open("output/output_$(num).txt", "w") do io
 			write(io, string(now()))
 			write(io, "\n\n")
-			write(io, output)
+			write(io, data)
 			write(io, "\n\n")
 		end
 	end

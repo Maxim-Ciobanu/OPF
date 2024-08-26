@@ -13,7 +13,7 @@ This module provides tools to create, optimize, and analyze MPOPF models using v
 - Visualize optimization results
 """
 module MPOPF
-    using PowerModels, JuMP, Dates, Serialization, PlotlyJS
+    using PowerModels, JuMP, Dates, Serialization, PlotlyJS, Ipopt
     
     # Exporting these functions from the module so we dont have to prefix them with MPOPF.
     
@@ -25,6 +25,9 @@ module MPOPF
     
     # Export of misc.jl functions
     export generate_load_scenarios, save, retreive, output_to_file
+
+    # Export of graphing_feasibility.jl
+    export perform_feasibility
 
 ##############################################################################################
 # Factory Structs
@@ -195,6 +198,7 @@ module MPOPF
     include("implementation-linear.jl")
     include("implementation-new_ac.jl")
     include("misc.jl")
+    include("graphing_feasibility.jl")
 
     # The first create_model fucntion creates a PowerFlowModel object
     # It creates the right model depending on the factory passed as the first paramenter
