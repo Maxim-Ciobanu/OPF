@@ -90,7 +90,7 @@ end
 # output: String - the output to be saved
 # file_name: String - the name of the file to be saved
 # show_date: Bool - whether to show the date in the file above the output
-function output_to_file(output::String, file_name::String="", show_date::Bool=false)
+function output_to_file(output::String; file_name::String="", show_date::Bool=false)
 	# check if the output directory exists
 	if !isdir("output")
 		mkdir("output")
@@ -103,17 +103,17 @@ function output_to_file(output::String, file_name::String="", show_date::Bool=fa
 	if (file_name !== "")
 		
 		# check if it already exists
-		if file_name in files
+		if isfile("output/" * file_name)
 			open("output/$(file_name)", "a") do io
-				if show_date write(io, string(now())); write(io, "\n\n") end
+				if show_date write(io, string(now())); write(io, "\n") end
 				write(io, output)
-				write(io, "\n\n")
+				write(io, "\n")
 			end
 		else
 			open("output/$(file_name)", "w") do io
-				if show_date write(io, string(now())); write(io, "\n\n") end
+				if show_date write(io, string(now())); write(io, "\n") end
 				write(io, output)
-				write(io, "\n\n")
+				write(io, "\n")
 			end
 		end
 	
