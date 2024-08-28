@@ -1,10 +1,3 @@
-using PowerModels, JuMP, Ipopt, Plots#, Gurobi
-include("MPOPF.jl")
-include("misc.jl")
-include("search_functions.jl")
-include("graphing_class.jl")
-using .MPOPF
-
 # create enum for linear models
 @enum MODEL_TYPE begin
 	Undef=0
@@ -138,7 +131,7 @@ function generalised(factory::Union{ACMPOPFModelFactory, DCMPOPFModelFactory, Li
 
 		for (vi, vj) in zip(values.(vm_fr), values.(vm_to))
 			println(value(vi), " -> ", value(vj))
-			output_to_file("$(path) -> $(log(value(vi)) - log(value(vj)))"; file_name="v_values/vm_diff.txt")
+			output_to_file("$(path) -> $(log(value(vi)) - log(value(vj)))", "v_values/vm_diff.txt")
 		end
 	end
 
@@ -279,8 +272,3 @@ function perform_feasibility(models::Array, finish_save::Bool=false)
 	# return the graph
 	return feasability_graph, v_error_graph, o_error_graph
 end
-
-# takes an array of 5
-# 1 = AC, 2 = DC, 3 = Lin1, 4 = Lin2, 5 = Lin3
-# toggle 1 = on, 0 = off
-graph1, gaph2, graph3 = perform_feasibility([0, 0, 0, 0, 1])

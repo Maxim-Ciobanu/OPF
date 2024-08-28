@@ -1,5 +1,3 @@
-using PlotlyJS, Dates, Serialization 
-
 # struct for storing data about the graph
 #
 # plot: Any - the plotly plot
@@ -69,6 +67,9 @@ end
 # graph: Graph - the graph to be saved
 # ------------------------------------------------------------
 function save_graph(graph::Graph)
+
+	# Cretes the directory if it does not already exist
+	mkpath(dirname(graph.location))
 	
 	print(graph.location)
 	# minimum conditions to be met before saving

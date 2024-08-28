@@ -1,31 +1,9 @@
-# Multiperiod Optimal Power Flow (MPOPF)
+!!! danger
 
-## Utilities
+    Still Working on this :(
 
-- [MatPower Graph Display](https://matpower.app/)
-- [MatPower Description of Case Format](https://matpower.org/docs/ref/matpower5.0/caseformat.html)
-    - [Local Copy](./Attachments/Description%20of%20caseformat.html)
-- [Markdown Admonitions](https://documenter.juliadocs.org/stable/showcase/#Admonitions)
+# Class UML Diagram
 
-## Introduction
-
-Welcome to the MPOPF project.
-This Julia package provides tools for analyzing and optimizing power flow in electrical networks over multiple time periods.
-
-!!! note
-
-    For a more indepth description of the project please visit our [Documentation](https://maxim-ciobanu.github.io/OPF/)
-
-## Features
-
-- Support for AC and DC power flow models
-- Multi-period optimization
-- Uncertainty modeling
-- Linearization techniques
-- Local search optimization
-- Feasibility checking
-
-# Design Diagram
 
 ```mermaid
 classDiagram
