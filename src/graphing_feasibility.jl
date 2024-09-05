@@ -2,16 +2,6 @@
 using JuMP, Ipopt#, Gurobi
 using MPOPF
 
-# create enum for linear models
-@enum MODEL_TYPE begin
-	Undef=0
-	Lin1=1
-	Lin2=2
-	Lin3=3
-	lin4=4
-end
-
-
 # create a function for retreiveing the data, if it exists
 # 
 # factory: Union{ACMPOPFModelFactory, DCMPOPFModelFactory, LinMPOPFModelFactory} - the model factory to use
@@ -157,7 +147,7 @@ function generalised(factory::Union{ACMPOPFModelFactory, DCMPOPFModelFactory, Li
 
 		for (vi, vj) in zip(values.(vm_fr), values.(vm_to))
 			println(value(vi), " -> ", value(vj))
-			output_to_file("$(path) -> $(log(value(vi)) - log(value(vj)))"; file_name="v_values/vm_diff.txt")
+			output_to_file("$(path) -> $(log(value(vi)) - log(value(vj)))", "v_values/vm_diff.txt")
 		end
 	end
 
@@ -194,6 +184,7 @@ function perform_feasibility(models::Array, finish_save::Bool=false)
 	feasability_graph = Graph("output/graphs/feasibility.html")
 	v_error_graph = Graph("output/graphs/v_error.html")
 	o_error_graph = Graph("output/graphs/o_error.html")
+	c_time_graph = Graph("output/graphs/c_time.html")
 	
 	# initiate the different models arrays
 	ac_models = [[], [], [], []]
@@ -258,6 +249,7 @@ function perform_feasibility(models::Array, finish_save::Bool=false)
 		add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in ac_models[1]], "AC", "blue")
 		add_scatter(v_error_graph, file_strings, [collect(values(i))[1] for i in ac_models[2]], "AC", "blue")
 		add_scatter(o_error_graph, file_strings, [collect(values(i))[1] for i in ac_models[3]], "AC", "blue")
+		add_scatter(c_time_graph, file_strings, [collect(values(i))[1] for i in ac_models[4]], "AC", "blue")
 	end
 	
 	if (models[2] == 1)
@@ -265,6 +257,7 @@ function perform_feasibility(models::Array, finish_save::Bool=false)
 		add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in dc_models[1]], "DC", "red")
 		add_scatter(v_error_graph, file_strings, [collect(values(i))[1] for i in dc_models[2]], "DC", "red")
 		add_scatter(o_error_graph, file_strings, [collect(values(i))[1] for i in dc_models[3]], "DC", "red")
+		add_scatter(c_time_graph, file_strings, [collect(values(i))[1] for i in dc_models[4]], "DC", "red")
 	end
 
 	if (models[3] == 1)
@@ -272,6 +265,7 @@ function perform_feasibility(models::Array, finish_save::Bool=false)
 		add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in lin1_models[1]], "Lin1", "green")
 		add_scatter(v_error_graph, file_strings, [collect(values(i))[1] for i in lin1_models[2]], "Lin1", "green")
 		add_scatter(o_error_graph, file_strings, [collect(values(i))[1] for i in lin1_models[3]], "Lin1", "green")
+		add_scatter(c_time_graph, file_strings, [collect(values(i))[1] for i in lin1_models[4]], "Lin1", "green")
 	end
 
 	if (models[4] == 1)
@@ -279,6 +273,7 @@ function perform_feasibility(models::Array, finish_save::Bool=false)
 		add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in lin2_models[1]], "Lin2", "yellow")
 		add_scatter(v_error_graph, file_strings, [collect(values(i))[1] for i in lin2_models[2]], "Lin2", "yellow")
 		add_scatter(o_error_graph, file_strings, [collect(values(i))[1] for i in lin2_models[3]], "Lin2", "yellow")
+		add_scatter(c_time_graph, file_strings, [collect(values(i))[1] for i in lin2_models[4]], "Lin2", "yellow")
 	end
 
 	if (models[5] == 1)
@@ -286,13 +281,15 @@ function perform_feasibility(models::Array, finish_save::Bool=false)
 		add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in lin3_models[1]], "Lin3", "purple")
 		add_scatter(v_error_graph, file_strings, [collect(values(i))[1] for i in lin3_models[2]], "Lin3", "purple")
 		add_scatter(o_error_graph, file_strings, [collect(values(i))[1] for i in lin3_models[3]], "Lin3", "purple")
+		add_scatter(c_time_graph, file_strings, [collect(values(i))[1] for i in lin3_models[4]], "Lin3", "purple")
 	end
 
 	if (models[6] == 1)
 		save("output/feasability_saved/lin4/feasability", merge(lin4_models[1]...)); save("output/feasability_saved/lin4/v_error", merge(lin4_models[2]...)); save("output/feasability_saved/lin4/o_error", merge(lin4_models[3]...)); save("output/feasability_saved/lin4/c_time", merge(lin4_models[4]...))
-		add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in lin4_models[1]], "Lin4", "blue")
-		add_scatter(v_error_graph, file_strings, [collect(values(i))[1] for i in lin4_models[2]], "Lin4", "blue")
-		add_scatter(o_error_graph, file_strings, [collect(values(i))[1] for i in lin4_models[3]], "Lin4", "blue")
+		add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in lin4_models[1]], "Lin4", "orange")
+		add_scatter(v_error_graph, file_strings, [collect(values(i))[1] for i in lin4_models[2]], "Lin4", "orange")
+		add_scatter(o_error_graph, file_strings, [collect(values(i))[1] for i in lin4_models[3]], "Lin4", "orange")
+		add_scatter(c_time_graph, file_strings, [collect(values(i))[1] for i in lin4_models[4]], "Lin4", "orange")
 	end
 
 	# create a function for scanning the data
@@ -303,16 +300,18 @@ function perform_feasibility(models::Array, finish_save::Bool=false)
 	create_plot(feasability_graph, "Feasibility of Various Linearized Models", "Cases", "Costs")
 	create_plot(v_error_graph, "Voltage Magnitude ( Vm ) Error of Various Models", "Cases", "Magnitude Error")
 	create_plot(o_error_graph, "Voltage Angle ( Va ) Error of Various Models", "Cases", "Angle Error")
+	create_plot(c_time_graph, "Computation Time of Various Models", "Cases", "Time (s)")
 
 	# save the graphs
 	if finish_save
 		save_graph(feasability_graph)
 		save_graph(v_error_graph)
 		save_graph(o_error_graph)
+		save_graph(c_time_graph)
 	end
 
 	# return the graph
-	return feasability_graph, v_error_graph, o_error_graph
+	return feasability_graph, v_error_graph, o_error_graph, c_time_graph
 end
 
 # takes an array of 5

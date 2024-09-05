@@ -29,6 +29,16 @@ module MPOPF
     # Export of graphing_feasibility.jl
     export perform_feasibility
 
+	@enum MODEL_TYPE begin
+		Undef=0
+		Lin1=1
+		Lin2=2
+		Lin3=3
+		Lin4=4
+	end
+
+	export MODEL_TYPE, Lin1, Lin2, Lin3, Lin4
+
 ##############################################################################################
 # Factory Structs
 # They are used as parameters so that Julias multiple dispatch knows which functions to call

@@ -7,6 +7,17 @@ using MPOPF
 
 x, y, z, i = perform_feasibility([0,0,0,0,0,1], true)
 
+file_path = "./Cases/case300.m"
+
+
+factory = LinMPOPFModelFactory(file_path, Ipopt.Optimizer)
+test = create_model(factory; model_type=Lin4)
+optimize_model(test)
+
+factory = ACMPOPFModelFactory(file_path, Ipopt.Optimizer)
+test = create_model(factory)
+optimize_model(test)
+
 # using JuMP, Ipopt, Gurobi
 # using MPOPF
 
