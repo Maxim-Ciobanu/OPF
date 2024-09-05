@@ -8,6 +8,7 @@ using MPOPF
 	Lin1=1
 	Lin2=2
 	Lin3=3
+	lin4=4
 end
 
 
@@ -48,6 +49,12 @@ function retreive_data(factory::Union{ACMPOPFModelFactory, DCMPOPFModelFactory, 
 			v_error = retreive("output/feasability_saved/lin3/v_error")
 			o_error = retreive("output/feasability_saved/lin3/o_error")
 			c_time = retreive("output/feasability_saved/lin3/c_time")
+
+		elseif model_type == Lin4
+			feasability = retreive("output/feasability_saved/lin4/feasability")
+			v_error = retreive("output/feasability_saved/lin4/v_error")
+			o_error = retreive("output/feasability_saved/lin4/o_error")
+			c_time = retreive("output/feasability_saved/lin4/c_time")
 		end
 	end
 
@@ -101,6 +108,9 @@ function generalised(factory::Union{ACMPOPFModelFactory, DCMPOPFModelFactory, Li
 	model_type !== false ? model = create_model(factory; model_type=model_type) : model = create_model(factory)
 	optimize_model(model)
 
+	# store the end time
+	end_time = time()
+
 	# get the length of the buses
 	ref = get_ref(model.data)
 	bus_len = length(ref[:bus])
@@ -137,7 +147,7 @@ function generalised(factory::Union{ACMPOPFModelFactory, DCMPOPFModelFactory, Li
 	costs[path] = total_cost
 	v_error[path] = new_v_error
 	o_error[path] = new_o_error
-	times[path] = time() - start_time
+	times[path] = end_time - start_time
 
 	# output the v values from the optimized model
 	vm = ac_model.model[:vm]
@@ -159,7 +169,7 @@ end
 
 # Fields
 - `models::Array` : a vector of 5, where each element is a model to be performed
-	- 1 = AC, 2 = DC, 3 = Lin1, 4 = Lin2, 5 = Lin3
+	- 1 = AC, 2 = DC, 3 = Lin1, 4 = Lin2, 5 = Lin3 6 = Lin4
 	- toggle 1 = on, 0 = off
 - `finish_save::Bool=false` : a boolean to determine if the graphs should be saved
 
@@ -170,6 +180,7 @@ end
 	- Lin1
 	- Lin2
 	- Lin3
+	- Lin4
 - for each case in the cases folder the function will loop over them and perform the feasibility tests
 for each model that has been toggled to be on
 """
@@ -190,6 +201,7 @@ function perform_feasibility(models::Array, finish_save::Bool=false)
 	lin1_models = [[], [], [], []]
 	lin2_models = [[], [], [], []]
 	lin3_models = [[], [], [], []]
+	lin4_models = [[], [], [], []]
 
 	# loop through all the cases
 	for path in file_paths
@@ -228,6 +240,13 @@ function perform_feasibility(models::Array, finish_save::Bool=false)
 			lin3_factory = LinMPOPFModelFactory(path, Ipopt.Optimizer)
 			cost_lin_log, v_error_lin_log, o_error_lin_log, time_lin_log = generalised(lin3_factory, path, Lin3)
 			push!(lin3_models[1], cost_lin_log); push!(lin3_models[2], v_error_lin_log); push!(lin3_models[3], o_error_lin_log); push!(lin3_models[4], time_lin_log)
+		end
+
+		if (models[6] == 1)
+			# perform the linearized models
+			lin4_factory = LinMPOPFModelFactory(path, Ipopt.Optimizer)
+			cost_lin_log, v_error_lin_log, o_error_lin_log, time_lin_log = generalised(lin4_factory, path, Lin4)
+			push!(lin4_models[1], cost_lin_log); push!(lin4_models[2], v_error_lin_log); push!(lin4_models[3], o_error_lin_log); push!(lin4_models[4], time_lin_log)
 		end
 	end
 
@@ -269,6 +288,13 @@ function perform_feasibility(models::Array, finish_save::Bool=false)
 		add_scatter(o_error_graph, file_strings, [collect(values(i))[1] for i in lin3_models[3]], "Lin3", "purple")
 	end
 
+	if (models[6] == 1)
+		save("output/feasability_saved/lin4/feasability", merge(lin4_models[1]...)); save("output/feasability_saved/lin4/v_error", merge(lin4_models[2]...)); save("output/feasability_saved/lin4/o_error", merge(lin4_models[3]...)); save("output/feasability_saved/lin4/c_time", merge(lin4_models[4]...))
+		add_scatter(feasability_graph, file_strings, [collect(values(i))[1] for i in lin4_models[1]], "Lin4", "blue")
+		add_scatter(v_error_graph, file_strings, [collect(values(i))[1] for i in lin4_models[2]], "Lin4", "blue")
+		add_scatter(o_error_graph, file_strings, [collect(values(i))[1] for i in lin4_models[3]], "Lin4", "blue")
+	end
+
 	# create a function for scanning the data
 	# this will for each case, evaluate all previous cases from that point 
 	# to see which model performs best for all previous cases
@@ -292,4 +318,4 @@ end
 # takes an array of 5
 # 1 = AC, 2 = DC, 3 = Lin1, 4 = Lin2, 5 = Lin3
 # toggle 1 = on, 0 = off
-graph1, gaph2, graph3 = perform_feasibility([0, 0, 0, 0, 1])
+# graph1, gaph2, graph3 = perform_feasibility([0, 0, 0, 0, 1])

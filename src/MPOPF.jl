@@ -230,7 +230,7 @@ module MPOPF
 
         power_flow_model = MPOPFModel(model, data, time_periods, factors, ramping_cost)
 
-        set_model_variables!(power_flow_model, factory)
+		model_type !== undef ? set_model_variables!(power_flow_model, factory, model_type) : set_model_variables!(power_flow_model, factory)
         set_model_objective_function!(power_flow_model, factory)
         model_type !== undef ? set_model_constraints!(power_flow_model, factory, model_type) : set_model_constraints!(power_flow_model, factory)
 

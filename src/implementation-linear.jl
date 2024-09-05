@@ -1,4 +1,4 @@
-function set_model_variables!(power_flow_model::AbstractMPOPFModel, factory::LinMPOPFModelFactory)
+function set_model_variables!(power_flow_model::AbstractMPOPFModel, factory::LinMPOPFModelFactory, model_type=0)
     model = power_flow_model.model
     T = power_flow_model.time_periods
     ref = PowerModels.build_ref(power_flow_model.data)[:it][:pm][:nw][0]
@@ -7,7 +7,12 @@ function set_model_variables!(power_flow_model::AbstractMPOPFModel, factory::Lin
     branch_data = ref[:branch]
     
     @variable(model, va[t in 1:T, i in keys(bus_data)])
-    @variable(model, bus_data[i]["vmin"] <= vm[t in 1:T, i in keys(bus_data)] <= bus_data[i]["vmax"], start=1.0)
+	if Int(model_type) == 4
+		@variable(model, log(bus_data[i]["vmin"]) <= vm[t in 1:T, i in keys(bus_data)] <= log(bus_data[i]["vmax"]), start=1.0) # changed this to log
+	else
+    	@variable(model, bus_data[i]["vmin"] <= vm[t in 1:T, i in keys(bus_data)] <= bus_data[i]["vmax"], start=1.0) # changed this to log
+	end
+
     @variable(model, gen_data[i]["pmin"] <= pg[t in 1:T, i in keys(gen_data)] <= gen_data[i]["pmax"])
     @variable(model, gen_data[i]["qmin"] <= qg[t in 1:T, i in keys(gen_data)] <= gen_data[i]["qmax"])
     @variable(model, -branch_data[l]["rate_a"] <= p[t in 1:T, (l,i,j) in ref[:arcs]] <= branch_data[l]["rate_a"])
@@ -33,7 +38,7 @@ function set_model_objective_function!(power_flow_model::AbstractMPOPFModel, fac
     )
 end
 
-function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::LinMPOPFModelFactory, model_type=0) #Can add an ENUM here. Then use an if/else case?
+function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::LinMPOPFModelFactory, model_type=0)
 	print("Model Type: ", model_type)
     model = power_flow_model.model
     data = power_flow_model.data
@@ -130,6 +135,14 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::L
 
 				@constraint(model, p_to == (g+g_to)/ttm*(log(vm_to)-log(vm_fr)) + (-b*tr-g*ti)/ttm*(va_to-va_fr)) #add loss
 				@constraint(model, q_to == (-(b+b_to)/ttm*(log(vm_to)-log(vm_fr)) + (-g*tr+b*ti)/ttm*(va_to-va_fr))) #add loss
+			elseif Int(model_type) == 4
+
+				# Linear Model 4 -> with natural log 2
+				@constraint(model, p_fr == (g+g_fr)/ttm*(vm_fr-vm_to) + (-b*tr-g*ti)/ttm*(va_fr-va_to)) #add loss
+				@constraint(model, q_fr == (-(b+b_fr)/ttm*(vm_fr-vm_to) + (-g*tr+b*ti)/ttm*(va_fr-va_to))) #add loss
+
+				@constraint(model, p_to == (g+g_to)/ttm*(vm_to-vm_fr) + (-b*tr-g*ti)/ttm*(va_to-va_fr)) #add loss
+				@constraint(model, q_to == (-(b+b_to)/ttm*(vm_to-vm_fr) + (-g*tr+b*ti)/ttm*(va_to-va_fr))) #add loss
 			end
 
 			# include a linear model here with the use of some type of support vector regression or machine learning to try and improve it even further
