@@ -29,6 +29,20 @@ module MPOPF
     # Export of graphing_feasibility.jl
     export perform_feasibility
 
+    # Export of compute_and_save_feasibility.jl
+    export compute_and_save_feasibility, load_and_graph_results, load_and_compile_results, calculate_model_averages
+
+
+    # create enum for linear models
+    @enum MODEL_TYPE begin
+        Undef=0
+        Lin1=1
+        Lin2=2
+        Lin3=3
+    end
+
+    export MODEL_TYPE, Lin1, Lin2, Lin3
+
 ##############################################################################################
 # Factory Structs
 # They are used as parameters so that Julias multiple dispatch knows which functions to call
@@ -54,9 +68,9 @@ module MPOPF
     """
     mutable struct ACMPOPFModelFactory <: AbstractMPOPFModelFactory
         file_path::String
-        optimizer::Type
+        optimizer
 
-        function ACMPOPFModelFactory(file_path::String, optimizer::Type)
+        function ACMPOPFModelFactory(file_path::String, optimizer)
             return new(file_path, optimizer)
         end
     end
@@ -199,6 +213,7 @@ module MPOPF
     include("implementation-new_ac.jl")
     include("misc.jl")
     include("graphing_feasibility.jl")
+    include("compute_and_save_feasibility.jl")
 
     # The first create_model fucntion creates a PowerFlowModel object
     # It creates the right model depending on the factory passed as the first paramenter
