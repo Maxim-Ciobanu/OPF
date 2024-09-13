@@ -115,6 +115,7 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::A
             @constraint(model, va_fr - va_to <= branch["angmax"])
             @constraint(model, va_fr - va_to >= branch["angmin"])
 
+			# line flow limits
             @constraint(model, p_fr^2 + q_fr^2 <= branch["rate_a"]^2)
             @constraint(model, p_to^2 + q_to^2 <= branch["rate_a"]^2)
         end
