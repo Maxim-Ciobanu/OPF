@@ -23,6 +23,30 @@ function create_initial_feasible_solution(data, time_periods, demands, ramping_d
     return solution
 end
 
+function create_initial_solution(data, time_periods, demands, ramping_data)
+    solution = []
+    for t in 1:time_periods
+        pg = Dict()
+        for (i, gen) in data["gen"]
+            gen_id = parse(Int, i)
+            pg[gen_id] = (gen["pmin"] + gen["pmax"]) / 2
+        end
+        push!(solution, pg)
+    end
+
+    sorted_demands = deepcopy(demands)
+    sorted_demands = collect(enumerate(sorted_demands))
+    sorted_demands = sort(sorted_demands, by = x-> sum(x[2]), rev = true)
+    
+    model = create_search_model(factory, 1, ramping_data, [demands[1][2]])
+
+    
+
+    
+
+
+end
+
 """
     adjust_to_meet_demand(solution, data, demands, t, ramping_data)
 
@@ -30,42 +54,34 @@ Modify outputs to ensure demand for time periods is met
 
 """
 function adjust_to_meet_demand(solution, data, demands, t, ramping_data)
-    total_output = sum(values(solution[t]))
+    total_generation = sum(values(solution[t]))
     total_demand = sum(demands[t])
-    diff = total_demand - total_output
-    
-    if abs(diff) < 1e-6  # If difference is negligible, consider it met
+    diff = total_demand - total_generation
+
+    if diff <= 1e-6  # If difference is negligible or negative, consider it met
         return solution
     end
-    
+
     # Sort generators by their cost efficiency (considering both generation and ramping costs)
-    sorted_gens = sort(collect(data["gen"]), 
+    sorted_gens = sort(collect(data["gen"]),
                        by=x->(x[2]["cost"][2] + ramping_data["costs"][parse(Int, x[1])]),
-                       rev=(diff < 0))
-    
+                       rev=true)
+
     for (i, gen) in sorted_gens
         gen_id = parse(Int, i)
         ramp_limit = ramping_data["ramp_limits"][gen_id]
-        
-        # If increasing demand, ramp up by the difference or ramping limit, whichever is smaller
-        if diff > 0
-            max_increase = min(gen["pmax"] - solution[t][gen_id], ramp_limit)
-            increase = min(diff, max_increase)
-            solution[t][gen_id] += increase
-            diff -= increase
-        else
-        # If decreasing demand, ramp down by difference or ramping limit, whichever is smaller
-            max_decrease = min(solution[t][gen_id] - gen["pmin"], ramp_limit)
-            decrease = min(-diff, max_decrease)
-            solution[t][gen_id] -= decrease
-            diff += decrease
-        end
-        
+
+        # Ramp up by the difference or ramping limit, whichever is smaller
+        max_increase = min(gen["pmax"] - solution[t][gen_id], ramp_limit)
+        increase = min(diff, max_increase)
+        solution[t][gen_id] += increase
+        diff -= increase
+
         if abs(diff) < 1e-6
             break
         end
     end
-    
+
     return solution
 end
 
@@ -378,7 +394,7 @@ function check_ramping_limits(solution, ramping_data)
     else
         println("Ramping limit violations found:")
         for (t, gen_id, direction, actual, limit) in violations
-            println("Time $t, Generator $gen_id: $direction ramp of $actual exceeds limit $limit")
+            println("Time $t, Generator $gen_id: $direction ramp of $actual exceeds limit $limit by ", actual - limit)
         end
         return false
     end
@@ -397,10 +413,10 @@ function check_demands_met(solution, initial_demands, tolerance=1e-6)
     violations = []
 
     for t in 1:time_periods
-        total_generation = sum(pg for (_, pg) in solution[t])
+        total_generation = sum(values(solution[t]))
         total_demand = sum(initial_demands[t])
         
-        if abs(total_generation - total_demand) > tolerance
+        if total_generation < total_demand - tolerance
             push!(violations, (t, total_generation, total_demand))
         end
     end
@@ -416,4 +432,86 @@ function check_demands_met(solution, initial_demands, tolerance=1e-6)
         end
         return false
     end
+end
+
+function sort_time_periods_by_demand(demands)
+    return sortperm(sum.(demands), rev=true)
+end
+
+function set_initial_generator_output(model, t, demands, gen_data)
+    total_demand = sum(demands[t])
+    total_capacity = sum(gen["pmax"] for (_, gen) in gen_data)
+    
+    if total_demand > total_capacity
+        error("Insufficient generation capacity for time period $t")
+    end
+    
+    # Distribute demand proportionally among generators
+    for (g, gen) in gen_data
+        set_start_value(model[:pg][t, g], (gen["pmax"] / total_capacity) * total_demand)
+    end
+end
+
+function adjust_adjacent_periods(model, t, adjacent_t, gen_data, ramp_data, direction)
+    for (g, gen) in gen_data
+        current_output = value(model[:pg][t, g])
+        ramp_limit = ramp_data["ramp_limits"][parse(Int, g)]
+        
+        if direction == :before
+            new_output = max(gen["pmin"], current_output - ramp_limit)
+        else # :after
+            new_output = max(gen["pmin"], current_output + ramp_limit)
+        end
+        
+        set_start_value(model[:pg][adjacent_t, g], new_output)
+    end
+end
+
+function create_decomposed_mpopf_model(factory, time_periods, ramping_data, demands)
+    data = PowerModels.parse_file(factory.file_path)
+    PowerModels.standardize_cost_terms!(data, order=2)
+    PowerModels.calc_thermal_limits!(data)
+    
+    model = JuMP.Model(factory.optimizer)
+    power_flow_model = MPOPFSearchModel(model, data, time_periods, ramping_data, demands)
+    
+    set_model_variables!(power_flow_model, factory)
+    set_model_objective_function!(power_flow_model, factory)
+    set_model_constraints!(power_flow_model, factory)
+    
+    ref = PowerModels.build_ref(data)[:it][:pm][:nw][0]
+    gen_data = ref[:gen]
+    
+    sorted_periods = sort_time_periods_by_demand(demands)
+    
+    for t in sorted_periods
+        set_initial_generator_output(model, t, demands, gen_data)
+        
+        if t > 1
+            adjust_adjacent_periods(model, t, t-1, gen_data, ramping_data, :before)
+        end
+        if t < time_periods
+            adjust_adjacent_periods(model, t, t+1, gen_data, ramping_data, :after)
+        end
+        
+        # Optimize the current time period
+        @objective(model, Min, sum(gen_data[g]["cost"][1]*model[:pg][t,g]^2 + 
+                                   gen_data[g]["cost"][2]*model[:pg][t,g] + 
+                                   gen_data[g]["cost"][3] for g in keys(gen_data)))
+        optimize!(model)
+        
+        # Check if optimization reduced power generation
+        for (g, gen) in gen_data
+            if value(model[:pg][t, g]) < start_value(model[:pg][t, g])
+                # If reduced, set it back to the initial value
+                fix(model[:pg][t, g], start_value(model[:pg][t, g]))
+            end
+        end
+    end
+    
+    # Set the full objective function for the final optimization
+    set_model_objective_function!(power_flow_model, factory)
+    optimize!(model)
+    
+    return power_flow_model
 end
