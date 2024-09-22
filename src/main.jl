@@ -1,4 +1,4 @@
-using Revise, PowerModels, JuMP, Ipopt, Gurobi, CSV, DataFrames
+using PowerModels, JuMP, Ipopt, CSV, DataFrames
 include("MPOPF.jl")
 include("misc.jl")
 include("search_functions.jl")
@@ -8,8 +8,9 @@ using .MPOPF
 
 
 # Example usage:
-file_path = "./Cases/case14.m"
-data = PowerModels.parse_file(file_path)
+matpower_file_path = "./Cases/case14.m"
+csv_file_path = "./Cases/rampingData.csv"
+data = PowerModels.parse_file(matpower_file_path)
 PowerModels.standardize_cost_terms!(data, order=2)
 PowerModels.calc_thermal_limits!(data)
 
@@ -111,10 +112,10 @@ demands[22] .*= 1.2
 demands[23] .*= 1.1
 demands[24] .*= 0.9
 =#
-ramping_data, demands = parse_power_system_csv("./Cases/rampingData.csv")
+ramping_data, demands = parse_power_system_csv(csv_file_path, matpower_file_path)
 
 # Total demand for initial case adjusted order=2 is 2.59
-search_factory = DCMPOPFSearchFactory(file_path, Gurobi.Optimizer)
+search_factory = DCMPOPFSearchFactory(matpower_file_path, Ipopt.Optimizer)
 search_model = create_search_model(search_factory, 5, ramping_data, demands)
 optimize_model(search_model)
 

@@ -41,10 +41,20 @@ function safe_parse_float(s::AbstractString)
 end
 
 # Do not leave cells blank, insert 0 for busses that don't demand power
-function parse_power_system_csv(file_path::String)
-    # Read the entire CSV file into a DataFrame
-    df = CSV.read(file_path, DataFrame, header=1, skipto=2)
+function parse_power_system_csv(file_path::String, matpower_file_path::String)
+    csv_content = read(file_path, String)
+    lines = split(csv_content, '\n')
+    csv_case_name = strip(lines[1])
 
+    mat_power_case_name = basename(matpower_file_path)
+    mat_power_case_name = replace(mat_power_case_name, ".m" => "")
+
+    if csv_case_name != mat_power_case_name
+        error("CSV case name ($csv_case_name) does not match the loaded MATPOWER case ($mat_power_case_name)")
+    end
+    
+    # Read the entire CSV file into a DataFrame
+    df = CSV.read(IOBuffer(join(lines[2:end], '\n')), DataFrame, header=1, skipto=2)
     # Initialize the output structures
     ramping_data = Dict{String, Vector{Float64}}()
     demands = Vector{Vector{Float64}}()
