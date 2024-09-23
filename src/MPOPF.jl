@@ -30,7 +30,7 @@ module MPOPF
     export perform_feasibility
 
     # Export of compute_and_save_feasibility.jl
-    export compute_and_save_feasibility, load_and_graph_results, load_and_compile_results, calculate_model_averages, find_infeasible_constraints
+    export compute_and_save_feasibility, load_and_graph_results, load_and_compile_results, calculate_model_averages, find_infeasible_constraints, find_bound_violations, load_and_compile_models
 
 
     # create enum for linear models
