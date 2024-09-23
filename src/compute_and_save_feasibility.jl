@@ -390,6 +390,17 @@ function calculate_model_averages(model_results::Dict{String, Dict{String, Dict{
     return model_averages
 end
 
+"""
+    find_infeasible_constraints(model::Model)
+
+check the feasibility of the constraints in a model, returns a dictionary of infeasible constraints
+
+# Arguments
+- `model::Model`: The model to be checked for constraint violations
+
+# Returns
+- `[]`: An array of the infeasible constraints.
+"""
 function find_infeasible_constraints(model::Model)
     if termination_status(model) != MOI.LOCALLY_INFEASIBLE
         println("The model must be optimized and locally infeasible")
@@ -427,9 +438,6 @@ function find_infeasible_constraints(model::Model)
     return infeasible_constraints
 end
 
-# check the lower bounds of all variables and upper bounds of variables ( more informative, do some sort of statistics per case per model )
-# sum of the voltage magnitude mismatich over the sum of the total pg or qg
-# how much adjustment needs to be made ( measuring the violation )
 """
     find_bound_violations(model::Model)
 
