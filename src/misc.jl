@@ -1,3 +1,5 @@
+using CSV, DataFrames, Random
+
 # Function for generating scenario load factors
 function generate_load_scenarios(num_scenarios::Int, num_buses::Int)
     load_scenarios_factors = Dict()
@@ -31,17 +33,17 @@ end
 
 
 function safe_parse_float(s::AbstractString)
-    
-
+    # Return the cell as a float, if none, input mising
     try
         return parse(Float64, s)
     catch
-        return missing  # or you could use missing
+        return missing
     end
 end
 
 # Do not leave cells blank, insert 0 for busses that don't demand power
 function parse_power_system_csv(file_path::String, matpower_file_path::String)
+    # Get CSV content, compare CSV case name with matpoewr case name
     csv_content = read(file_path, String)
     lines = split(csv_content, '\n')
     csv_case_name = strip(lines[1])
@@ -75,4 +77,83 @@ function parse_power_system_csv(file_path::String, matpower_file_path::String)
     end
 
     return ramping_data, demands
+end
+
+function generate_power_system_csv(data::Dict, output_dir::String, num_periods::Int=24)
+    # Extract case name
+    case_name = basename(data["name"])
+    case_name = replace(case_name, ".m" => "")
+
+    # Create a filename
+    output_file = joinpath(output_dir, "$(case_name)_rampingData.csv")
+
+    # Extract generator data
+    gen_data = []
+    for (_, gen) in data["gen"]
+        # Calculate ramping limit as percentage of generator output
+        pmax = get(gen, "pmax", 0.0)
+        ramp_percent = rand(5:50)  # Random percentage between 5% and 50%
+        ramp_limit = pmax * (ramp_percent / 100)
+        
+        # Generate random ramping cost
+        ramp_cost = rand(5:20)  # Random cost between 5 and 20
+
+        push!(gen_data, (
+            gen["index"],
+            round(ramp_limit, digits=2),
+            round(ramp_cost, digits=2)  # This is now the ramp cost
+        ))
+    end
+    sort!(gen_data, by = x -> x[1])
+
+    # Extract initial bus demands
+    demand_dict = Dict{Int, Float64}()
+    for (_, load) in data["load"]
+        bus_id = load["load_bus"]
+        pd = get(load, "pd", 0.0)
+        demand_dict[bus_id] = get(demand_dict, bus_id, 0.0) + pd
+    end
+
+    # Create a vector of demands, ensuring we have a value for each bus
+    num_buses = length(data["bus"])
+    initial_demand = [get(demand_dict, i, 0.0) for i in 1:num_buses]
+
+    # Generate random variations for additional time periods
+    Random.seed!()  # Input a seed if you like for reproducibility
+    demands = [initial_demand]
+    for _ in 2:num_periods
+        variation = rand(num_buses) * 0.4 .- 0.2  # Random variation between -20% and +20%
+        new_demand = initial_demand .* (1 .+ variation)
+        push!(demands, max.(new_demand, 0))  # Ensure non-negative demands
+    end
+
+    # Create the CSV content
+    csv_content = IOBuffer()
+    println(csv_content, case_name)
+    println(csv_content, "#gen_data")
+    println(csv_content, "gen_id,ramp_limits,costs")
+    for (index, ramp, cost) in gen_data
+        println(csv_content, "$index,$ramp,$cost")
+    end
+    println(csv_content, "#bus_data")
+    print(csv_content, "bus_id")
+    for i in 1:num_periods
+        print(csv_content, ",T$i")
+    end
+    println(csv_content)
+    for bus in 1:num_buses
+        print(csv_content, bus)
+        for period in 1:num_periods
+            print(csv_content, ",", round(demands[period][bus], digits=3))
+        end
+        println(csv_content)
+    end
+
+    # Write to file
+    open(output_file, "w") do f
+        write(f, String(take!(csv_content)))
+    end
+
+    println("CSV file generated successfully: $output_file")
+    return output_file
 end

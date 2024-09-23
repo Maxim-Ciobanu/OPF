@@ -9,7 +9,7 @@ using .MPOPF
 
 # Example usage:
 matpower_file_path = "./Cases/case14.m"
-csv_file_path = "./Cases/rampingData.csv"
+output_dir = "./Cases"
 data = PowerModels.parse_file(matpower_file_path)
 PowerModels.standardize_cost_terms!(data, order=2)
 PowerModels.calc_thermal_limits!(data)
@@ -112,11 +112,12 @@ demands[22] .*= 1.2
 demands[23] .*= 1.1
 demands[24] .*= 0.9
 =#
-ramping_data, demands = parse_power_system_csv(csv_file_path, matpower_file_path)
 
+ramping_csv_file = generate_power_system_csv(data, output_dir)
+ramping_data, demands = parse_power_system_csv(ramping_csv_file, matpower_file_path)
 # Total demand for initial case adjusted order=2 is 2.59
 search_factory = DCMPOPFSearchFactory(matpower_file_path, Ipopt.Optimizer)
-search_model = create_search_model(search_factory, 5, ramping_data, demands)
+search_model = create_search_model(search_factory, 24, ramping_data, demands)
 optimize_model(search_model)
 
 #best_solution1, best_cost1, best_models1, base_cost1 = decomposed_mpopf_local_search(search_factory, 3, ramping_data, demands)
