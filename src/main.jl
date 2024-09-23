@@ -5,73 +5,42 @@
 using JuMP, Ipopt, Serialization
 using MPOPF
 
-function load_and_compile_models(results_directory::String)
-    # Define model types and their corresponding colors
-    model_types = ["AC", "DC", "Linear", "Logarithmic", "Quadratic"]
 
-    # Get all case directories
-    case_dirs = sort(filter(isdir, readdir(results_directory, join=true)))
-    
-    # Create a list to store case information and results
-    case_data = []
-
-    for case_dir in case_dirs
-        case_name = basename(case_dir)
-        case_results = Dict()
-
-        for model in model_types
-            results_file = joinpath(case_dir, model, "optimized_model.jls")
-            if isfile(results_file)
-                data = open(deserialize, results_file)
-                case_results[model] = data
-            end
-        end
-
-        # Only add cases where we have both results and bus count
-        if !isempty(case_results)
-            push!(case_data, (case_name, case_results))
-        end
-    end
-
-    # Initialize nested dictionary to store results for each model and case
-    model_results = Dict{String, Dict{String, Any}}()
-    for (case_name, _) in case_data
-        model_results[case_name] = Dict()
-    end
-
-    # Collect results for each model and case
-    for (case_name, case_results) in case_data
-        for model in model_types
-            if haskey(case_results, model)
-                data = case_results[model]
-                model_results[case_name][model] = data
-            else
-                model_results[case_name][model] = NaN
-            end
-        end
-    end
-
-    # TODO: Add code here to save graphs if save_to_file is true
-
-    return model_results
-end
 
 models = load_and_compile_models("./results")
 
 for case in keys(models)
 	println("\n\n\nCase: ", case)
 	for model in keys(models[case])
+		println("Model: ", model)
 		model = models[case][model].model
 
-		try
-			# check feasibility of the constraints
-			find_infeasible_constraints(model)
-		catch
-			println("No infeasible constraints found")
+		# try
+		# check feasibility of the constraints
+		feasibility = find_infeasible_constraints(model)
+		violations = find_bound_violations(model)
+
+		# sum the violation differences
+		total_violation = sum(getindex.(values(violations), 4))
+		number_violations = length(values(violations))
+
+		average_violation = total_violation / number_violations
+
+		for (con, val) in feasibility
+			println("")
+			println("Infeasible constraint: ", con)
+			println("Current value: ", val)
+			println("")
 		end
-		
+
+		println("Max violation: ", maximum(getindex.(values(violations), 4)))
+		println("Average violation: ", average_violation)
+		# catch
+		# 	println("No infeasible constraints found")
+		# end
 	end
 end
+
 # Path to the case file
 # file_path = "./Cases/case14.m"
 
