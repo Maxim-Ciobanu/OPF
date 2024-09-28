@@ -87,7 +87,7 @@ function generate_power_system_csv(data::Dict, output_dir::String, num_periods::
     initial_demand = [get(demand_dict, i, 0.0) for i in 1:num_buses]
 
     # Generate random variations for additional time periods
-    Random.seed!(42)  # Input a seed if you like for reproducibility
+    Random.seed!()  # Input a seed if you like for reproducibility
     demands = [initial_demand]
     for _ in 2:num_periods
         variation = rand(num_buses) * 0.4 .- 0.2  # Random variation between -20% and +20%

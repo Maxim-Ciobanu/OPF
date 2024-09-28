@@ -39,12 +39,6 @@ function create_initial_solution(data, time_periods, demands, ramping_data)
     sorted_demands = sort(sorted_demands, by = x-> sum(x[2]), rev = true)
     
     model = create_search_model(factory, 1, ramping_data, [demands[1][2]])
-
-    
-
-    
-
-
 end
 
 """
@@ -180,7 +174,7 @@ function is_feasible_solution(models)
     return all(termination_status(model.model) in [MOI.OPTIMAL, MOI.LOCALLY_SOLVED] for model in models)
 end
 
-function decomposed_mpopf_local_search(factory, time_periods, ramping_data, demands; max_iterations=1000, max_time=300, max_escape_attempts=5)
+function decomposed_mpopf_local_search(factory, time_periods, ramping_data, demands; max_iterations=1000, max_time=300)
     data = PowerModels.parse_file(factory.file_path)
     PowerModels.standardize_cost_terms!(data, order=2)
     PowerModels.calc_thermal_limits!(data)
@@ -197,10 +191,6 @@ function decomposed_mpopf_local_search(factory, time_periods, ramping_data, dema
 
     start_time = time()
     no_improvement_count = 0
-    escape_mode = false
-    escape_iterations = 0
-    escape_attempts = 0
-
     total_iterations = 0
 
     for iteration in 1:max_iterations
@@ -212,25 +202,28 @@ function decomposed_mpopf_local_search(factory, time_periods, ramping_data, dema
         total_iterations += 1
         # Choose a random time period to adjust
         t = rand(1:time_periods)
+
+        # Choose a random generator
+        gen_ids = keys(data["gen"])
+        selected_gen_id = rand(gen_ids)
         
         # Make a random adjustment
         new_solution = deepcopy(current_solution)
-        for (i, gen) in data["gen"]
-            gen_id = parse(Int, i)
-            ramp_limit = ramping_data["ramp_limits"][gen_id]
-            
-            if t > 1
-                prev_output = new_solution[t-1][gen_id]
-                max_down = max(data["gen"]["$gen_id"]["pmin"], prev_output - ramp_limit) - new_solution[t][gen_id]
-                max_up = min(data["gen"]["$gen_id"]["pmax"], prev_output + ramp_limit) - new_solution[t][gen_id]
-            else
-                max_down = data["gen"]["$gen_id"]["pmin"] - new_solution[t][gen_id]
-                max_up = data["gen"]["$gen_id"]["pmax"] - new_solution[t][gen_id]
-            end
-            
-            adjustment = rand(max_down:0.01:max_up)
-            new_solution[t][gen_id] += adjustment
+
+        gen_id = parse(Int, selected_gen_id)
+        ramp_limit = ramping_data["ramp_limits"][gen_id]
+
+        if t > 1
+            prev_output = new_solution[t-1][gen_id]
+            max_down = max(data["gen"]["$gen_id"]["pmin"], prev_output - ramp_limit) - new_solution[t][gen_id]
+            max_up = min(data["gen"]["$gen_id"]["pmax"], prev_output + ramp_limit) - new_solution[t][gen_id]
+        else
+            max_down = data["gen"]["$gen_id"]["pmin"] - new_solution[t][gen_id]
+            max_up = data["gen"]["$gen_id"]["pmax"] - new_solution[t][gen_id]
         end
+        
+        adjustment = rand(max_down:0.01:max_up)
+        new_solution[t][gen_id] += adjustment
         
         # Adjust demand for affected time periods
         for i in t:time_periods
@@ -248,36 +241,15 @@ function decomposed_mpopf_local_search(factory, time_periods, ramping_data, dema
             current_cost = new_cost
             current_models = new_models
             no_improvement_count = 0
-            escape_mode = false
-            escape_iterations = 0
-        elseif escape_mode || (new_cost <= current_cost && is_feasible_solution(new_models)) && is_feasible_solution(new_models)
-            current_solution = new_solution
-            current_cost = new_cost
-            current_models = new_models
-            if escape_mode
-                escape_iterations += 1
-                if escape_iterations >= 5
-                    escape_mode = false
-                    escape_iterations = 0
-                    escape_attempts += 1
-                end
-            end
-        else
-            no_improvement_count += 1
         end
         
-        if no_improvement_count >= 5 && !escape_mode && escape_attempts < max_escape_attempts
-            escape_mode = true
-            no_improvement_count = 0
-        end
-        
-        if escape_attempts >= max_escape_attempts
-            println("Max escape attempts reached. Stopping search.")
+        if no_improvement_count >= 50
+            println("No improvement after $no_improvement_count iterations. Stopping search.")
             break
         end
     end
     
-    return best_solution, best_cost, best_models, base_cost
+    return best_solution, best_cost, best_models, base_cost, total_iterations
 end
 
 
