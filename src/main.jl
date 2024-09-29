@@ -26,18 +26,21 @@ for case in keys(models)
 
 		average_violation = total_violation / number_violations
 
-		for (con, val) in feasibility
-			println("")
-			println("Infeasible constraint: ", con)
-			println("Current value: ", val)
-			println("")
+		# look into the feasbility violations
+		if length(feasibility) > 0
+			for (con, val) in feasibility
+				println("")
+				println("Infeasible constraint: ", con)
+				println("Current value: ", val)
+				println("")
+			end
 		end
 
-		println("Max violation: ", maximum(getindex.(values(violations), 4)))
-		println("Average violation: ", average_violation)
-		# catch
-		# 	println("No infeasible constraints found")
-		# end
+		# look into the bound violations below
+		if length(violations) > 0
+			println("Max violation: ", maximum(getindex.(values(violations), 4)))
+			println("Average violation: ", average_violation)
+		end
 	end
 end
 
