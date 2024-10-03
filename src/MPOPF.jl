@@ -21,9 +21,13 @@ module MPOPF
     export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory, optimize_model_with_plot, LinMPOPFModelFactory, NewACMPOPFModelFactory, create_model_check_feasibility, get_ref
     
     # Export of Graphing_class.jl functions
+    # TODO: Need to have proper documentation for the Graphing class
     export Graph, add_scatter, create_plot, save_graph, display_graph
     
     # Export of misc.jl functions
+    # TODO: Need to document these functions
+    # TODO: Need to rename these functions as well, for example, save is confusing
+    # TODO: After renaming them need to also rename the places they are used
     export generate_load_scenarios, save, retreive, output_to_file
 
     # Export of graphing_feasibility.jl
