@@ -313,57 +313,6 @@ function load_and_compile_results(results_directory::String, save_to_file::Bool=
     return model_results
 end
 
-function load_and_compile_models(results_directory::String)
-    # Define model types and their corresponding colors
-    model_types = ["AC", "DC", "Linear", "Logarithmic", "Quadratic"]
-
-    # Get all case directories
-    case_dirs = sort(filter(isdir, readdir(results_directory, join=true)))
-    
-    # Create a list to store case information and results
-    case_data = []
-
-    for case_dir in case_dirs
-        case_name = basename(case_dir)
-        case_results = Dict()
-
-        for model in model_types
-            results_file = joinpath(case_dir, model, "optimized_model.jls")
-            if isfile(results_file)
-                data = open(deserialize, results_file)
-                case_results[model] = data
-            end
-        end
-
-        # Only add cases where we have both results and bus count
-        if !isempty(case_results)
-            push!(case_data, (case_name, case_results))
-        end
-    end
-
-    # Initialize nested dictionary to store results for each model and case
-    model_results = Dict{String, Dict{String, Any}}()
-    for (case_name, _) in case_data
-        model_results[case_name] = Dict()
-    end
-
-    # Collect results for each model and case
-    for (case_name, case_results) in case_data
-        for model in model_types
-            if haskey(case_results, model)
-                data = case_results[model]
-                model_results[case_name][model] = data
-            else
-                model_results[case_name][model] = NaN
-            end
-        end
-    end
-
-    # TODO: Add code here to save graphs if save_to_file is true
-
-    return model_results
-end
-
 function calculate_model_averages(model_results::Dict{String, Dict{String, Dict{String, Float64}}})
     # Initialize a dictionary to store the averages for each model
     model_averages = Dict{String, Dict{String, Float64}}()
@@ -392,8 +341,7 @@ end
 
 function find_infeasible_constraints(model::Model)
     if termination_status(model) != MOI.LOCALLY_INFEASIBLE
-        println("The model must be optimized and locally infeasible")
-		return []
+        error("The model must be optimized and locally infeasible")
     end
 
     infeasible_constraints = []
@@ -424,60 +372,10 @@ function find_infeasible_constraints(model::Model)
         end
     end
 
-    return infeasible_constraints
-end
-
-# check the lower bounds of all variables and upper bounds of variables ( more informative, do some sort of statistics per case per model )
-# sum of the voltage magnitude mismatich over the sum of the total pg or qg
-# how much adjustment needs to be made ( measuring the violation )
-"""
-    find_bound_violations(model::Model)
-
-Check lower and upper bounds of all variables in a model, returns a dictionary of violations with additional mismatch data
-
-# Arguments
-- `model::Model`: The model to be checked for vounds violations
-
-# Returns
-- `Dict{VariableRef, Tuple{Float64, Float64, Float64, Float64}}`: A dictionary where each key 
-is a variable ref and the value is a tuple of data.
-"""
-function find_bound_violations(model::Model)
-
-	# if termination_status(model) != MOI.LOCALLY_INFEASIBLE
-    #     error("The model must be optimized and locally infeasible")
-    # end
-
-	# Get the variable names
-	variable_names = all_variables(model)
-
-	violations = Dict{VariableRef, Tuple{Float64, Float64, Float64, Float64}}()
-
-	# iterate over all variables
-	for (_, var) in enumerate(variable_names)
-
-		# check if the variable has a lower and upper bound
-		if !has_lower_bound(var) || !has_upper_bound(var)
-			continue
-		end
-
-		# get the bounds and value of the variable
-		upper = upper_bound(var)
-		lower = lower_bound(var)
-		value = JuMP.value(var)
-
-		# check for violation
-		if value < lower 
-			
-			# add it to the violations dictionary
-			violations[var] = (value, lower, upper, lower - value)
-		elseif value > upper
-
-			# add it to the violations dictionary
-			violations[var] = (value, lower, upper, value - upper)
-		end
-	end
-
-	# return the violations
-	return violations
+    for (con, val) in infeasible_constraints
+        println("")
+        println("Infeasible constraint: ", con)
+        println("Current value: ", val)
+        println("")
+    end
 end
