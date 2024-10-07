@@ -81,7 +81,7 @@ function output_to_file(data::String, file_name::String="", show_date::Bool=fals
 	if (file_name !== "")
 		
 		# check if it already exists
-		if isfile("output/" * file_name)
+		if file_name in files
 			open("output/$(file_name)", "a") do io
 				if show_date write(io, string(now())); write(io, "\n\n") end
 				write(io, data)

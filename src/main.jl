@@ -5,8 +5,6 @@
 using JuMP, Ipopt, Gurobi
 using MPOPF
 
-# x, y, z = perform_feasibility([1,1,1,1,1], true)
-
 # Path to the case file
 file_path = "./Cases/case14.m"
 
