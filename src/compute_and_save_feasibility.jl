@@ -364,17 +364,6 @@ function load_and_compile_models(results_directory::String)
     return model_results
 end
 
-"""
-    calculate_model_averages(model_results::Dict{String, Dict{String, Dict{String, Float64}}})
-
-Calculate the average values for cost, v_error, o_error and times for all models in the dictionary
-
-# Arguments
-- `model_results::Dict{String, Dict{String, Dict{String, Float64}}}`: The dictionary of models to be analysed.
-
-# Returns
-- `Dict{String, Dict{String, Float64}}`: A dictionary that maps the model to a metric to a value
-"""
 function calculate_model_averages(model_results::Dict{String, Dict{String, Dict{String, Float64}}})
     # Initialize a dictionary to store the averages for each model
     model_averages = Dict{String, Dict{String, Float64}}()
