@@ -21,13 +21,31 @@ module MPOPF
     export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory, optimize_model_with_plot, LinMPOPFModelFactory, NewACMPOPFModelFactory, create_model_check_feasibility, get_ref
     
     # Export of Graphing_class.jl functions
+    # TODO: Need to have proper documentation for the Graphing class
     export Graph, add_scatter, create_plot, save_graph, display_graph
     
     # Export of misc.jl functions
+    # TODO: Need to document these functions
+    # TODO: Need to rename these functions as well, for example, save is confusing
+    # TODO: After renaming them need to also rename the places they are used
     export generate_load_scenarios, save, retreive, output_to_file
 
     # Export of graphing_feasibility.jl
     export perform_feasibility
+
+    # Export of compute_and_save_feasibility.jl
+    export compute_and_save_feasibility, load_and_graph_results, load_and_compile_results, calculate_model_averages, find_infeasible_constraints, find_bound_violations, load_and_compile_models
+
+
+    # create enum for linear models
+    @enum MODEL_TYPE begin
+        Undef=0
+        Lin1=1
+        Lin2=2
+        Lin3=3
+    end
+
+    export MODEL_TYPE, Lin1, Lin2, Lin3
 
 ##############################################################################################
 # Factory Structs
@@ -54,9 +72,9 @@ module MPOPF
     """
     mutable struct ACMPOPFModelFactory <: AbstractMPOPFModelFactory
         file_path::String
-        optimizer::Type
+        optimizer
 
-        function ACMPOPFModelFactory(file_path::String, optimizer::Type)
+        function ACMPOPFModelFactory(file_path::String, optimizer)
             return new(file_path, optimizer)
         end
     end
@@ -199,6 +217,7 @@ module MPOPF
     include("implementation-new_ac.jl")
     include("misc.jl")
     include("graphing_feasibility.jl")
+    include("compute_and_save_feasibility.jl")
 
     # The first create_model fucntion creates a PowerFlowModel object
     # It creates the right model depending on the factory passed as the first paramenter
