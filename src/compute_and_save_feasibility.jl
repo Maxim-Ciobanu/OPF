@@ -1,16 +1,3 @@
-"""
-    compute_and_save_feasibility(factory::Union{ACMPOPFModelFactory, DCMPOPFModelFactory, LinMPOPFModelFactory}, path::String, model_type=false)
-
-Compute the feasibility of a model and save the results to a specified path.
-
-# Arguments
-- `factory::Union{ACMPOPFModelFactory, DCMPOPFModelFactory, LinMPOPFModelFactory}`: The factory to create the model.
-- `path::String`: The path where the results will be saved.
-- `model_type`: The type of the model (optional, only needed for `LinMPOPFModelFactory`).
-
-# Returns
-- `Dict`: A dictionary containing the results of the computation.
-"""
 function compute_and_save_feasibility(factory::Union{ACMPOPFModelFactory, DCMPOPFModelFactory, LinMPOPFModelFactory}, path::String, model_type=false)
 
 	# start the time
@@ -145,18 +132,7 @@ function compute_and_save_feasibility(factory::Union{ACMPOPFModelFactory, DCMPOP
     return results
 end
 
-"""
-    load_and_graph_results(results_directory::String, save_to_file::Bool=false)
 
-Load results from a directory and generate graphs for feasibility, voltage magnitude error, voltage angle error, and computation times (times not complete).
-
-# Arguments
-- `results_directory::String`: The directory where the results are stored. To get results run the function `compute_and_save_feasibility`.
-- `save_to_file::Bool`: Whether to save the generated graphs to a file (optional).
-
-# Returns
-- `feasibility_graph`, `v_error_graph`, `o_error_graph`, and `time_graph`.
-"""
 function load_and_graph_results(results_directory::String, save_to_file::Bool=false)
     # Define model types and their corresponding colors
     model_types = ["AC", "DC", "Linear", "Logarithmic", "Quadratic"]
@@ -264,18 +240,6 @@ function load_and_graph_results(results_directory::String, save_to_file::Bool=fa
     return feasibility_graph, v_error_graph, o_error_graph, time_graph
 end
 
-"""
-    load_and_compile_results(results_directory::String, save_to_file::Bool=false)
-
-Load results from a directory and compile them into a dictionary for further analysis.
-
-# Arguments
-- `results_directory::String`: The directory where the results are stored. To get results run the function `compute_and_save_feasibility`.
-- `save_to_file::Bool`: Whether to save the generated results to a file (optional) (Not yet implemented).
-
-# Returns
-- `Dict{String, Dict{String, Dict{String, Float64}}}`: A dictionary containing the results of the computation.
-"""
 function load_and_compile_results(results_directory::String, save_to_file::Bool=false)
     # Define model types and their corresponding colors
     model_types = ["AC", "DC", "Linear", "Logarithmic", "Quadratic"]
@@ -349,18 +313,6 @@ function load_and_compile_results(results_directory::String, save_to_file::Bool=
     return model_results
 end
 
-"""
-    load_and_compile_models(results_directory::String)
-
-Load `models` (Contrary to `load_and_compile_results`) from a directory and compile them into a dictionary for further analysis.
-Example, getting the pg value from case14 AC: `model_results["case14"]["AC"].model[:pg]`.
-
-# Arguments
-- `results_directory::String`: The directory where the models are stored.
-
-# Returns
-- `Dict{String, Dict{String, Dict{String, Any}}}`: A dictionary containing the data of the models.
-"""
 function load_and_compile_models(results_directory::String)
     # Define model types and their corresponding colors
     model_types = ["AC", "DC", "Linear", "Logarithmic", "Quadratic"]
@@ -419,7 +371,6 @@ Calculate the average values for cost, v_error, o_error and times for all models
 
 # Arguments
 - `model_results::Dict{String, Dict{String, Dict{String, Float64}}}`: The dictionary of models to be analysed.
-- This `model_results` can be obtained by running the function `load_and_compile_results`.
 
 # Returns
 - `Dict{String, Dict{String, Float64}}`: A dictionary that maps the model to a metric to a value
