@@ -3,5 +3,3 @@
 *.DS_Store
 docs/build/
 output/*
-results/
-large_results/
