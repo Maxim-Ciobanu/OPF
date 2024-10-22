@@ -14,11 +14,16 @@ This module provides tools to create, optimize, and analyze MPOPF models using v
 """
 module MPOPF
     using PowerModels, JuMP, Dates, Serialization, PlotlyJS, Ipopt
+    using Distributions, Statistics
+
     
     # Exporting these functions from the module so we dont have to prefix them with MPOPF.
     
     # Export of this file
     export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory, optimize_model_with_plot, LinMPOPFModelFactory, NewACMPOPFModelFactory, create_model_check_feasibility, get_ref
+    
+    # Export of implementation_uncertainty.jl
+    export generate_random_load_scenarios, setup_demand_distributions, sample_demand_scenarios, return_loads
     
     # Export of Graphing_class.jl functions
     # TODO: Need to have proper documentation for the Graphing class
@@ -28,7 +33,7 @@ module MPOPF
     # TODO: Need to document these functions
     # TODO: Need to rename these functions as well, for example, save is confusing
     # TODO: After renaming them need to also rename the places they are used
-    export generate_load_scenarios, save, retreive, output_to_file
+    export save, retreive, output_to_file
 
     # Export of graphing_feasibility.jl
     export perform_feasibility

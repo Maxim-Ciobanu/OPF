@@ -1,31 +1,3 @@
-"""
-    generate_load_scenarios(num_scenarios::Int, num_buses::Int)
-
-Generate load scenarios for a given number of scenarios and buses.
-
-# Arguments
-- `num_scenarios::Int`: The number of scenarios to generate.
-- `num_buses::Int`: The number of buses in the case file.
-
-# Returns
-- `Dict{Int, Dict{Int, Float64}}`: A dictionary where each key 
-is a scenario number and the value is another dictionary 
-mapping bus numbers to load factors.
-"""
-function generate_load_scenarios(num_scenarios::Int, num_buses::Int)
-    load_scenarios_factors = Dict()
-    for scenario in 1:num_scenarios
-        scenario_factor = rand(0.95:0.01:1.05)
-        bus_factors = Dict()
-        for bus in 1:num_buses
-            bus_factors[bus] = scenario_factor
-        end
-        load_scenarios_factors[scenario] = bus_factors
-    end
-    return load_scenarios_factors
-end
-
-
 # a function for serializing data to a file
 # updates the values if the file already exists
 #

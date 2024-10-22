@@ -2,47 +2,120 @@
 # Note: This file is curently being used for examples, nothing is permanent
 #############################################################################
 
-using JuMP, Ipopt, Serialization
+using JuMP, Ipopt, Serialization, Gurobi
+using PowerModels
 using MPOPF
+using Statistics
 
 
 
-models = load_and_compile_models("./results")
 
-for case in keys(models)
-	println("\n\n\nCase: ", case)
-	for model in keys(models[case])
-		println("Model: ", model)
-		model = models[case][model].model
 
-		# try
-		# check feasibility of the constraints
-		feasibility = find_infeasible_constraints(model)
-		violations = find_bound_violations(model)
+# Example for DC with new uncertainty functions for generating scenarios
+# --------------------------------------------------------------------------
+file_path  = "./Cases/case14.m"
+distributions = setup_demand_distributions(file_path, :absolute, 0.15)
+scenarios = sample_demand_scenarios(distributions, 100, false)
+# Using DC Factory with Gurobi
+dc_factory_Gurobi = DCMPOPFModelFactory(file_path, Gurobi.Optimizer)
+My_DC_model_Uncertainty = create_model(dc_factory_Gurobi, scenarios)
+optimize_model(My_DC_model_Uncertainty)
+# Output the final Pg Values
+println("Final Pg values:")
+println()
+display(JuMP.value.(My_DC_model_Uncertainty.model[:pg]))
+display(JuMP.value.(My_DC_model_Uncertainty.model[:mu_plus]))
+display(JuMP.value.(My_DC_model_Uncertainty.model[:mu_minus]))
+# --------------------------------------------------------------------------
 
-		# sum the violation differences
-		total_violation = sum(getindex.(values(violations), 4))
-		number_violations = length(values(violations))
 
-		average_violation = total_violation / number_violations
 
-		# look into the feasbility violations
-		if length(feasibility) > 0
-			for (con, val) in feasibility
-				println("")
-				println("Infeasible constraint: ", con)
-				println("Current value: ", val)
-				println("")
-			end
-		end
 
-		# look into the bound violations below
-		if length(violations) > 0
-			println("Max violation: ", maximum(getindex.(values(violations), 4)))
-			println("Average violation: ", average_violation)
-		end
-	end
-end
+
+
+
+# my_factory = DCMPOPFModelFactory("./Cases/case14.m", Gurobi.Optimizer)
+# my_model = create_model(my_factory)
+# optimize_model(my_model)
+
+
+# factory = ACMPOPFModelFactory("./Cases/case14.m", Ipopt.Optimizer)
+
+# data = PowerModels.parse_file(factory.file_path)
+# PowerModels.standardize_cost_terms!(data, order=2)
+# PowerModels.calc_thermal_limits!(data)
+
+# ref = PowerModels.build_ref(data)[:it][:pm][:nw][0]
+# bus = 1
+# ref[:gen]
+# ref[:bus]
+
+# branch = ref[:branch][bus]
+# va = value.(models["case14"]["AC"].model[:va])
+
+
+# t = 1
+
+# va_fr = va[t,branch["f_bus"]]
+# va_to = va[t,branch["t_bus"]]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# for case in keys(models)
+# 	println("\n\n\nCase: ", case)
+# 	for model in keys(models[case])
+# 		println("Model: ", model)
+# 		model = models[case][model].model
+
+# 		# try
+# 		# check feasibility of the constraints
+# 		feasibility = find_infeasible_constraints(model)
+# 		violations = find_bound_violations(model)
+
+# 		# sum the violation differences
+# 		total_violation = sum(getindex.(values(violations), 4))
+# 		number_violations = length(values(violations))
+
+# 		average_violation = total_violation / number_violations
+
+# 		# look into the feasbility violations
+# 		if length(feasibility) > 0
+# 			for (con, val) in feasibility
+# 				println("")
+# 				println("Infeasible constraint: ", con)
+# 				println("Current value: ", val)
+# 				println("")
+# 			end
+# 		end
+
+# 		# look into the bound violations below
+# 		if length(violations) > 0
+# 			println("Max violation: ", maximum(getindex.(values(violations), 4)))
+# 			println("Average violation: ", average_violation)
+# 		end
+# 	end
+# end
 
 # Path to the case file
 # file_path = "./Cases/case14.m"
@@ -58,7 +131,7 @@ end
 
 # # Example for DC
 # # --------------------------------------------------------------------------
-# dc_factory = DCMPOPFModelFactory(file_path, Ipopt.Optimizer)
+# dc_factory = DCMPOPFModelFactory(file_path, Gurobi.Optimizer)
 # My_DC_model = create_model(dc_factory)
 # optimize_model(My_DC_model)
 # # --------------------------------------------------------------------------
@@ -74,7 +147,8 @@ end
 
 # # Example for DC with UncertaintyFactory
 # # --------------------------------------------------------------------------
-# load_scenarios_factors = generate_load_scenarios(1000, 14)
+# file_path  = "./Cases/case14.m"
+# load_scenarios_factors = generate_random_load_scenarios(5, 14)
 # # Using DC Factory with Gurobi
 # dc_factory_Gurobi = DCMPOPFModelFactory(file_path, Gurobi.Optimizer)
 # My_DC_model_Uncertainty = create_model(dc_factory_Gurobi, load_scenarios_factors)
