@@ -23,24 +23,80 @@ function create_initial_feasible_solution(data, time_periods, demands, ramping_d
     return solution
 end
 
-function create_initial_solution(data, time_periods, demands, ramping_data)
-    solution = []
-    for t in 1:time_periods
-        pg = Dict()
-        for (i, gen) in data["gen"]
-            gen_id = parse(Int, i)
-            pg[gen_id] = (gen["pmin"] + gen["pmax"]) / 2
-        end
-        push!(solution, pg)
-    end
+function create_initial_random_solution(data, time_periods, demands, ramping_data, factory)
+    start_time = time()
+    while time() - start_time < 60
 
-    sorted_demands = deepcopy(demands)
-    sorted_demands = collect(enumerate(sorted_demands))
-    sorted_demands = sort(sorted_demands, by = x-> sum(x[2]), rev = true)
-    
-    model = create_search_model(factory, 1, ramping_data, [demands[1][2]])
+        solution = []
+        for t in 1:time_periods
+            pg = Dict()
+            for (i, gen) in data["gen"]
+                gen_id = parse(Int, i)
+                pg[gen_id] = gen["pmin"] + rand() * (gen["pmax"] - gen["pmin"])
+            end
+            push!(solution, pg)
+        end
+        if check_solution(solution, data, time_periods, ramping_data, demands, factory)
+            break
+        end
+    end
+    return solution
 end
 
+function check_solution(solution, data, time_periods, ramping_data, demands, factory)
+    models = []
+    time_periods = length(solution)
+    for t in 1:time_periods
+        model = create_search_model(factory, 1, ramping_data, [demands[t]])
+        
+        # Add ramping constraints to the model
+        if t > 1
+            for (i, _) in data["gen"]
+                gen_id = parse(Int, i)
+                prev_pg = value(models[t-1].model[:pg][1,gen_id])
+                ramp_limit = ramping_data["ramp_limits"][gen_id]
+                
+                @constraint(model.model, model.model[:pg][1,gen_id] <= prev_pg + ramp_limit)
+                @constraint(model.model, model.model[:pg][1,gen_id] >= prev_pg - ramp_limit)
+            end
+        end
+
+        # Set initial values
+        for (i, pg) in solution[t]
+            set_start_value(model.model[:pg][1,i], pg)
+        end
+
+        optimize!(model.model) # optimize!(model.model)
+
+    end
+
+    if !models.isempty()
+        if models.length() == time_periods
+            return true
+        end
+    end
+    return false
+end
+
+
+
+
+
+      #= 
+        # Check if the optimization was solved
+        if termination_status(model.model) != MOI.OPTIMAL && termination_status(model.model) != MOI.LOCALLY_SOLVED
+            println("Warning: Optimization for time period $t failed with status $(termination_status(model.model))")
+            return solution, models  # Return the original solution if optimization fails
+        end
+        
+        push!(models, model)
+    end
+    
+    new_solution = [Dict(i => value(model.model[:pg][1,i]) for i in keys(solution[t])) for (t, model) in enumerate(models)]
+    
+    return new_solution, models
+end
+=#
 """
     adjust_to_meet_demand(solution, data, demands, t, ramping_data)
 
@@ -130,7 +186,7 @@ function optimize_solution(solution, data, ramping_data, demands, factory)
             set_start_value(model.model[:pg][1,i], pg)
         end
 
-        optimize_model(model)
+        optimize!(model.model) # optimize!(model.model)
         
         # Check if the optimization was solved
         if termination_status(model.model) != MOI.OPTIMAL && termination_status(model.model) != MOI.LOCALLY_SOLVED
@@ -174,7 +230,7 @@ function is_feasible_solution(models)
     return all(termination_status(model.model) in [MOI.OPTIMAL, MOI.LOCALLY_SOLVED] for model in models)
 end
 
-function decomposed_mpopf_local_search(factory, time_periods, ramping_data, demands; max_iterations=1000, max_time=300)
+function decomposed_mpopf_local_search(factory, time_periods, ramping_data, demands; max_iterations=1000, max_time=10)
     data = PowerModels.parse_file(factory.file_path)
     PowerModels.standardize_cost_terms!(data, order=2)
     PowerModels.calc_thermal_limits!(data)
@@ -193,11 +249,11 @@ function decomposed_mpopf_local_search(factory, time_periods, ramping_data, dema
     no_improvement_count = 0
     total_iterations = 0
 
-    for iteration in 1:max_iterations
+    while total_iterations < max_iterations
         # Sets a time limit for the search
         if time() - start_time > max_time
             println("Time limit reached. Stopping search.")
-            break
+            return best_solution, best_cost, best_models, base_cost, total_iterations
         end
         total_iterations += 1
         # Choose a random time period to adjust
@@ -241,12 +297,15 @@ function decomposed_mpopf_local_search(factory, time_periods, ramping_data, dema
             current_cost = new_cost
             current_models = new_models
             no_improvement_count = 0
+        else 
+            no_improvement_count += 1
         end
         
         if no_improvement_count >= 50
             println("No improvement after $no_improvement_count iterations. Stopping search.")
-            break
+            return best_solution, best_cost, best_models, base_cost, total_iterations
         end
+
     end
     
     return best_solution, best_cost, best_models, base_cost, total_iterations
@@ -258,7 +317,7 @@ function decomposed_mpopf_demand_search(factory, time_periods, ramping_data, dem
     PowerModels.standardize_cost_terms!(data, order=2)
     PowerModels.calc_thermal_limits!(data)
     
-    solution = create_initial_feasible_solution(data, time_periods, demands, ramping_data)
+    solution = create_initial_feasible_solution(data, time_periods, demands, ramping_data )
     best_solution, best_models = optimize_solution(solution, data, ramping_data, demands, factory)
     best_cost = calculate_total_cost(best_solution, best_models, ramping_data)
     base_cost = best_cost
@@ -394,6 +453,25 @@ function check_demands_met(solution, initial_demands, tolerance=1e-6)
     end
 
     if isempty(violations)
+        return true
+    end
+    return false
+end
+
+function check_demands_met_output(solution, initial_demands, tolerance=1e-6)
+    time_periods = length(solution)
+    violations = []
+
+    for t in 1:time_periods
+        total_generation = sum(values(solution[t]))
+        total_demand = sum(initial_demands[t])
+        
+        if total_generation < total_demand - tolerance
+            push!(violations, (t, total_generation, total_demand))
+        end
+    end
+
+    if isempty(violations)
         println("All demands are met within tolerance.")
         return true
     else
@@ -405,6 +483,7 @@ function check_demands_met(solution, initial_demands, tolerance=1e-6)
         return false
     end
 end
+
 
 function sort_time_periods_by_demand(demands)
     return sortperm(sum.(demands), rev=true)
