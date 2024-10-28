@@ -6,7 +6,7 @@ include("search2.jl")
 using .MPOPF
 
 # Initialize data files and variables
-matpower_file_path = "./Cases/case1354pegase.m"
+matpower_file_path = "./Cases/case30Q.m"
 output_dir = "./Cases"
 data = PowerModels.parse_file(matpower_file_path)
 PowerModels.standardize_cost_terms!(data, order=2)
@@ -23,7 +23,7 @@ search_factory = DCMPOPFSearchFactory(matpower_file_path, Gurobi.Optimizer)
 # Initialize model with data and set num of time periods
 search_model = create_search_model(search_factory, 12, ramping_data, demands)
 # Optimize the model (this is the entire model, not decomposed. We can compare out search against this answer)
-optimize_model(search_model)
+optimize!(search_model.model)
 
 
 # Run a search on the same model and data as our optimal model

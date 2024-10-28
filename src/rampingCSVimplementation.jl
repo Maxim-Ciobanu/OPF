@@ -60,7 +60,7 @@ function generate_power_system_csv(data::Dict, output_dir::String, num_periods::
     for (_, gen) in data["gen"]
         # Calculate ramping limit as percentage of generator output
         pmax = get(gen, "pmax", 0.0)
-        ramp_percent = rand(5:50)  # Random percentage between 5% and 50%
+        ramp_percent = rand(50:100)  # Random percentage between 5% and 50%
         ramp_limit = pmax * (ramp_percent / 100)
         
         # Generate random ramping cost
@@ -90,7 +90,7 @@ function generate_power_system_csv(data::Dict, output_dir::String, num_periods::
     Random.seed!()  # Input a seed if you like for reproducibility
     demands = [initial_demand]
     for _ in 2:num_periods
-        variation = rand(num_buses) * 1 .- 0.5  # Random variation between -20% and +20%
+        variation = rand(num_buses) * 0.2 .- 0.1  # Random variation between -20% and +20%
         new_demand = initial_demand .* (1 .+ variation)
         push!(demands, new_demand)  # Maybe ensure non-negative demands
     end
