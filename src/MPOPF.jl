@@ -217,6 +217,7 @@ module MPOPF
     include("graphing_class.jl")
     include("implementation-ac.jl")
     include("implementation-dc.jl")
+    include("implementation-search_dc.jl")
     include("implementation_uncertainty.jl")
     include("implementation-linear.jl")
     include("implementation-new_ac.jl")
@@ -250,6 +251,34 @@ module MPOPF
         PowerModels.standardize_cost_terms!(data, order=2)
         PowerModels.calc_thermal_limits!(data)
 
+        model = JuMP.Model(factory.optimizer)
+
+        power_flow_model = MPOPFModel(model, data, time_periods, factors, ramping_cost)
+
+        set_model_variables!(power_flow_model, factory)
+        set_model_objective_function!(power_flow_model, factory)
+        model_type !== undef ? set_model_constraints!(power_flow_model, factory, model_type) : set_model_constraints!(power_flow_model, factory)
+
+        return power_flow_model
+    end
+
+    function create_search_model(factory::AbstractMPOPFModelFactory, time_periods::Int64, ramping_data::Dict, demands::Vector{Vector{Float64}})::MPOPFSearchModel
+        data = PowerModels.parse_file(factory.file_path)
+        PowerModels.standardize_cost_terms!(data, order=2)
+        PowerModels.calc_thermal_limits!(data)
+
+        model = JuMP.Model(factory.optimizer)
+
+        power_flow_model = MPOPFSearchModel(model, data, time_periods, ramping_data, demands)
+
+        set_model_variables!(power_flow_model, factory)
+        set_model_objective_function!(power_flow_model, factory)
+        set_model_constraints!(power_flow_model, factory)
+
+        return power_flow_model
+    end
+    #=
+    function create_search_model(factory::AbstractMPOPFModelFactory, data, time_periods::Int64=1, factors::Vector{Float64}=[1.0], ramping_cost::Int64=0)::MPOPFModel
         model = JuMP.Model(factory.optimizer)
 
         power_flow_model = MPOPFModel(model, data, time_periods, factors, ramping_cost)
