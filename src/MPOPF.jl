@@ -10,11 +10,15 @@ This module provides tools to create, optimize, and analyze MPOPF models using v
 """
 module MPOPF
     using PowerModels, JuMP, Dates, Serialization, PlotlyJS, Ipopt
+    using Distributions, Statistics
 
     # Exporting these functions from the module so we dont have to prefix them with MPOPF.
 
     # Export of this file
-    export create_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory, optimize_model_with_plot, LinMPOPFModelFactory, NewACMPOPFModelFactory, create_model_check_feasibility, get_ref
+    export create_model, create_search_model, optimize_model, ACMPOPFModelFactory, DCMPOPFModelFactory, optimize_model_with_plot, LinMPOPFModelFactory, NewACMPOPFModelFactory, DCMPOPFSearchFactory, create_model_check_feasibility, get_ref
+
+    # Export of implementation_uncertainty.jl
+    export generate_random_load_scenarios, setup_demand_distributions, sample_demand_scenarios, return_loads
 
     # Export of Graphing_class.jl functions
     # TODO: Need to have proper documentation for the Graphing class
@@ -31,6 +35,15 @@ module MPOPF
 
     # Export of compute_and_save_feasibility.jl
     export compute_and_save_feasibility, load_and_graph_results, load_and_compile_results, calculate_model_averages, find_infeasible_constraints, find_bound_violations, load_and_compile_models
+
+    # Export of search_functions.jl
+    export create_initial_feasible_solution, check_solution, adjust_to_meet_demand, apply_ramping_constraints, optimize_solution, calculate_total_cost,
+    is_feasible_solution, decomposed_mpopf_local_search, decomposed_mpopf_demand_search, check_ramping_limits, check_demands_met, check_demands_met_output,
+    sort_time_periods_by_demand, adjust_adjacent_periods, create_decomposed_mpopf_model, create_initial_random_solution, generate_bounded_random_solution, 
+    adjust_solution_for_constraints, verify_solution_feasibility
+
+    # Export of rampingCSVimplementation.jl
+    export safe_parse_float, parse_power_system_csv, generate_power_system_csv
 
 
     # create enum for linear models
@@ -123,6 +136,17 @@ module MPOPF
             return new(file_path, optimizer)
         end
     end
+    ```
+        TODO: Document
+    ```
+    mutable struct DCMPOPFSearchFactory <: AbstractMPOPFModelFactory
+        file_path::String
+        optimizer::Type
+
+        function DCMPOPFSearchFactory(file_path::String, optimizer::Type)
+            return new(file_path, optimizer)
+        end
+    end
 
 ##############################################################################################
 # Concrete Model Structs
@@ -183,6 +207,20 @@ module MPOPF
             return new(model, data, scenarios, time_periods, factors, ramping_cost)
         end
     end
+    ```
+        TODO: Document
+    ```
+    mutable struct MPOPFSearchModel <: AbstractMPOPFModel
+        model::JuMP.Model
+        data::Dict
+        time_periods::Int64
+        ramping_data::Dict
+        demands::Vector{Vector{Float64}}
+
+        function MPOPFSearchModel(model::JuMP.Model, data::Dict, time_periods::Int64, ramping_data::Dict, demands::Vector{Vector{Float64}})
+            return new(model, data, time_periods, ramping_data, demands)
+        end
+    end
 
 ##############################################################################################
 # Create Model Functions
@@ -197,9 +235,13 @@ module MPOPF
     include("implementation_uncertainty.jl")
     include("implementation-linear.jl")
     include("implementation-new_ac.jl")
+    include("implementation-search_dc.jl")
     include("misc.jl")
     include("graphing_feasibility.jl")
     include("compute_and_save_feasibility.jl")
+    include("search_functions.jl")
+    include("search2.jl")
+    include("rampingCSVimplementation.jl")
 
     # The first create_model fucntion creates a PowerFlowModel object
     # It creates the right model depending on the factory passed as the first paramenter
@@ -301,6 +343,26 @@ module MPOPF
 		if (v !== false) fix.(power_flow_model.model[:v], v; force=true) end
 		if (theta !== false) fix.(power_flow_model.model[:theta], theta; force=true) end
 
+        set_model_objective_function!(power_flow_model, factory)
+        set_model_constraints!(power_flow_model, factory)
+
+        return power_flow_model
+    end
+
+
+    ```
+        TODO: Document
+    ```
+    function create_search_model(factory::AbstractMPOPFModelFactory, time_periods::Int64, ramping_data::Dict, demands::Vector{Vector{Float64}})::MPOPFSearchModel
+        data = PowerModels.parse_file(factory.file_path)
+        PowerModels.standardize_cost_terms!(data, order=2)
+        PowerModels.calc_thermal_limits!(data)
+
+        model = JuMP.Model(factory.optimizer)
+
+        power_flow_model = MPOPFSearchModel(model, data, time_periods, ramping_data, demands)
+
+        set_model_variables!(power_flow_model, factory)
         set_model_objective_function!(power_flow_model, factory)
         set_model_constraints!(power_flow_model, factory)
 

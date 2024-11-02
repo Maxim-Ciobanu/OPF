@@ -1,4 +1,5 @@
-using JuMP, PowerModels, Ipopt, Gurobi, Random
+using JuMP, PowerModels, Ipopt, Random
+using MPOPF
 
 """
     create_initial_feasible_solution(data, time_periods, demands, ramping_data)
