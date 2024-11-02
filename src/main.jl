@@ -4,9 +4,9 @@ include("rampingCSVimplementation.jl")
 include("search_functions.jl")
 include("search2.jl")
 using .MPOPF
-
+#= Example usage of local search compared to optimal
 # Initialize data files and variables
-matpower_file_path = "./Cases/case30Q.m"
+matpower_file_path = "./Cases/case300.m"
 output_dir = "./Cases"
 data = PowerModels.parse_file(matpower_file_path)
 PowerModels.standardize_cost_terms!(data, order=2)
@@ -43,3 +43,4 @@ sum_of_search = sum(x[2] for x in results)
 println("Average difference: ")
 println(sum_of_search / sum_of_opt)
 
+=#
