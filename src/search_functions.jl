@@ -6,7 +6,12 @@ using MPOPF
 
 Set all generator ouputs to half of total capacity and adjusts to meet demands
 of the model
-
+# Arguments
+- `data`:
+- `time_periods`:
+- `demands`:
+- `ramping_data`:
+# Returns
 """
 function create_initial_feasible_solution(data, time_periods, demands, ramping_data)
     solution = []
@@ -24,66 +29,17 @@ function create_initial_feasible_solution(data, time_periods, demands, ramping_d
     return solution
 end
 
-
-function check_solution(solution, data, time_periods, ramping_data, demands, factory)
-    models = []
-    time_periods = length(solution)
-    for t in 1:time_periods
-        model = create_search_model(factory, 1, ramping_data, [demands[t]])
-        
-        # Add ramping constraints to the model
-        if t > 1
-            for (i, _) in data["gen"]
-                gen_id = parse(Int, i)
-                prev_pg = value(models[t-1].model[:pg][1,gen_id])
-                ramp_limit = ramping_data["ramp_limits"][gen_id]
-                
-                @constraint(model.model, model.model[:pg][1,gen_id] <= prev_pg + ramp_limit)
-                @constraint(model.model, model.model[:pg][1,gen_id] >= prev_pg - ramp_limit)
-            end
-        end
-
-        # Set initial values
-        for (i, pg) in solution[t]
-            set_start_value(model.model[:pg][1,i], pg)
-        end
-
-        optimize!(model.model) # optimize!(model.model)
-
-    end
-
-    if !models.isempty()
-        if models.length() == time_periods
-            return true
-        end
-    end
-    return false
-end
-
-
-
-
-
-      #= 
-        # Check if the optimization was solved
-        if termination_status(model.model) != MOI.OPTIMAL && termination_status(model.model) != MOI.LOCALLY_SOLVED
-            println("Warning: Optimization for time period $t failed with status $(termination_status(model.model))")
-            return solution, models  # Return the original solution if optimization fails
-        end
-        
-        push!(models, model)
-    end
-    
-    new_solution = [Dict(i => value(model.model[:pg][1,i]) for i in keys(solution[t])) for (t, model) in enumerate(models)]
-    
-    return new_solution, models
-end
-=#
 """
     adjust_to_meet_demand(solution, data, demands, t, ramping_data)
 
 Modify outputs to ensure demand for time periods is met
-
+# Arguments
+- `solution`:
+- `data`:
+- `demands`:
+- `t`:
+- `ramping_data`:
+# Returns
 """
 function adjust_to_meet_demand(solution, data, demands, t, ramping_data)
     total_generation = sum(values(solution[t]))
@@ -121,7 +77,11 @@ end
     apply_ramping_constraints(solution, ramping_data, t)
 
 Modify generator outputs to ensure ramping constraints are followed
-
+# Arguments
+- `solution`:
+- `ramping_data`:
+- `t`:
+# Returns
 """
 function apply_ramping_constraints(solution, ramping_data, t)
     if t > 1
@@ -143,7 +103,13 @@ end
     optimize_solution(solution, data, ramping_data, demands, factory)
 
 Optimize individual time periods and check for feasibility/termination status
-
+# Arguments
+- `solution`:
+- `data`:
+- `ramping_data`:
+- `demands`:
+- `factory`:
+# Returns
 """
 function optimize_solution(solution, data, ramping_data, demands, factory)
     models = []
@@ -189,7 +155,11 @@ end
 
 Sum costs of individual time periods, calculate ramping costs 
 between time periods and return total
-
+# Arguments
+- `solution`:
+- `models`:
+- `ramping_data`:
+# Returns
 """
 function calculate_total_cost(solution, models, ramping_data)
     time_periods = length(solution)
@@ -206,11 +176,27 @@ end
     is_feasible_solution(models)
 
 Checks models for feasibility
-
+# Arguments
+- `models`:
+# Returns
 """
 function is_feasible_solution(models)
     return all(termination_status(model.model) in [MOI.OPTIMAL, MOI.LOCALLY_SOLVED] for model in models)
 end
+
+"""
+    decomposed_mpopf_local_search(factory, time_periods, ramping_data, demands; max_iterations=1000, max_time=10)
+Perform a local search on a decomposed DC MPOPF model. Adjusts random generator values for a random time period
+each iteration.
+# Arguments
+- `factory`:
+- `time_periods`:
+- `ramping_data`:
+- `demands`:
+- `max_iterations`:
+- `max_time`:
+# Returns
+"""
 
 function decomposed_mpopf_local_search(factory, time_periods, ramping_data, demands; max_iterations=1000, max_time=10)
     data = PowerModels.parse_file(factory.file_path)
@@ -293,7 +279,19 @@ function decomposed_mpopf_local_search(factory, time_periods, ramping_data, dema
     return best_solution, best_cost, best_models, base_cost, total_iterations
 end
 
-
+"""
+    decomposed_mpopf_demand_search(factory, time_periods, ramping_data, demands; max_iterations=1000, max_time=300, demand_step=0.01)
+Perform a local search on a decomposed DC MPOPF model. Adjusts overall demand for a random time period each iteration.
+# Arguments
+- `factory`:
+- `time_periods`:
+- `ramping_data`:
+- `demands`:
+- `max_iterations`:
+- `max_time`:
+- `demand_step`:
+# Returns
+"""
 function decomposed_mpopf_demand_search(factory, time_periods, ramping_data, demands; max_iterations=1000, max_time=300, demand_step=0.01)
     data = PowerModels.parse_file(factory.file_path)
     PowerModels.standardize_cost_terms!(data, order=2)
@@ -379,7 +377,10 @@ end
 
 Checks a solved model for adherence to ramping constraints.
 Identifies which time periods/gen violate constraints
-
+#Arguements
+- `solution`:
+- `ramping_data`:
+#Returns
 """
 function check_ramping_limits(solution, ramping_data)
     time_periods = length(solution)
@@ -418,8 +419,13 @@ end
     check_demands_met(solution, initial_demands, tolerance=1e-6)
 
 Checks solved model to see if all minimum demands are met.
-Identifies which time periods are not having demands met
-
+Used as a check inside of search functions, use 
+"check_demands_met_output" if attempting to see which time periods violate constraints
+#Arguements
+- `solution`:
+- `initial_demands`:
+- `tolerance`:
+#Returns
 """
 function check_demands_met(solution, initial_demands, tolerance=1e-6)
     time_periods = length(solution)
@@ -439,6 +445,15 @@ function check_demands_met(solution, initial_demands, tolerance=1e-6)
     end
     return false
 end
+
+"""
+    check_demands_met_output(solution, initial_demands, tolerance=1e-6)
+Checks solved model to see if all minimum demands are met.
+# Arguments
+- `solution`: 
+- `initial_demands`:
+- `tolerance`: Allowable tolerance for generated demand and expected demand. Default = 1e-6
+"""
 
 function check_demands_met_output(solution, initial_demands, tolerance=1e-6)
     time_periods = length(solution)
@@ -466,101 +481,24 @@ function check_demands_met_output(solution, initial_demands, tolerance=1e-6)
     end
 end
 
-
-function sort_time_periods_by_demand(demands)
-    return sortperm(sum.(demands), rev=true)
-end
-
-function set_initial_generator_output(model, t, demands, gen_data)
-    total_demand = sum(demands[t])
-    total_capacity = sum(gen["pmax"] for (_, gen) in gen_data)
-    
-    if total_demand > total_capacity
-        error("Insufficient generation capacity for time period $t")
-    end
-    
-    # Distribute demand proportionally among generators
-    for (g, gen) in gen_data
-        set_start_value(model[:pg][t, g], (gen["pmax"] / total_capacity) * total_demand)
-    end
-end
-
-function adjust_adjacent_periods(model, t, adjacent_t, gen_data, ramp_data, direction)
-    for (g, gen) in gen_data
-        current_output = value(model[:pg][t, g])
-        ramp_limit = ramp_data["ramp_limits"][parse(Int, g)]
-        
-        if direction == :before
-            new_output = max(gen["pmin"], current_output - ramp_limit)
-        else # :after
-            new_output = max(gen["pmin"], current_output + ramp_limit)
-        end
-        
-        set_start_value(model[:pg][adjacent_t, g], new_output)
-    end
-end
-
-function create_decomposed_mpopf_model(factory, time_periods, ramping_data, demands)
-    data = PowerModels.parse_file(factory.file_path)
-    PowerModels.standardize_cost_terms!(data, order=2)
-    PowerModels.calc_thermal_limits!(data)
-    
-    model = JuMP.Model(factory.optimizer)
-    power_flow_model = MPOPFSearchModel(model, data, time_periods, ramping_data, demands)
-    
-    set_model_variables!(power_flow_model, factory)
-    set_model_objective_function!(power_flow_model, factory)
-    set_model_constraints!(power_flow_model, factory)
-    
-    ref = PowerModels.build_ref(data)[:it][:pm][:nw][0]
-    gen_data = ref[:gen]
-    
-    sorted_periods = sort_time_periods_by_demand(demands)
-    
-    for t in sorted_periods
-        set_initial_generator_output(model, t, demands, gen_data)
-        
-        if t > 1
-            adjust_adjacent_periods(model, t, t-1, gen_data, ramping_data, :before)
-        end
-        if t < time_periods
-            adjust_adjacent_periods(model, t, t+1, gen_data, ramping_data, :after)
-        end
-        
-        # Optimize the current time period
-        @objective(model, Min, sum(gen_data[g]["cost"][1]*model[:pg][t,g]^2 + 
-                                   gen_data[g]["cost"][2]*model[:pg][t,g] + 
-                                   gen_data[g]["cost"][3] for g in keys(gen_data)))
-        optimize!(model)
-        
-        # Check if optimization reduced power generation
-        for (g, gen) in gen_data
-            if value(model[:pg][t, g]) < start_value(model[:pg][t, g])
-                # If reduced, set it back to the initial value
-                fix(model[:pg][t, g], start_value(model[:pg][t, g]))
-            end
-        end
-    end
-    
-    # Set the full objective function for the final optimization
-    set_model_objective_function!(power_flow_model, factory)
-    optimize!(model)
-    
-    return power_flow_model
-end
-
-
 """
     create_initial_random_solution(data, time_periods, demands, ramping_data, factory; 
                                  max_attempts=100, time_limit=60)
 
 Generate a random feasible initial solution for the power system optimization problem.
-Returns nil if no feasible solution is found within the specified attempts/time limit.
+Returns nothing if no feasible solution is found within the specified attempts/time limit.
+# Arguments
+- `data`:
+- `time_periods`:
+- `demands`:
+- `ramping_data`:
+- `factory`:
+- `max_attempts`:
+- `time_limit`:
 """
 function create_initial_random_solution(data, time_periods, demands, ramping_data, factory;
-                                      max_attempts=100, time_limit=60)
+                                      max_attempts=100000, time_limit=60)
     start_time = time()
-    max_attempts = 10000000
     for attempt in 1:max_attempts
         if time() - start_time > time_limit
             println("Time limit reached after $attempt attempts")
@@ -588,6 +526,9 @@ end
     generate_bounded_random_solution(data, time_periods)
 
 Generate random solution respecting generator bounds and total demand requirements.
+# Arguments
+-`data`:
+-`time_periods`:
 """
 function generate_bounded_random_solution(data, time_periods)
     solution = []
@@ -613,6 +554,12 @@ end
     adjust_solution_for_constraints(solution, data, demands, ramping_data, time_periods)
 
 Adjust the random solution to better meet system constraints before verification.
+# Arguments
+-`solution`:
+-`data`:
+-`demands`:
+-`ramping_data`:
+-`time_periods`:
 """
 function adjust_solution_for_constraints(solution, data, demands, ramping_data, time_periods)
     adjusted_solution = deepcopy(solution)
@@ -650,6 +597,13 @@ end
     verify_solution_feasibility(solution, data, time_periods, ramping_data, demands, factory)
 
 Verify if a solution is feasible by checking all constraints and running a test optimization.
+    # Arguments
+-`solution`:
+-`data`:
+-`time_periods`:
+-`ramping_data`:
+-`demands`:
+-`factory`:
 """
 function verify_solution_feasibility(solution, data, time_periods, ramping_data, demands, factory)
     # Check basic bounds
