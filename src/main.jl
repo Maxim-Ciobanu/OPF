@@ -16,7 +16,7 @@ base_loads = return_loads(file_path)
 min = 0.25
 max = 0.25
 
-scenarios = test(base_loads, min, max, 5)
+scenarios = get_random_scenarios(base_loads, min, max, 5)
 
 display(scenarios)
 # --------------------------------------------------------------------------
