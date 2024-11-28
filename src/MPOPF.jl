@@ -28,7 +28,7 @@ module MPOPF
     # TODO: Need to document these functions
     # TODO: Need to rename these functions as well, for example, save is confusing
     # TODO: After renaming them need to also rename the places they are used
-    export generate_load_scenarios, save, retreive, output_to_file
+    export generate_load_scenarios, save, retreive, output_to_file, get_random_scenarios
 
     # Export of graphing_feasibility.jl
     export perform_feasibility

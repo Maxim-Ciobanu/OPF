@@ -8,23 +8,39 @@ using MPOPF
 using Statistics
 
 
+# Example of random scenarios
+# --------------------------------------------------------------------------
+file_path = "./Cases/case14.m"
+
+base_loads = return_loads(file_path)
+min = 0.25
+max = 0.25
+
+scenarios = test(base_loads, min, max, 5)
+
+display(scenarios)
+# --------------------------------------------------------------------------
+
+
+
+
 
 
 # Example for DC with new uncertainty functions for generating scenarios
 # --------------------------------------------------------------------------
-file_path  = "./Cases/case14.m"
-distributions = setup_demand_distributions(file_path, :absolute, 0.15)
-scenarios = sample_demand_scenarios(distributions, 100, false)
-# Using DC Factory with Gurobi
-dc_factory_Gurobi = DCMPOPFModelFactory(file_path, Gurobi.Optimizer)
-My_DC_model_Uncertainty = create_model(dc_factory_Gurobi, scenarios)
-optimize_model(My_DC_model_Uncertainty)
-# Output the final Pg Values
-println("Final Pg values:")
-println()
-display(JuMP.value.(My_DC_model_Uncertainty.model[:pg]))
-display(JuMP.value.(My_DC_model_Uncertainty.model[:mu_plus]))
-display(JuMP.value.(My_DC_model_Uncertainty.model[:mu_minus]))
+# file_path  = "./Cases/case14.m"
+# distributions = setup_demand_distributions(file_path, :absolute, 0.15)
+# scenarios = sample_demand_scenarios(distributions, 100, false)
+# # Using DC Factory with Gurobi
+# dc_factory_Gurobi = DCMPOPFModelFactory(file_path, Gurobi.Optimizer)
+# My_DC_model_Uncertainty = create_model(dc_factory_Gurobi, scenarios)
+# optimize_model(My_DC_model_Uncertainty)
+# # Output the final Pg Values
+# println("Final Pg values:")
+# println()
+# display(JuMP.value.(My_DC_model_Uncertainty.model[:pg]))
+# display(JuMP.value.(My_DC_model_Uncertainty.model[:mu_plus]))
+# display(JuMP.value.(My_DC_model_Uncertainty.model[:mu_minus]))
 # --------------------------------------------------------------------------
 
 
