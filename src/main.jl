@@ -6,6 +6,40 @@ using JuMP, Ipopt, Gurobi, Serialization, Random
 using PowerModels
 using MPOPF
 using Statistics
+using CSV
+using DataFrames
+
+
+
+
+file_path = "./Cases/case300.m"
+num_scenarios = 10
+variation_value = 0.15
+mismatch_costs::Tuple{Float64,Float64}=(100.0, 100.0)
+
+
+# Get initial PG solution from first method
+distributions = setup_demand_distributions(file_path, :relative, variation_value)
+training_scenarios = sample_demand_scenarios(distributions, num_scenarios)
+
+dc_factory_Gurobi = DCMPOPFModelFactory(file_path, Gurobi.Optimizer)
+My_DC_model_Uncertainty = create_model(dc_factory_Gurobi, training_scenarios, mismatch_costs)
+optimize_model(My_DC_model_Uncertainty)
+# Output the final Pg Values
+println("Final Pg values:")
+println()
+PgValues = JuMP.value.(My_DC_model_Uncertainty.model[:pg])
+display(value.(My_DC_model_Uncertainty.model[:mu_plus]))
+display(value.(My_DC_model_Uncertainty.model[:mu_minus]))
+
+
+test_scenarios = sample_demand_scenarios(distributions, num_scenarios)
+test_concrete_solution(PgValues, test_scenarios, dc_factory_Gurobi)
+
+data = DataFrame(number = 1:10)
+CSV.write("numbers.csv", data)
+
+
 
 
 # Example of random scenarios
