@@ -5,6 +5,7 @@
 #SBATCH --time=24:00:00
 #SBATCH --output=logs/Job-%j.out
 
+module load gurobi
 module load julia/1.10.0
 
 julia simulation.jl
