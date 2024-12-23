@@ -7,17 +7,13 @@ using DataFrames
 
 cases = load_and_compile_models("results/")
 
-# power_flow_model = cases["case14"]["Linear"]
-# model = power_flow_model.model
-
-
-
 
 for case_name in keys(cases)
+	println("Performing $case_name")
 	for model_name in keys(cases[case_name])
 		println(`Performing $model_name`)
 
-		# ignore DC
+		# ignore DC, for now
 		if model_name == "DC" break end
 
 		power_flow_model = cases[case_name][model_name]
@@ -53,11 +49,13 @@ for case_name in keys(cases)
 			for (i, bus) in ref[:bus]
 				bus_loads = [load_data[l] for l in ref[:bus_loads][i]]
 				bus_shunts = [ref[:shunt][s] for s in ref[:bus_shunts][i]]
-		
-				if sizeof(bus_loads) == 0 || sizeof(bus_shunts) == 0
-					println("bus loads or shunts is equal to 0 raising error")
-					break
-				end
+				
+
+				# CHECK IF BUS LOADS OR BUS SHUNTS IS EMPTY AS THIS CAUSES ERROR?
+				# if sizeof(bus_loads) == 0 || sizeof(bus_shunts) == 0
+				# 	println("bus loads or shunts is equal to 0 raising error")
+				# 	break
+				# end
 		
 				equation_a_lhs = sum(p[t,a] for a in ref[:bus_arcs][i])
 				equation_a_rhs = sum(pg[t, g] for g in ref[:bus_gens][i]) - sum(load["pd"] * factors[t] for load in bus_loads) - sum(shunt["gs"] for shunt in bus_shunts)*vm[t,i]^2
