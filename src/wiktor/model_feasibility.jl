@@ -207,11 +207,11 @@ for case_name in keys(cases)
 					if sum(value(p[t,a])) == sum(value(pg[t, g])) - sum(load["pd"] * factors[t] for load in bus_loads; init=0) - sum(shunt["gs"] for shunt in bus_shunts; init=0) * value(vm[t,i])^2
 						continue
 					else
-						failures[case_name][model_name]["Power-Balance-Equation1"] = Dict{String, Any}()
-						failures[case_name][model_name]["Power-Balance-Equation1"]["t"] = t
-						failures[case_name][model_name]["Power-Balance-Equation1"]["a"] = a
-						failures[case_name][model_name]["Power-Balance-Equation1"]["equation_expanded"] = `$(sum(value(p[t,a]))) == $(sum(value(pg[t, g]))) - $(sum(load["pd"] * factors[t] for load in bus_loads; init=0)) - $(sum(shunt["gs"] for shunt in bus_shunts; init=0)) x $(value(vm[t,i])^2)`
-						failures[case_name][model_name]["Power-Balance-Equation1"]["equation"] = `$(sum(value(p[t,a]))) == $(sum(value(pg[t, g])) - sum(load["pd"] * factors[t] for load in bus_loads; init=0) - sum(shunt["gs"] for shunt in bus_shunts; init=0) * value(vm[t,i])^2)`
+						failures[case_name][model_name]["Power-Balance-Equation"] = Dict{String, Any}()
+						failures[case_name][model_name]["Power-Balance-Equation"]["t"] = t
+						failures[case_name][model_name]["Power-Balance-Equation"]["a"] = a
+						failures[case_name][model_name]["Power-Balance-Equation"]["equation_expanded"] = `$(sum(value(p[t,a]))) == $(sum(value(pg[t, g]))) - $(sum(load["pd"] * factors[t] for load in bus_loads; init=0)) - $(sum(shunt["gs"] for shunt in bus_shunts; init=0)) x $(value(vm[t,i])^2)`
+						failures[case_name][model_name]["Power-Balance-Equation"]["equation"] = `$(sum(value(p[t,a]))) == $(sum(value(pg[t, g])) - sum(load["pd"] * factors[t] for load in bus_loads; init=0) - sum(shunt["gs"] for shunt in bus_shunts; init=0) * value(vm[t,i])^2)`
 
 					end
 
@@ -224,17 +224,120 @@ for case_name in keys(cases)
 					if sum(value(q[t,a])) == sum(value(qg[t, g])) - sum(load["qd"] * factors[t] for load in bus_loads; init=0) + sum(shunt["bs"] for shunt in bus_shunts; init=0) * value(vm[t,i])^2
 						continue
 					else
-						failures[case_name][model_name]["Power-Balance-Equation1"] = Dict{String, Any}()
-						failures[case_name][model_name]["Power-Balance-Equation1"]["t"] = t
-						failures[case_name][model_name]["Power-Balance-Equation1"]["a"] = a
-						failures[case_name][model_name]["Power-Balance-Equation1"]["equation_expanded"] = `$(sum(value(q[t,a]))) == $(sum(value(qg[t, g]))) - $(sum(load["qd"] * factors[t] for load in bus_loads; init=0)) + $(sum(shunt["bs"] for shunt in bus_shunts; init=0)) x $(value(vm[t,i])^2)`
-						failures[case_name][model_name]["Power-Balance-Equation1"]["equation"] = `$(sum(value(q[t,a]))) == $(sum(value(qg[t, g])) - sum(load["qd"] * factors[t] for load in bus_loads; init=0) + sum(shunt["bs"] for shunt in bus_shunts; init=0) * value(vm[t,i])^2)`
+						failures[case_name][model_name]["Reactive-Power-Balance-Equation"] = Dict{String, Any}()
+						failures[case_name][model_name]["Reactive-Power-Balance-Equation"]["t"] = t
+						failures[case_name][model_name]["Reactive-Power-Balance-Equation"]["a"] = a
+						failures[case_name][model_name]["Reactive-Power-Balance-Equation"]["equation_expanded"] = `$(sum(value(q[t,a]))) == $(sum(value(qg[t, g]))) - $(sum(load["qd"] * factors[t] for load in bus_loads; init=0)) + $(sum(shunt["bs"] for shunt in bus_shunts; init=0)) x $(value(vm[t,i])^2)`
+						failures[case_name][model_name]["Reactive-Power-Balance-Equation"]["equation"] = `$(sum(value(q[t,a]))) == $(sum(value(qg[t, g])) - sum(load["qd"] * factors[t] for load in bus_loads; init=0) + sum(shunt["bs"] for shunt in bus_shunts; init=0) * value(vm[t,i])^2)`
 					end
 				end
 			end
 		end
 	end
 end
+
+
+
+failures_graph_power = Graph("output/graphs/failures_power.html")
+failures_graph_reactive = Graph("output/graphs/failures_reactive.html")
+
+models = ["AC", "DC", "Logarithmic", "Quadratic", "Linear"]
+style = 1
+
+for model in models
+
+	# collect the differences for all power balance equation
+	differences_power = []
+	differences_reactive = []
+
+	for case in keys(failures)
+
+		# get the power balance differences
+		fail = failures[case][model]
+
+		if length(keys(fail)) > 0
+			
+			equation = string(fail["Power-Balance-Equation"]["equation"])
+
+			split_equation = split(equation, " == ")[1]
+			cleaned_equation = strip(replace(split_equation, r"[\`]" => ""), ['`'])
+			lhs = parse(Float64, cleaned_equation)
+
+			split_equation = split(equation, " == ")[2]
+			cleaned_equation = strip(replace(split_equation, r"[\`]" => ""), ['`'])
+			rhs = parse(Float64, cleaned_equation)
+			
+			difference = abs(rhs-lhs)
+			push!(differences_power, difference)
+		end
+
+		if length(keys(fail)) > 0
+			
+			equation = string(fail["Reactive-Power-Balance-Equation"]["equation"])
+
+			split_equation = split(equation, " == ")[1]
+			cleaned_equation = strip(replace(split_equation, r"[\`]" => ""), ['`'])
+			lhs = parse(Float64, cleaned_equation)
+
+			split_equation = split(equation, " == ")[2]
+			cleaned_equation = strip(replace(split_equation, r"[\`]" => ""), ['`'])
+			rhs = parse(Float64, cleaned_equation)
+			
+			difference = abs(rhs-lhs)
+			push!(differences_reactive, difference)
+		end
+	end
+
+	add_scatter(failures_graph_power, collect(keys(failures)), differences_power, model, style)
+	add_scatter(failures_graph_reactive, collect(keys(failures)), differences_reactive, model, style)
+	style += 1
+end
+
+create_plot(failures_graph_power, "absolute difference in power balance equation of failed cases", "Case Number", "Abs Difference")
+create_plot(failures_graph_reactive, "absolute difference in reactive power balance equation of failed cases", "Case Number", "Abs Difference")
+
+save_graph(failures_graph_power)
+save_graph(failures_graph_reactive)
+
+
+# # want to analyse the magnitude of the difference
+# for case_name in keys(failures)
+# 	println("\n")
+# 	println("Performing $case_name")
+	
+
+# 	for model_name in keys(failures[case_name])
+# 		fail = failures[case_name][model_name]
+
+# 		if length(keys(fail)) > 0
+# 			for key in keys(fail)
+# 				equation = string(fail[key]["equation"])
+
+# 				split_equation = split(equation, " == ")[1]
+# 				cleaned_equation = strip(replace(split_equation, r"[\`]" => ""), ['`'])
+# 				lhs = parse(Float64, cleaned_equation)
+
+# 				split_equation = split(equation, " == ")[2]
+# 				cleaned_equation = strip(replace(split_equation, r"[\`]" => ""), ['`'])
+# 				rhs = parse(Float64, cleaned_equation)
+				
+# 				difference = abs(rhs-lhs)
+# 				println(difference)
+# 			end
+# 		end
+# 	end
+# end
+
+
+
+
+
+
+
+
+
+
+
 
 
 
