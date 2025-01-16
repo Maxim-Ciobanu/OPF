@@ -1,0 +1,1 @@
+# a script for filtering cases so that there is something in the folder

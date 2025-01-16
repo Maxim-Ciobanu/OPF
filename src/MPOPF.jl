@@ -24,7 +24,7 @@ module MPOPF
 
     # Export of Graphing_class.jl functions
     # TODO: Need to have proper documentation for the Graphing class
-    export Graph, add_scatter, create_plot, save_graph, display_graph
+    export Graph, add_scatter, add_vertical_line, create_plot, save_graph, display_graph
 
     # Export of misc.jl functions
     # TODO: Need to document these functions

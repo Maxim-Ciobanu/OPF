@@ -5,7 +5,7 @@ using Statistics
 using CSV
 using DataFrames
 
-cases = load_and_compile_models("results/")
+cases = load_and_compile_models("all_results_16GB/")
 failures = Dict{String, Dict{String, Any}}()
 
 
@@ -16,7 +16,7 @@ for case_name in keys(cases)
 	failures[case_name] = Dict{String, Any}()
 
 	# go over every model per case
-	for model_name in keys(cases[case_name])
+	for model_name in keys(cases[case_name])	
 
 		# initialise case names failures
 		failures[case_name][model_name] = Dict{String, Any}()
@@ -33,6 +33,17 @@ for case_name in keys(cases)
 		branch_data = ref[:branch]
 		load_data = ref[:load]
 
+		# perform if model is dc
+		if model_name == "DC"
+			va = model[:va]
+			p = model[:p]
+			pg = model[:pg]
+			qg = model[:qg]
+			ramp_up = model[:ramp_up]
+			ramp_down = model[:ramp_down]
+
+		end
+
 
 		# all other models
 		if model_name == "AC" || model_name == "Quadratic" || model_name == "Logarithmic" || model_name == "Linear" 
@@ -48,9 +59,6 @@ for case_name in keys(cases)
 			ramp_down = model[:ramp_down]
 			
 			factors = power_flow_model.factors
-
-			println("\t- Performing minmax checks on $model_name")
-
 
 			# @variable(model, bus_data[i]["vmin"] <= vm[t in 1:T, i in keys(bus_data)] <= bus_data[i]["vmax"], start=1.0)
 			for t in 1:T
@@ -253,10 +261,12 @@ end
 
 
 
-failures_graph_minmax = Graph("output/graphs/failures_minmax.html")
 
+
+failures_graph_minmax = Graph("output/graphs/failures_minmax.html")
 models = ["AC", "DC", "Logarithmic", "Quadratic", "Linear"]
 let graph_style = 1
+let largest_mismatch = -1
 
 for model in models
 
@@ -264,6 +274,11 @@ for model in models
 	differences_minmax = []
 
 	for case in keys(failures)
+
+		# get the model and termination criteria
+		solved_model = cases[case][model].model
+		termination = termination_status(solved_model)
+
 		for minmax_equation in keys(failures[case][model])
 
 			# get the failed minmax equation
@@ -291,6 +306,11 @@ for model in models
 
 				# add it to the differences array
 				push!(differences_minmax, sum(total_difference) / length(total_difference))
+
+				# check if the mismatch is largest
+				if sum(total_difference) / length(total_difference) > largest_mismatch
+					largest_mismatch = sum(total_difference) / length(total_difference)
+				end
 			end
 		end
 	end
@@ -299,7 +319,30 @@ for model in models
 	graph_style += 1
 end
 
+
+# add vertical lines to show infeasible cases
+for case in keys(cases)
+
+	# for each case check if at least one of the models is infeasible
+	infeasible = false
+
+	for model_type in keys(cases[case])
+		model = cases[case][model_type].model
+		termination = termination_status(model)
+		if termination == LOCALLY_INFEASIBLE
+			infeasible = true
+		end
+	end
+
+	# if any of the models are infeasible show it
+	if infeasible
+		add_vertical_line(failures_graph_minmax, case, largest_mismatch)
+	end
+end
+
+
 create_plot(failures_graph_minmax, "absolute difference in minmax equation of failed cases", "Case Number", "Abs Difference ( average )")
 save_graph(failures_graph_minmax)
 
+end
 end

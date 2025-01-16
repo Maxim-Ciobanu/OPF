@@ -5,13 +5,18 @@ using Statistics
 using CSV
 using DataFrames
 
-cases = load_and_compile_models("results/")
+cases = load_and_compile_models("all_results_16GB/")
 
 failures = Dict{String, Dict{String, Any}}()
+
+total_cases = length(cases)
+let count = 1
 
 
 # go over every case
 for case_name in keys(cases) 	
+	println("performing - $case_name \t $count / $total_cases")
+	count += 1
 
 	# initialise case names failures
 	failures[case_name] = Dict{String, Any}()
@@ -126,6 +131,7 @@ for case_name in keys(cases)
 		end
 	end
 end
+end
 
 
 
@@ -133,7 +139,9 @@ failures_graph_power = Graph("output/graphs/failures_power.html")
 failures_graph_reactive = Graph("output/graphs/failures_reactive.html")
 
 models = ["AC", "DC", "Logarithmic", "Quadratic", "Linear"]
-style = 1
+let graph_style = 1
+let largest_mismatch_reactive = -1
+let largest_mismatch_power = -1
 
 for model in models
 
@@ -161,12 +169,15 @@ for model in models
 				rhs = parse(Float64, cleaned_equation)
 				
 				difference = abs(rhs-lhs)
-				println(difference)
 				push!(total_difference, difference)
 			end
 
 			average = sum(total_difference) / length(total_difference)
 			push!(differences_power, average)
+
+			if average > largest_mismatch_power
+				largest_mismatch_power = average
+			end
 		end
 
 		if length(keys(fail)) > 0
@@ -184,22 +195,53 @@ for model in models
 				rhs = parse(Float64, cleaned_equation)
 				
 				difference = abs(rhs-lhs)
-				println(difference)
 				push!(total_difference, difference)
 			end
 
 			average = sum(total_difference) / length(total_difference)
 			push!(differences_reactive, average)
+
+			if average > largest_mismatch_reactive
+				largest_mismatch_reactive = average
+			end
 		end
 	end
 
-	add_scatter(failures_graph_power, collect(keys(failures)), differences_power, model, style)
-	add_scatter(failures_graph_reactive, collect(keys(failures)), differences_reactive, model, style)
-	style += 1
+	add_scatter(failures_graph_power, collect(keys(failures)), differences_power, model, graph_style)
+	add_scatter(failures_graph_reactive, collect(keys(failures)), differences_reactive, model, graph_style)
+	graph_style += 1
 end
+
+
+# add vertical lines to show infeasible cases
+for case in keys(cases)
+
+	# for each case check if at least one of the models is infeasible
+	infeasible = false
+
+	for model_type in keys(cases[case])
+		model = cases[case][model_type].model
+		termination = termination_status(model)
+		if termination == LOCALLY_INFEASIBLE
+			infeasible = true
+		end
+	end
+
+	# if any of the models are infeasible show it
+	if infeasible
+		add_vertical_line(failures_graph_power, case, largest_mismatch_power)
+		add_vertical_line(failures_graph_reactive, case, largest_mismatch_reactive)
+	end
+end
+
+
 
 create_plot(failures_graph_power, "absolute difference in power balance equation of failed cases", "Case Number", "Abs Difference")
 create_plot(failures_graph_reactive, "absolute difference in reactive power balance equation of failed cases", "Case Number", "Abs Difference")
 
 save_graph(failures_graph_power)
 save_graph(failures_graph_reactive)
+
+end
+end
+end

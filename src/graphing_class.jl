@@ -44,6 +44,19 @@ mutable struct Graph
 	end
 end
 
+function add_vertical_line(graph::Graph, x::Any, height::Number)
+	trace = PlotlyJS.scatter(
+		x=[x, x],
+		y=[0, height],
+		mode="lines",
+		line=attr(color="red", dash="dot", width=2),
+		showlegend=false,
+		hoverinfo="none"
+	)
+	push!(graph.traces, trace)
+	
+end
+
 
 # a function for adding a scatter plot to the graph
 # 
@@ -216,6 +229,7 @@ end
 graph = Graph("output/plot2.html")
 add_scatter(graph, ["a", "b", "c", "d", "e"], [1, 2, 3, 4, 5], "trace 1", "blue")
 add_scatter(graph, ["a", "b", "c", "d", "e"], [5, 4, 3, 2, 1], "trace 2", "red")
+add_vertical_line(graph, 2)
 create_plot(graph, "my plot", "x-axis", "y-axis")
 save_graph(graph)
 =#

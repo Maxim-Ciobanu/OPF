@@ -5,3 +5,7 @@ docs/build/
 output/*
 results/
 large_results/
+all_results_16GB/
+selected_results_300MB/
+results_small_cases/
+all_results_medium/
