@@ -5,7 +5,7 @@ using Statistics
 using CSV
 using DataFrames
 
-cases = load_and_compile_models("all_results_16GB/")
+cases = load_and_compile_models("results/")
 
 failures = Dict{String, Dict{String, Any}}()
 
@@ -41,6 +41,72 @@ for case_name in keys(cases)
 
 		branch_data = ref[:branch]
 		load_data = ref[:load]
+
+		# DC model
+		if model_name == "DC"
+
+			# extract model variables
+			va = model[:va]
+			p = model[:p]
+			pg = model[:pg]
+			factors = power_flow_model.factors
+			ramp_up = model[:ramp_up]
+			ramp_down = model[:ramp_down]
+
+			# do something here
+			p_expr = Dict()
+	
+			for t in 1:T
+				p_expr[t] = Dict()
+			end
+
+			for t in 1:T
+				p_expr[t] = Dict([((l, i, j), 1.0 * p[t, (l, i, j)]) for (l, i, j) in ref[:arcs_from]])
+				p_expr[t] = merge(p_expr[t], Dict([((l, j, i), -1.0 * p[t, (l, i, j)]) for (l, i, j) in ref[:arcs_from]]))
+			end
+
+			
+
+			for t in 1:T
+
+				power_failures = []
+				reactive_failures = []
+
+				for (i, bus) in ref[:bus]
+					bus_loads = [load_data[l] for l in ref[:bus_loads][i]]
+            		bus_shunts = [ref[:shunt][s] for s in ref[:bus_shunts][i]]
+
+					# @constraint(model,
+					# sum(p_expr[t][a] for a in ref[:bus_arcs][i]) ==
+					# sum(pg[t, g] for g in ref[:bus_gens][i]) -
+					# sum(load["pd"] * factors[t] for load in bus_loads) -
+					# sum(shunt["gs"] for shunt in bus_shunts)*1.0^2
+					lhs = sum(value(p_expr[t][a]) for a in ref[:bus_arcs][i]; init=0)
+					rhs_1 = sum(value(pg[t, g]) for g in ref[:bus_gens][i]; init=0)
+					rhs_2 = sum(load["pd"] * factors[t] for load in bus_loads; init=0)
+					rhs_3 = sum(shunt["gs"] for shunt in bus_shunts; init=0)*1.0^2
+
+					if lhs == rhs_1 - rhs_2 - rhs_3
+						continue
+					else
+						failure = Dict{String, Any}("t" => t,
+							"i" => i,
+							"bus" => bus,
+							"lhs" => lhs,
+							"rhs_1" => rhs_1,
+							"rhs_2" => rhs_2,
+							"rhs_3" => rhs_3,
+							"equation_expanded" => `$lhs == $rhs_1 - $rhs_2 - $rhs_3`,
+							"equation" => `$lhs == $(rhs_1 - rhs_2 - rhs_3)`
+						)
+						
+						push!(power_failures, failure)
+					end
+				end
+
+				failures[case_name][model_name]["Power-Balance-Equation"] = power_failures
+			end
+		end
 
 		# all other models
 		if model_name == "AC" || model_name == "Quadratic" || model_name == "Logarithmic" || model_name == "Linear" 
@@ -133,8 +199,89 @@ for case_name in keys(cases)
 end
 end
 
+#=
+# variable dictionary 
+map_variables_DC = Dict{String, Any}(
+	"Power-Balance-Equation" => ["p", "pg"],
+)
+
+map_variables_AC = Dict{String, Any}(
+	"Power-Balance-Equation" => ["p", "pg", "vm"],
+	"Reactive-Power-Balance-Equation" => ["q", "qg", "vm"],
+)
+
+counts = Dict{String, Dict{String, Int64}}(
+	"DC" => Dict{String, Int64}(
+		"p" => 0,
+		"q" => 0,
+		"pg" => 0,
+		"qg" => 0,
+		"vm" => 0,
+	),
+	"AC" => Dict{String, Int64}(
+		"p" => 0,
+		"q" => 0,
+		"pg" => 0,
+		"qg" => 0,
+		"vm" => 0,
+	),
+	"Logarithmic" => Dict{String, Int64}(
+		"p" => 0,
+		"q" => 0,
+		"pg" => 0,
+		"qg" => 0,
+		"vm" => 0,
+	),
+	"Quadratic" => Dict{String, Int64}(
+		"p" => 0,
+		"q" => 0,
+		"pg" => 0,
+		"qg" => 0,
+		"vm" => 0,
+	),
+	"Linear" => Dict{String, Int64}(
+		"p" => 0,
+		"q" => 0,
+		"pg" => 0,
+		"qg" => 0,
+		"vm" => 0,
+	),
+)
+
+# Find the variables which cause the most mismatches
+for case in keys(failures)
+	for model in keys(failures[case])
+		
+
+		# go through each min max failure and ammend the counts
+		for failure in keys(failures[case][model])
+			fail = failures[case][model][failure]
+
+			# only look when data is available
+			if length(fail) > 0
+				if model == "DC"
+					for variable in map_variables_DC[failure]
+						counts["DC"][variable] += length(fail)
+					end
+				else
+					for variable in map_variables_AC[failure]
+						counts[model][variable] += length(fail)
+					end
+				end
+			end
+		end
+	end
+end
+=#
 
 
+
+# Take the powerbalance dictionary of failures created above and then process the mismatches into a graph
+# options include ( on a model by case basis ) for the buses
+# 	- average ( plot the average mismatch over the buses )
+#	- summation ( plot the sum of all the mismatches )
+#	- maximum ( find the largest mismatch on a bus and plot it )
+#
 failures_graph_power = Graph("output/graphs/failures_power.html")
 failures_graph_reactive = Graph("output/graphs/failures_reactive.html")
 
@@ -173,14 +320,16 @@ for model in models
 			end
 
 			average = sum(total_difference) / length(total_difference)
-			push!(differences_power, average)
+			summation = sum(total_difference)
+			largest = maximum(total_difference)
+			push!(differences_power, largest)
 
-			if average > largest_mismatch_power
-				largest_mismatch_power = average
+			if largest > largest_mismatch_power
+				largest_mismatch_power = largest
 			end
 		end
 
-		if length(keys(fail)) > 0
+		if (length(keys(fail)) > 0) && ("Reactive-Power-Balance-Equation" in keys(fail))
 			total_difference = []
 
 			for item in fail["Reactive-Power-Balance-Equation"]
@@ -199,16 +348,22 @@ for model in models
 			end
 
 			average = sum(total_difference) / length(total_difference)
-			push!(differences_reactive, average)
+			summation = sum(total_difference)
+			largest = maximum(total_difference)
 
-			if average > largest_mismatch_reactive
-				largest_mismatch_reactive = average
+			push!(differences_reactive, largest)
+
+			if largest > largest_mismatch_reactive
+				largest_mismatch_reactive = largest
 			end
 		end
 	end
 
+	# update the scatter graph
 	add_scatter(failures_graph_power, collect(keys(failures)), differences_power, model, graph_style)
 	add_scatter(failures_graph_reactive, collect(keys(failures)), differences_reactive, model, graph_style)
+	
+	# change the colour
 	graph_style += 1
 end
 
@@ -218,6 +373,7 @@ for case in keys(cases)
 
 	# for each case check if at least one of the models is infeasible
 	infeasible = false
+	limit = false
 
 	for model_type in keys(cases[case])
 		model = cases[case][model_type].model
@@ -225,12 +381,21 @@ for case in keys(cases)
 		if termination == LOCALLY_INFEASIBLE
 			infeasible = true
 		end
+
+		if termination == ITERATION_LIMIT
+			limit = true
+		end
 	end
 
 	# if any of the models are infeasible show it
 	if infeasible
 		add_vertical_line(failures_graph_power, case, largest_mismatch_power)
 		add_vertical_line(failures_graph_reactive, case, largest_mismatch_reactive)
+	end
+
+	if limit
+		add_vertical_line(failures_graph_power, case, largest_mismatch_power) # add colour
+		add_vertical_line(failures_graph_reactive, case, largest_mismatch_reactive) # add colour
 	end
 end
 
@@ -245,3 +410,4 @@ save_graph(failures_graph_reactive)
 end
 end
 end
+#
