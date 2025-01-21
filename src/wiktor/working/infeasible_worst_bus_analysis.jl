@@ -5,6 +5,20 @@ using Statistics
 using CSV
 using DataFrames
 
+#=
+
+The purpose of this file is to analyse the dictionary that outlines violating constraint equations in these four forms
+
+- angle on ref busses must be equal to 0
+- active power balance equation for both AC and DC
+- reactive power balance equation for both AC and DC
+- bounding constraints on variables
+
+
+Graphs will show the maximum absolute difference on the most violating bus for each case and for every model
+Graphs will also show which cases are violating and which are not for ease of understanding
+=#
+
 # load in the data
 function deserialize_failures(filename)
 	return deserialize(filename)

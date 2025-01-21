@@ -562,6 +562,8 @@ end
 #	- summation ( plot the sum of all the mismatches )
 #	- maximum ( find the largest mismatch on a bus and plot it )
 #
+
+
 failures_graph_minmax = Graph("output/graphs/failures_minmax.html")
 models = ["AC", "DC", "Logarithmic", "Quadratic", "Linear"]
 let graph_style = 1
