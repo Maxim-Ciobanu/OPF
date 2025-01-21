@@ -57,9 +57,8 @@ function populate_bus_quantities(case, model, failures)
 	# count how many buses fail here
 	count = 0
 	
-	for items in failures[case][model]
-		println(items)
-		count += length(items)
+	for constraint in keys(failures[case][model])
+		count = count + length(failures[case][model][constraint])
 	end
 
 	return count
