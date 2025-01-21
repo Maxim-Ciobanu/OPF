@@ -10,7 +10,9 @@ function deserialize_failures(filename)
 	return deserialize(filename)
 end
 
+
 function add_infeasible_cases(graph::Graph, cases, largest_mismatch)
+
 	# add vertical lines to show infeasible cases
 	for case in keys(cases)
 
@@ -90,14 +92,48 @@ function populate_minmax(case::String, model::String, failures::Dict)
 end
 
 function populate_angle(case::String, model::String, failures::Dict)
-end
+	# store all bus errors for specific case and model
+	errors = []
+		
+	# get all the keys that are related to active power balance equation
+	keys(failures[case][model]) .|> fail->if occursin("powerbalance_va", fail)
 
+		# get the power balance differences
+		failed_angle_powerbalance_equation = failures[case][model][fail]
+
+		# check if there are any violations
+		if length(failed_angle_powerbalance_equation) > 0
+
+			for item in failed_angle_powerbalance_equation
+
+				# get the lhs
+				lhs = item["lhs"]
+
+				# get the rhs
+				rhs = item["rhs_1"]
+				
+				# calculate the difference of the lhs and rhs and add it to the bus error array
+				difference = abs(rhs-lhs)
+
+				push!(errors, difference)
+			end
+		end
+	end
+
+	# reporting techniques listed below ( preferred largest as more specific )
+	average = sum(errors; init=0) / length(errors)
+	summation = sum(errors; init=0)
+	largest = maximum(errors; init=0)
+
+
+	return largest
+end
 
 function populate_active_power(case::String, model::String, failures::Dict)
 	
 	# store all bus errors for specific case and model
 	errors = []
-	println(keys(failures[case][model]))
+	
 	# get all the keys that are related to active power balance equation
 	keys(failures[case][model]) .|> fail->if occursin("powerbalance_active", fail)
 
@@ -136,7 +172,6 @@ function populate_active_power(case::String, model::String, failures::Dict)
 
 	return largest
 end
-
 
 function populate_reactive_power(case::String, model::String, failures::Dict)
 
@@ -183,16 +218,19 @@ end
 
 # get failures dictionary
 failures = deserialize_failures("output/failures/all_case_violations_dictionary.bin")
+cases = load_and_compile_models("results")
 
 # generate the graphs
 failures_graph_power = Graph("output/graphs/failures_power.html")
 failures_graph_reactive = Graph("output/graphs/failures_reactive.html")
 failures_graph_minmax = Graph("output/graphs/failures_minmax.html")
+failures_graph_angle = Graph("output/graphs/failures_angle.html")
 
 # for the vertical infeasibility lines
 let largest_mismatch_reactive = -1
 let largest_mismatch_power = -1
 let largest_mismatch_minmax = -1
+let largest_mismatch_angle = -1
 
 # models to look at
 models = ["AC", "DC", "Logarithmic", "Quadratic", "Linear"]
@@ -206,6 +244,7 @@ for model in models
 	differences_minmax = []
 	differences_power = []
 	differences_reactive = []
+	differences_angle = []
 
 	# now iterate through each case
 	for case in keys(failures)
@@ -214,14 +253,37 @@ for model in models
 		push!(differences_power, populate_active_power(case, model, failures))
 		push!(differences_reactive, populate_reactive_power(case, model, failures))
 		push!(differences_minmax, populate_minmax(case, model, failures))
+		push!(differences_angle, populate_angle(case, model, failures))
 	end
 
 	add_scatter(failures_graph_power, collect(keys(failures)), differences_power, model, graph_style)
 	add_scatter(failures_graph_reactive, collect(keys(failures)), differences_reactive, model, graph_style)
 	add_scatter(failures_graph_minmax, collect(keys(failures)), differences_minmax, model, graph_style)
+	add_scatter(failures_graph_angle, collect(keys(failures)), differences_angle, model, graph_style)
+
+	if maximum(differences_minmax) > largest_mismatch_minmax
+		largest_mismatch_minmax = maximum(differences_minmax)
+	end
+
+	if maximum(differences_power) > largest_mismatch_power
+		largest_mismatch_power = maximum(differences_power)
+	end
+
+	if maximum(differences_reactive) > largest_mismatch_reactive
+		largest_mismatch_reactive = maximum(differences_reactive)
+	end
+
+	if maximum(differences_angle) > largest_mismatch_angle
+		largest_mismatch_angle = maximum(differences_angle)
+	end
 
 	graph_style += 1
 
+add_infeasible_cases(failures_graph_power, cases, largest_mismatch_power)
+add_infeasible_cases(failures_graph_reactive, cases, largest_mismatch_reactive)
+add_infeasible_cases(failures_graph_minmax, cases, largest_mismatch_minmax)
+add_infeasible_cases(failures_graph_angle, cases, largest_mismatch_angle)
+end
 end
 end
 end
@@ -229,12 +291,14 @@ end
 end
 
 
-
-
+# create all plots
 create_plot(failures_graph_power, "absolute difference in power balance equation of failed cases", "Case Number", "Abs Difference")
 create_plot(failures_graph_reactive, "absolute difference in reactive power balance equation of failed cases", "Case Number", "Abs Difference")
 create_plot(failures_graph_minmax, "absolute difference in minmax equation of failed cases", "Case Number", "Abs Difference ( average )")
+create_plot(failures_graph_angle, "absolute difference in angle equation of failed cases", "Case Number", "Abs Difference ( average )")
 
+# save them
 save_graph(failures_graph_power)
 save_graph(failures_graph_reactive)
 save_graph(failures_graph_minmax)
+save_graph(failures_graph_angle)
