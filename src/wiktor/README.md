@@ -1,8 +1,18 @@
 ## Info
 - Both `wiktor/model_powerbalance_feasibility.jl` and `wiktor/model_minmax_feasibility` inherintly perform the same thing, just on different equations and has a slightly different `failure` format
 - threshold can be used to set an added level of ignorance
+- `old code` directory contains some reference code I used to combine into the `working/model_feasibility.jl` file 
 
 ## Functioning
+
+#### Files
+- `working/model_feasibility` performs all checks on bounds, powerbalance and ref bus angles and combines these all into one neat dictionary
+- `working/infeasible_bus_analysis` performs an analysis on the above data finding how many buses are failing over all cases and models
+- `working/infeasible_worst_bus_analysis` performs a deeper analysis on the following
+	- graph showing worst bus that violates the powerbalance active power equation for all cases and models
+	- graph showing worst bus that violates the powerbalance reactive power equation for all cases and models
+	- graph showing worst bus that violates the bounds equation for all cases and models
+	- graph showing worst bus that violates the ref bus voltage angle equation for all cases and models
 
 #### Steps ( A general overview of how the code works )
 - compile all cases and model results using max's `load_and_compile_models()` function
