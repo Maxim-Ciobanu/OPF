@@ -66,7 +66,7 @@ for case_name in keys(cases)
 			end
 
 			
-
+			
 			for t in 1:T
 
 				power_failures = []
@@ -282,6 +282,7 @@ end
 #	- summation ( plot the sum of all the mismatches )
 #	- maximum ( find the largest mismatch on a bus and plot it )
 #
+
 failures_graph_power = Graph("output/graphs/failures_power.html")
 failures_graph_reactive = Graph("output/graphs/failures_reactive.html")
 

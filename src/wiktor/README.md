@@ -25,6 +25,8 @@
 - `powerbalance_{MODEL_TYPE}_{X}` compiles the power balance constraint and returns a list of all violated buses
 	- `MODEL_TYPE` refers to *AC* or *DC* where AC represents all other model types as the code is identical in this case
 	- `X` refers to the constraint number, for more detail on specific constraint look at comments inside of the function
+- `serialize_failures(failures::Dict)` is a function to serialize the models violations dictionary so extensive calculations do not have to be performed repetative
+	- `failures` refers to the violations dictionary containing violation information for each case and model
 
 
 ## Future Improvements

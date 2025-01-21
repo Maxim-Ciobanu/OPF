@@ -6,7 +6,7 @@ using CSV
 using DataFrames
 
 # how much error are we willing to operate at?
-threshold = 1e-6
+threshold = 0
 
 
 function minmax_AC_1(vm, bus_data)
@@ -442,7 +442,38 @@ function powerbalance_AC_3(q, qg, vm, ref, factors, load_data)
 	return reactive_failures
 end
 
-function powerbalance_DC_1(p, pg, ref, factors, load_data)
+function powerbalance_DC_1(va, ref)
+	# @constraint(model, va[t,i] == 0)
+
+	angle_failures = []
+	t = 1
+
+	for (i, bus) in ref[:ref_buses]
+
+		lhs = value(va[t, i])
+		rhs = 0
+
+		if abs(lhs - rhs) < threshold
+			continue
+		else
+			failure = Dict{String, Any}(
+				"t" => t,
+				"i" => i,
+				"bus" => bus,
+				"lhs" => lhs,
+				"rhs_1" => rhs,
+				"equation_expanded" => `$lhs == 0`,
+				"equation" => `$lhs == 0`
+			)
+		
+			push!(angle_failures, failure)
+		end
+	end
+
+	return angle_failures
+end
+
+function powerbalance_DC_2(p, pg, ref, factors, load_data)
 	# @constraint(model,
 	# sum(p_expr[t][a] for a in ref[:bus_arcs][i]) ==
 	# sum(pg[t, g] for g in ref[:bus_gens][i]) -
@@ -488,6 +519,8 @@ function powerbalance_DC_1(p, pg, ref, factors, load_data)
 
 	return power_failures
 end
+
+
 
 function compute_infeasible(directory::String)
 	
@@ -535,8 +568,9 @@ function compute_infeasible(directory::String)
 				ramp_down = model[:ramp_down]
 
 				# now perform the checks
-				powerbalance_1 = powerbalance_DC_1(p, pg, ref, factors, load_data)
-
+				powerbalance_1 = powerbalance_DC_1(va, ref)
+				powerbalance_2 = powerbalance_DC_2(p, pg, ref, factors, load_data)
+				
 				# now complete the bound checks
 				minmax_1 = minmax_DC_1(pg, gen_data)
 				minmax_2 = minmax_DC_2(p, ref)
@@ -545,15 +579,19 @@ function compute_infeasible(directory::String)
 
 				# complete the failures dictionary
 				if length(powerbalance_1) > 0
-					failures[case_name][model_name]["power_balance_1"] = powerbalance_1
+					failures[case_name][model_name]["powerbalance_va"] = powerbalance_1
+				end
+
+				if length(powerbalance_2) > 0
+					failures[case_name][model_name]["powerbalance_active"] = powerbalance_2
 				end
 
 				if length(minmax_1) > 0
-					failures[case_name][model_name]["Min-Max-Failure-1"] = minmax_1
+					failures[case_name][model_name]["minmax_1"] = minmax_1
 				end
 
 				if length(minmax_2) > 0
-					failures[case_name][model_name]["Min-Max-Failure-2"] = minmax_2
+					failures[case_name][model_name]["minmax_2"] = minmax_2
 				end
 
 				# if length(minmax_3) > 0
@@ -597,15 +635,15 @@ function compute_infeasible(directory::String)
 
 				# complete the failures dictionary
 				if length(powerbalance_1) > 0
-					failures[case_name][model_name]["power_balance_1"] = powerbalance_1
+					failures[case_name][model_name]["powerbalance_va"] = powerbalance_1
 				end
 
 				if length(powerbalance_2) > 0
-					failures[case_name][model_name]["power_balance_2"] = powerbalance_2
+					failures[case_name][model_name]["powerbalance_active"] = powerbalance_2
 				end
 
 				if length(powerbalance_3) > 0
-					failures[case_name][model_name]["power_balance_3"] = powerbalance_3
+					failures[case_name][model_name]["powerbalance_reactive"] = powerbalance_3
 				end
 
 				if length(minmax_1) > 0
@@ -642,8 +680,9 @@ function compute_infeasible(directory::String)
 	return failures
 end
 
-# function serialize_failures(failures::Dict)
-	
-# end
+function serialize_failures(failures::Dict)
+	serialize("output/failures/all_case_violations_dictionary.bin", failures)
+end
 
 failures = compute_infeasible("results")
+serialize_failures(failures)
