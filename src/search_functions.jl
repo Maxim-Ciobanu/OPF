@@ -297,7 +297,10 @@ function decomposed_mpopf_demand_search(factory, time_periods, ramping_data, dem
     PowerModels.standardize_cost_terms!(data, order=2)
     PowerModels.calc_thermal_limits!(data)
     
-    solution = create_initial_random_solution(data, time_periods, demands, ramping_data, factory)
+    largest = find_largest_time_period(12, demands)
+    values = optimize_largest_period(search_factory, data, largest, demands)
+    solution = set_all_values_to_largest(data, 12, values, demands, ramping_data)
+      
     best_solution, best_models = optimize_solution(solution, data, ramping_data, demands, factory)
     best_cost = calculate_total_cost(best_solution, best_models, ramping_data)
     base_cost = best_cost
@@ -649,3 +652,49 @@ function verify_solution_feasibility(solution, data, time_periods, ramping_data,
     
     return true
 end
+
+function findLargestTimePeriod(time_periods, demands) 
+    largest = 0;
+    largest_index = 0;
+
+    for i in 1:time_periods 
+        period_total = sum(demands[i])
+        if period_total > largest
+            largest = period_total
+            largest_index = i
+        end
+    end
+    return largest_index;
+end
+
+function optimize_largest_period(factory, data, largest_time_period, demands)
+    solution = []
+    pg = Dict()
+
+    for (i, gen) in data["gen"]
+        gen_id = parse(Int, i)
+        pg[gen_id] = (gen["pmin"] + gen["pmax"]) / 2
+    end
+    push!(solution, pg)
+    
+    model = create_search_model(factory, 1, ramping_data, [demands[largest_time_period]])
+    optimize!(model.model)
+    m = model.model[:pg]
+    largest_pg_values = [value(m[key]) for key in keys(m)]
+    return Dict(zip(m.axes[2], largest_pg_values'))
+end
+
+function set_all_values_to_largest(data, time_periods, largest_values, demands, ramping_data)
+    solution = []
+    for t in 1:time_periods
+        pg = Dict{Any, Any}()
+        # Set all generators to the values from the largest period optimization
+        for (i, gen) in data["gen"]
+            pg[parse(Int, i)] = largest_values[parse(Int, i)]
+        end
+        
+        push!(solution, pg)
+    end
+    return solution
+end
+

@@ -40,7 +40,7 @@ module MPOPF
     export create_initial_feasible_solution, check_solution, adjust_to_meet_demand, apply_ramping_constraints, optimize_solution, calculate_total_cost,
     is_feasible_solution, decomposed_mpopf_local_search, decomposed_mpopf_demand_search, check_ramping_limits, check_demands_met, check_demands_met_output,
     sort_time_periods_by_demand, adjust_adjacent_periods, create_decomposed_mpopf_model, create_initial_random_solution, generate_bounded_random_solution, 
-    adjust_solution_for_constraints, verify_solution_feasibility
+    adjust_solution_for_constraints, verify_solution_feasibility, find_largest_time_period, optimize_largest_period, set_all_values_to_largest
 
     # Export of rampingCSVimplementation.jl
     export safe_parse_float, parse_power_system_csv, generate_power_system_csv
