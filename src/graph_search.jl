@@ -85,7 +85,24 @@ function generate_random_loads(largest_model; scenarios_to_generate = 30, variat
     return random_scenarios
 end
 
+function power_flow(factory, demand, ramping_data, load)
+
+    model = create_search_model(factory, 1, ramping_data, [demand])
+    for (gen_id, value) in load
+        fix(model.model[:pg][1,gen_id], value, force=true)
+    end
+    optimize!(model.model)
+
+    return model
+end
+
 function build_graph(random_scenarios) 
 
 
+
 end
+
+#= TODO: 
+build function to iterate over scenarios, push feasible models into vector
+implement build_graph() to create acyclic directed graph from feasible models
+=#
