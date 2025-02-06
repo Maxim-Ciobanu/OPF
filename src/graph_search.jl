@@ -44,7 +44,7 @@ function build_and_optimize_largest_period(factory, demand, ramping_data)
     return model
 end
 
-# Maybe change to bias toward negative values
+# TODO revisit method for biasing values higher or lower
 function generate_random_loads(largest_model; scenarios_to_generate = 30, variation_percent = 1)
     # Used to check that conversion to Dict did not upset order
     #pg_values = value.(largest_model.model[:pg])
