@@ -1,3 +1,5 @@
+using Graphs, MetaGraphs
+
 """
     find_largest_time_period(time_periods::Int64, demands::Vector{Vector{Float64}})
 
@@ -50,7 +52,12 @@ function generate_random_loads(largest_model; scenarios_to_generate = 30, variat
     #pg_values = value.(largest_model.model[:pg])
 
     # Extract largest values
+    if termination_status(largest_model.model) == MOI.INFEASIBLE
+        error("Largest model is infeasible. Cannot generate random loads.")
+    end
+    
     largest_values = [value(largest_model.model[:pg][key]) for key in keys(largest_model.model[:pg])]
+    
     sum_of_largest = sum(largest_values)
     # Pair values with corresponding generator number
     pg_values = Dict(zip(largest_model.model[:pg].axes[2], largest_values))
@@ -96,13 +103,94 @@ function power_flow(factory, demand, ramping_data, load)
     return model
 end
 
-function build_graph(random_scenarios) 
-
-
-
+function extract_power_flow_data(model)
+    
+    m = value.(model.model[:pg])
+    values = [value(m[key]) for key in keys(m)]
+    return Dict(zip(m.axes[2], values'))
 end
 
-#= TODO: 
-build function to iterate over scenarios, push feasible models into vector
-implement build_graph() to create acyclic directed graph from feasible models
-=#
+function test_scenarios(factory, demand, ramping_data, random_scenarios)
+    feasible_scenarios = []
+    for scenario in random_scenarios
+        model = power_flow(factory, demand, ramping_data, scenario)
+        status = termination_status(model.model)
+
+        if status == MOI.LOCALLY_INFEASIBLE || status == MOI.INFEASIBLE || status != MOI.LOCALLY_SOLVED
+            println("Skipping infeasible scenario")
+            continue  # Skip extracting values from an infeasible model
+        end
+
+        values = extract_power_flow_data(model)
+        push!(feasible_scenarios, values)
+    end
+    return feasible_scenarios
+end
+
+
+function build_graph(scenarios::Vector{Dict{Int64, Float64}})
+    # Create a directed graph
+    g = MetaDiGraph()
+    
+    # Group scenarios by time period
+    num_scenarios = length(scenarios)
+    num_time_periods = num_scenarios  # Assuming one scenario per time period for this example
+    
+    # Track nodes by time period for edge creation
+    nodes_by_period = Dict{Int, Vector{Int}}()
+    
+    # Create nodes for each scenario
+    for (t, scenario) in enumerate(scenarios)
+        # Add node to graph
+        add_vertex!(g)
+        current_node = nv(g)
+        
+        # Store node metadata
+        set_prop!(g, current_node, :time_period, t)
+        set_prop!(g, current_node, :generator_values, scenario)
+        set_prop!(g, current_node, :total_generation, sum(values(scenario)))
+        
+        # Track nodes by time period
+        if !haskey(nodes_by_period, t)
+            nodes_by_period[t] = Int[]
+        end
+        push!(nodes_by_period[t], current_node)
+        
+        # If not first time period, connect to previous period's nodes
+        if t > 1
+            for prev_node in nodes_by_period[t-1]
+                # Add edge from previous time period to current
+                add_edge!(g, prev_node, current_node)
+                
+                # Calculate and store transition cost/metrics
+                prev_values = get_prop(g, prev_node, :generator_values)
+                current_values = scenario
+                
+                # Example metric: sum of absolute changes in generator outputs
+                transition_cost = sum(abs.(
+                    [get(prev_values, gen, 0.0) - get(current_values, gen, 0.0) 
+                     for gen in union(keys(prev_values), keys(current_values))]
+                ))
+                
+                set_prop!(g, Edge(prev_node, current_node), :transition_cost, transition_cost)
+            end
+        end
+    end
+    
+    return g
+end
+
+
+function big_guy(factory, demands, ramping_data, time_periods)
+
+    highest_demand = find_largest_time_period(time_periods, demands)
+    largest_model = build_and_optimize_largest_period(factory, demands[highest_demand], ramping_data)
+
+    loads = generate_random_loads(largest_model)
+
+    scenarios = test_scenarios(factory, demands[highest_demand], ramping_data, loads)
+
+
+    return scenarios
+
+end

@@ -19,19 +19,5 @@ search_factory = DCMPOPFSearchFactory(matpower_file_path, Gurobi.Optimizer)
 search_model = create_search_model(search_factory, 12, ramping_data, demands)
 optimize!(search_model.model)
 
-largest = find_largest_time_period(12, demands)
-
-model = build_and_optimize_largest_period(search_factory, demands[largest], ramping_data)
-
-loads = generate_random_loads(model)
-l = loads[1]
-m = power_flow(search_factory, demands[largest], ramping_data, l)
-
-#values = optimize_largest_period(search_factory, data, largest, demands)
-
-# m = set_all_values_to_largest(data, 12, values, demands, ramping_data)
-
-
-#=
-test = create_initial_feasible_solution(data, 12, demands, ramping_data)
-=#
+test = big_guy(search_factory, demands, ramping_data, 12)
+println("done")
