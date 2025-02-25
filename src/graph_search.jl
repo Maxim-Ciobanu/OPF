@@ -128,60 +128,52 @@ function test_scenarios(factory, demand, ramping_data, random_scenarios)
 end
 
 
-function build_graph(scenarios::Vector{Dict{Int64, Float64}})
+function build_initial_graph(scenarios::Vector{Any}, time_periods)
     # Create a directed graph
     g = MetaDiGraph()
-    
-    # Group scenarios by time period
-    num_scenarios = length(scenarios)
-    num_time_periods = num_scenarios  # Assuming one scenario per time period for this example
-    
-    # Track nodes by time period for edge creation
-    nodes_by_period = Dict{Int, Vector{Int}}()
-    
+        
     # Create nodes for each scenario
-    for (t, scenario) in enumerate(scenarios)
-        # Add node to graph
-        add_vertex!(g)
-        current_node = nv(g)
-        
-        # Store node metadata
-        set_prop!(g, current_node, :time_period, t)
-        set_prop!(g, current_node, :generator_values, scenario)
-        set_prop!(g, current_node, :total_generation, sum(values(scenario)))
-        
-        # Track nodes by time period
-        if !haskey(nodes_by_period, t)
-            nodes_by_period[t] = Int[]
-        end
-        push!(nodes_by_period[t], current_node)
-        
-        # If not first time period, connect to previous period's nodes
-        if t > 1
-            for prev_node in nodes_by_period[t-1]
-                # Add edge from previous time period to current
-                add_edge!(g, prev_node, current_node)
-                
-                # Calculate and store transition cost/metrics
-                prev_values = get_prop(g, prev_node, :generator_values)
-                current_values = scenario
-                
-                # Example metric: sum of absolute changes in generator outputs
-                transition_cost = sum(abs.(
-                    [get(prev_values, gen, 0.0) - get(current_values, gen, 0.0) 
-                     for gen in union(keys(prev_values), keys(current_values))]
-                ))
-                
-                set_prop!(g, Edge(prev_node, current_node), :transition_cost, transition_cost)
-            end
+    for p in 1:time_periods
+        for (t, scenario) in enumerate(scenarios)
+            # Add node to graph
+            add_vertex!(g)
+            current_node = nv(g)
+            
+            # Store node metadata
+            set_prop!(g, current_node, :time_period, p) # time period
+            set_prop!(g, current_node, :generator_values, scenario) # generator values
+            set_prop!(g, current_node, :total_generation, sum(values(scenario))) # sum of values
         end
     end
-    
     return g
 end
 
+function add_edges_to_initial_graph(graph, time_periods, ramping_data)
 
-function big_guy(factory, demands, ramping_data, time_periods)
+    ramp_limits = ramping_data["ramp_limits"]
+    ramp_costs = ramping_data["costs"]
+    for n in 1:(time_periods - 1)
+        nodes_n = collect(filter_vertices(graph, :time_period, n))
+        nodes_n1 = collect(filter_vertices(graph, :time_period, n + 1))
+
+        for node in nodes_n
+            gen_values_n = get_prop(graph, node_n, :generator_values)
+            gen_values_n1 = get_prop(graph, node_n1, :generator_values)
+
+            for (gen, val) in gen_values_n
+                # compare generator values between periods
+                # if no generators violate constraints on ramping
+                # add edge between node_n and node_n1 with weight equal to 
+                # the ramping costs between the two sets of values 
+            end  
+        end
+    end
+# collect(filter_vertices(graph, :time_period, target_period))
+# obtains the index of all nodes with time period of target_period
+end
+
+
+function search(factory, demands, ramping_data, time_periods)
 
     highest_demand = find_largest_time_period(time_periods, demands)
     largest_model = build_and_optimize_largest_period(factory, demands[highest_demand], ramping_data)
@@ -190,7 +182,7 @@ function big_guy(factory, demands, ramping_data, time_periods)
 
     scenarios = test_scenarios(factory, demands[highest_demand], ramping_data, loads)
 
+    g = build_initial_graph(scenarios, time_periods)
 
-    return scenarios
-
+    return g, scenarios
 end

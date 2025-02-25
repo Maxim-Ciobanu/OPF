@@ -1,7 +1,7 @@
 using JuMP, Ipopt, Gurobi, Serialization, Random, Graphs, MetaGraphs
 using PowerModels
 using MPOPF
-using Statistics
+using Statistics, Plots, GraphRecipes
 
 include("graph_search.jl")
 include("search_functions.jl")
@@ -19,5 +19,5 @@ search_factory = DCMPOPFSearchFactory(matpower_file_path, Gurobi.Optimizer)
 search_model = create_search_model(search_factory, 12, ramping_data, demands)
 optimize!(search_model.model)
 
-test = big_guy(search_factory, demands, ramping_data, 12)
+graph, scenarios = search(search_factory, demands, ramping_data, 12)
 println("done")
