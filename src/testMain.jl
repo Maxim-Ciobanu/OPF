@@ -19,5 +19,6 @@ search_factory = DCMPOPFSearchFactory(matpower_file_path, Gurobi.Optimizer)
 search_model = create_search_model(search_factory, 12, ramping_data, demands)
 optimize!(search_model.model)
 
-graph, scenarios = search(search_factory, demands, ramping_data, 12)
+graph, scenarios, full_path, total_cost = search(search_factory, demands, ramping_data, 12)
+
 println("done")
