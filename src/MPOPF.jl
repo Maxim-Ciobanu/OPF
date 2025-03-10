@@ -36,7 +36,7 @@ module MPOPF
     export perform_feasibility
 
     # Export of compute_and_save_feasibility.jl
-    export compute_and_save_feasibility, load_and_graph_results, load_and_compile_results, calculate_model_averages, find_infeasible_constraints, find_bound_violations, load_and_compile_models
+    export compute_and_save_feasibility, load_and_graph_results, load_and_compile_results, compute_result_averages, find_infeasible_constraints, find_bound_violations, load_and_compile_models
 
     # Export of search_functions.jl
     export create_initial_feasible_solution, check_solution, adjust_to_meet_demand, apply_ramping_constraints, optimize_solution, calculate_total_cost,
