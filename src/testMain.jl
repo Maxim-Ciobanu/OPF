@@ -19,6 +19,20 @@ search_factory = DCMPOPFSearchFactory(matpower_file_path, Gurobi.Optimizer)
 search_model = create_search_model(search_factory, 12, ramping_data, demands)
 optimize!(search_model.model)
 
-graph, scenarios, full_path, total_cost = search(search_factory, demands, ramping_data, 12)
+graph, scenarios, full_path, total_cost, solution = iter_search(search_factory, demands, ramping_data, 12)
 
-println("done")
+# Create a new model with fixed generator values from your graph solution
+#=
+verification_model = create_search_model(search_factory, 12, ramping_data, demands)
+for t in keys(solution)
+    for (gen, val) in solution[t]["generator_values"]
+        fix(verification_model.model[:pg][t, gen], val, force=true)
+    end
+end
+optimize!(verification_model.model)
+status = termination_status(verification_model.model)
+println("Graph solution feasibility: $status")
+if status == MOI.OPTIMAL || status == MOI.LOCALLY_SOLVED
+    println("Objective value: $(objective_value(verification_model.model))")
+end
+=#
