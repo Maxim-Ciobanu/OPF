@@ -115,8 +115,8 @@ function generate_power_system_csv(data::Dict, output_dir::String, num_periods::
     demands = [initial_demand]
 
     for _ in 2:num_periods
-        variation = rand(length(bus_ids)) * 0.4 .- 0.2  # Random variation between -20% and +20%
-        new_demand = initial_demand .* (1 .+ variation)
+        variation = rand(length(bus_ids)) #* 0.4 .- 0.2  # Random variation between -20% and +20%
+        new_demand = initial_demand .* (1) #.+ variation)
         new_demand = max.(new_demand, 0)  # Ensure non-negative demands
 
         # Check if total demand exceeds capacity and scale if necessary

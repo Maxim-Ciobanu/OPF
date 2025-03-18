@@ -46,9 +46,6 @@ function generate_random_loads(largest_model; scenarios_to_generate = 30, variat
         for (gen_num, gen_output) in pg_values
             max_variation = gen_output * (variation_percent/100)
             variation = rand() * max_variation
-            if variation < 0
-                variation = 0
-            end
             if rand() >= pos_or_neg
                 random_dict[gen_num] = gen_output + variation
             else
@@ -59,6 +56,26 @@ function generate_random_loads(largest_model; scenarios_to_generate = 30, variat
         random_scenarios[t] = random_dict
 
         variation_percent += 1
+    end
+    return random_scenarios
+end
+
+function generate_new_loads(current_outputs; scenarios_to_generate = 30, variation_percent = 1)
+
+    random_scenarios = Vector{Dict{Int64, Float64}}(undef, scenarios_to_generate)
+    for i in 1:scenarios_to_generate
+        random_dict = Dict()
+        pos_or_neg = rand([0.35, 0.5, 0.65])
+        for (gen, val) in current_outputs
+            max_variation = gen_output * (variation_percent/100)
+            variation = rand() * max_variation
+            if rand() >= pos_or_neg
+                random_dict[gen] = val + variation
+            else
+                random_dict[gen] = val - variation
+            end
+        end
+        random_scenarios[i] = random_dict
     end
     return random_scenarios
 end
@@ -265,11 +282,14 @@ function iter_search(factory, demands, ramping_data, time_periods)
 
     cost_history = [best_cost]
 
-    new_scenarios = []
+    generator_values_dict = Dict()
+    for (time_period, data) in solution
+        generator_values_dict[time_period] = data[:generator_values]
+    end
 
-    # create new scenarios for each time period
-
-
+    for (t, vals) in generator_values_dict
+        generate_new_loads(vals)
+    end
 
 
     return graph, scenarios, best_path, best_cost, solution
@@ -373,4 +393,80 @@ function iterative_search(factory, demands, ramping_data, time_periods; max_iter
     end
     
     return best_g, path_history, best_path, best_cost, cost_history
+end
+
+function find_infeasible_constraints(model::Model)
+    #if termination_status(model) != MOI.LOCALLY_INFEASIBLE
+     #   println("The model must be optimized and locally infeasible")
+	#	return []
+    #end
+
+    infeasible_constraints = []
+    
+    for (f, s) in list_of_constraint_types(model)
+        for con in all_constraints(model, f, s)
+            func = constraint_object(con).func
+            set = constraint_object(con).set
+            constraint_value = JuMP.value(func)
+            
+            is_satisfied = false
+            if set isa MOI.EqualTo
+                is_satisfied = isapprox(constraint_value, MOI.constant(set), atol=1e-6)
+            elseif set isa MOI.LessThan
+                is_satisfied = constraint_value <= MOI.constant(set) + 1e-6
+            elseif set isa MOI.GreaterThan
+                is_satisfied = constraint_value >= MOI.constant(set) - 1e-6
+            elseif set isa MOI.Interval
+                is_satisfied = MOI.lower(set) - 1e-6 <= constraint_value <= MOI.upper(set) + 1e-6
+            else
+                @warn "Unsupported constraint type: $set"
+                continue
+            end
+            
+            if !is_satisfied
+                push!(infeasible_constraints, (con, constraint_value))
+            end
+        end
+    end
+
+    return infeasible_constraints
+end
+
+function find_bound_violations(model::Model)
+
+	# if termination_status(model) != MOI.LOCALLY_INFEASIBLE
+    #     error("The model must be optimized and locally infeasible")
+    # end
+
+	# Get the variable names
+	variable_names = all_variables(model)
+
+	violations = Dict{VariableRef, Tuple{Float64, Float64, Float64, Float64}}()
+
+	# iterate over all variables
+	for (_, var) in enumerate(variable_names)
+
+		# check if the variable has a lower and upper bound
+		if !has_lower_bound(var) || !has_upper_bound(var)
+			continue
+		end
+
+		# get the bounds and value of the variable
+		upper = upper_bound(var)
+		lower = lower_bound(var)
+		value = JuMP.value(var)
+
+		# check for violation
+		if value < lower 
+			
+			# add it to the violations dictionary
+			violations[var] = (value, lower, upper, lower - value)
+		elseif value > upper
+
+			# add it to the violations dictionary
+			violations[var] = (value, lower, upper, value - upper)
+		end
+	end
+    	# return the violations
+	return violations
 end

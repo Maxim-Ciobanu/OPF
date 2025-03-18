@@ -44,6 +44,10 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::D
     ramp_up = model[:ramp_up]
     ramp_down = model[:ramp_down]
 
+    bus_ids = [i for i in keys(ref[:bus])]  # List of bus indices
+    bus_index_to_position = Dict(i => idx for (idx, i) in enumerate(bus_ids))
+    # replace sum(get(demands([t], i, 0)) with demand for this approach
+
     p_expr = Dict(t => Dict() for t in 1:T)
 
     for t in 1:T
@@ -59,15 +63,18 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::D
             @constraint(model, va[t,i] == 0)
         end
 
+        
         # Bus power balance constraint
         for (i, bus) in ref[:bus]
             bus_loads = [load_data[l] for l in ref[:bus_loads][i]]
             bus_shunts = [ref[:shunt][s] for s in ref[:bus_shunts][i]]
             
+            demand = get(bus_index_to_position, i, 0) == 0 ? 0.0 : demands[t][bus_index_to_position[i]]
+
             @constraint(model,
-                sum(p_expr[t][a] for a in ref[:bus_arcs][i]) <=
+                sum(p_expr[t][a] for a in ref[:bus_arcs][i]) ==
                 sum(pg[t, g] for g in ref[:bus_gens][i]) -
-                sum(get(demands[t], i, 0)) - #epsilon
+                sum(get(demands[t], i, 0)) -
                 sum(shunt["gs"] for shunt in bus_shunts) * 1.0^2
             )
         end
