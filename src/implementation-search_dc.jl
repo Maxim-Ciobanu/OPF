@@ -8,7 +8,6 @@ function set_model_variables!(power_flow_model::AbstractMPOPFModel, factory::DCM
     
     @variable(model, va[t in 1:T, i in keys(bus_data)])
     @variable(model, gen_data[i]["pmin"] <= pg[t in 1:T, i in keys(gen_data)] <= gen_data[i]["pmax"])
-    # @variable(model, -branch_data[l]["rate_a"] <= p[t in 1:T, (l,i,j) in ref[:arcs]] <= branch_data[l]["rate_a"])
     @variable(model, -ref[:branch][l]["rate_a"] <= p[1:T,(l,i,j) in ref[:arcs_from]] <= ref[:branch][l]["rate_a"])
     @variable(model, 0 <= ramp_up[t in 2:T, g in keys(gen_data)] <= ramp_data[g])
     @variable(model, 0 <= ramp_down[t in 2:T, g in keys(gen_data)] <= ramp_data[g])
@@ -44,10 +43,7 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::D
     ramp_up = model[:ramp_up]
     ramp_down = model[:ramp_down]
 
-    bus_ids = [i for i in keys(ref[:bus])]  # List of bus indices
-    bus_index_to_position = Dict(i => idx for (idx, i) in enumerate(bus_ids))
-    # replace sum(get(demands([t], i, 0)) with demand for this approach
-
+    # We no longer need bus_ids and bus_index_to_position, as demands will be indexed by actual bus IDs
     p_expr = Dict(t => Dict() for t in 1:T)
 
     for t in 1:T
@@ -63,18 +59,18 @@ function set_model_constraints!(power_flow_model::AbstractMPOPFModel, factory::D
             @constraint(model, va[t,i] == 0)
         end
 
-        
         # Bus power balance constraint
         for (i, bus) in ref[:bus]
             bus_loads = [load_data[l] for l in ref[:bus_loads][i]]
             bus_shunts = [ref[:shunt][s] for s in ref[:bus_shunts][i]]
             
-            demand = get(bus_index_to_position, i, 0) == 0 ? 0.0 : demands[t][bus_index_to_position[i]]
+            # Get demand directly using bus ID from the demands dictionary
+            bus_demand = get(demands[t], i, 0.0)
 
             @constraint(model,
                 sum(p_expr[t][a] for a in ref[:bus_arcs][i]) ==
                 sum(pg[t, g] for g in ref[:bus_gens][i]) -
-                sum(get(demands[t], i, 0)) -
+                bus_demand -
                 sum(shunt["gs"] for shunt in bus_shunts) * 1.0^2
             )
         end

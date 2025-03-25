@@ -9,9 +9,8 @@ function safe_parse_float(s::AbstractString)
     end
 end
 
-# Do not leave cells blank, insert 0 for busses that don't demand power
 function parse_power_system_csv(file_path::String, matpower_file_path::String)
-    # Get CSV content, compare CSV case name with matpoewr case name
+    # Get CSV content, compare CSV case name with matpower case name
     csv_content = read(file_path, String)
     lines = split(csv_content, '\n')
     csv_case_name = strip(lines[1])
@@ -26,8 +25,8 @@ function parse_power_system_csv(file_path::String, matpower_file_path::String)
     # Read the entire CSV file into a DataFrame
     df = CSV.read(IOBuffer(join(lines[2:end], '\n')), DataFrame, header=1, skipto=2)
     # Initialize the output structures
-    ramping_data = Dict{String,Vector{Float64}}()
-    demands = Vector{Vector{Float64}}()
+    ramping_data = Dict{String,Any}()
+    demands = Vector{Dict{Int,Float64}}()
 
     # Find the row where bus data starts
     bus_data_start = findfirst(x -> x == "#bus_data", df[!, 1])
@@ -35,17 +34,36 @@ function parse_power_system_csv(file_path::String, matpower_file_path::String)
     # Process generator data
     gen_data = df[1:bus_data_start-1, :]
     ramping_data["gen_id"] = [safe_parse_float(x) for x in gen_data[!, 1] if x != "gen_id"]
-    ramping_data["ramp_limits"] = [safe_parse_float(x) for x in gen_data[!, 2] if x != "ramp_limits"]
-    ramping_data["costs"] = [safe_parse_float(x) for x in gen_data[!, 3] if x != "costs"]
+    ramping_data["ramp_limits"] = Dict{Int,Float64}()
+    ramping_data["costs"] = Dict{Int,Float64}()
+    
+    # Convert ramp limits and costs to dictionaries indexed by gen_id
+    for i in 1:length(ramping_data["gen_id"])
+        gen_id = Int(ramping_data["gen_id"][i])
+        ramping_data["ramp_limits"][gen_id] = safe_parse_float(gen_data[i+1, 2])
+        ramping_data["costs"][gen_id] = safe_parse_float(gen_data[i+1, 3])
+    end
 
     # Process bus data
-    bus_data = df[bus_data_start+1:end, 2:end]
-    for col in names(bus_data)
-        push!(demands, filter(!ismissing, [safe_parse_float(x) for x in bus_data[!, col]]))
+    bus_data = df[bus_data_start+1:end, :]
+    
+    # Extract actual bus IDs from the first column
+    bus_ids = [parse(Int, x) for x in bus_data[!, 1] if x != "bus_id" && !ismissing(x)]
+    
+    # Process demand data for each time period
+    for t in 2:size(bus_data, 2)  # Start from column 2 (first time period)
+        period_demands = Dict{Int,Float64}()
+        for (idx, bus_id) in enumerate(bus_ids)
+            # Get the demand value, default to 0.0 if missing
+            demand_val = safe_parse_float(bus_data[idx+1, t])
+            period_demands[bus_id] = ismissing(demand_val) ? 0.0 : demand_val
+        end
+        push!(demands, period_demands)
     end
 
     return ramping_data, demands
 end
+
 
 function generate_power_system_csv(data::Dict, output_dir::String, num_periods::Int=24)
     # Extract case name
@@ -115,8 +133,8 @@ function generate_power_system_csv(data::Dict, output_dir::String, num_periods::
     demands = [initial_demand]
 
     for _ in 2:num_periods
-        variation = rand(length(bus_ids)) #* 0.4 .- 0.2  # Random variation between -20% and +20%
-        new_demand = initial_demand .* (1) #.+ variation)
+        variation = rand(length(bus_ids)) * 0.4 .- 0.2  # Random variation between -20% and +20%
+        new_demand = initial_demand .* (1 .+ variation)
         new_demand = max.(new_demand, 0)  # Ensure non-negative demands
 
         # Check if total demand exceeds capacity and scale if necessary
@@ -148,7 +166,7 @@ function generate_power_system_csv(data::Dict, output_dir::String, num_periods::
     for (idx, bus_id) in enumerate(bus_ids)
         print(csv_content, bus_id)
         for period in 1:num_periods
-            print(csv_content, ",", round(demands[period][idx], digits=3))
+            print(csv_content, ",", demands[period][idx])
         end
         println(csv_content)
     end

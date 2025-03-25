@@ -5,10 +5,11 @@ function find_largest_time_period(time_periods, demands)
     largestIndex = -1
     largest = 0
 
-    for d in 1:time_periods
-        if sum(demands[d]) > largest
-            largest = sum(demands[d])
-            largestIndex = d
+    for t in 1:time_periods
+        period_sum = sum(values(demands[t]))
+        if period_sum > largest
+            largest = period_sum
+            largestIndex = t
         end
     end
 
@@ -79,7 +80,7 @@ function generate_new_loads(current_outputs; scenarios_to_generate = 30, variati
     end
     return random_scenarios
 end
-
+#TODO: Update for new data structures
 function power_flow(factory, demand, ramping_data, load)
 
     model = create_search_model(factory, 1, ramping_data, [demand])
@@ -90,31 +91,31 @@ function power_flow(factory, demand, ramping_data, load)
 
     return model
 end
-
+#TODO: Update for new data structures
 function extract_power_flow_data(model)
     
     m = value.(model.model[:pg])
     values = [value(m[key]) for key in keys(m)]
     return Dict(zip(m.axes[2], values'))
 end
-
+#TODO: Update for new data structures
 function test_scenarios(factory, demand, ramping_data, random_scenarios)
     feasible_scenarios = []
     for scenario in random_scenarios
-        model = power_flow(factory, demand, ramping_data, scenario)
-        status = termination_status(model.model)
+            model = power_flow(factory, demand, ramping_data, scenario)
+            status = termination_status(model.model)
+    #TODO: Figure out why scenarios are coming back empty
+            if status != MOI.LOCALLY_SOLVED && status != MOI.OPTIMAL
+                println("Skipping infeasible scenario")
+                continue  # Skip extracting values from an infeasible model
+            end
 
-        if status == MOI.LOCALLY_INFEASIBLE || status == MOI.INFEASIBLE || status != MOI.LOCALLY_SOLVED
-            println("Skipping infeasible scenario")
-            continue  # Skip extracting values from an infeasible model
-        end
-
-        values = extract_power_flow_data(model)
-        push!(feasible_scenarios, (values, objective_value(model.model)))
+            values = extract_power_flow_data(model)
+            push!(feasible_scenarios, (values, objective_value(model.model)))
     end
     return feasible_scenarios
 end
-
+#TODO: Update for new data structures
 function build_initial_graph(scenarios::Vector{Any}, time_periods)
     graph = MetaDiGraph()
     defaultweight!(graph, 1.0)
@@ -160,7 +161,7 @@ function build_initial_graph(scenarios::Vector{Any}, time_periods)
 
     return graph
 end
-
+#TODO: Update for new data structures
 function add_edges_to_initial_graph(graph, time_periods, ramping_data)
 
     ramp_limits = ramping_data["ramp_limits"]
@@ -176,7 +177,7 @@ function add_edges_to_initial_graph(graph, time_periods, ramping_data)
         end
     end
 end
-
+#TODO: Update for new data structures
 function add_weighted_edges(graph, time_periods, ramping_data)
     ramp_costs = ramping_data["costs"]
     ramp_limits = ramping_data["ramp_limits"]
@@ -208,7 +209,7 @@ function add_weighted_edges(graph, time_periods, ramping_data)
         end
     end
 end
-
+#TODO: Update for new data structures
 function shortest_path(graph)
     # find the source node (time period 0)
     source_node = first(filter_vertices(graph, :time_period, 0))
@@ -245,7 +246,7 @@ function shortest_path(graph)
     
     return full_path, total_cost
 end
-
+#TODO: Update for new data structures
 function extract_solution(graph, path)
     solution = Dict{Int, Dict{Symbol, Any}}()  # Dictionary to store node properties
 
@@ -260,7 +261,7 @@ function extract_solution(graph, path)
     return solution
 end
 
-
+#TODO: Update for new data structures
 function iter_search(factory, demands, ramping_data, time_periods)
 
     highest_demand = find_largest_time_period(time_periods, demands)
@@ -272,9 +273,9 @@ function iter_search(factory, demands, ramping_data, time_periods)
 
     graph = build_initial_graph(scenarios, time_periods)
     add_weighted_edges(graph, time_periods, ramping_data)
-
+#=
     path, cost = shortest_path(graph)
-
+    
     best_graph = graph
     best_path = path[2:end - 1]
     best_cost = cost
@@ -291,8 +292,8 @@ function iter_search(factory, demands, ramping_data, time_periods)
         generate_new_loads(vals)
     end
 
-
-    return graph, scenarios, best_path, best_cost, solution
+=#
+    return graph#, scenarios, best_path, best_cost, solution
 
 end
 
