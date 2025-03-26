@@ -14,7 +14,7 @@ This Julia package provides tools for analyzing and optimizing power flow in ele
 > **ℹ️ Note:**  
 > For a more in-depth description of the project please visit our [Documentation](https://maxim-ciobanu.github.io/OPF/)
 
-## Installation
+## Installation (Assuming Linux)
 Note: This project uses Julia version 1.10.3
 Clone the repository (example uses ssh). We make sure to switch to the Probabilistic-OPF branch.
 ```sh
