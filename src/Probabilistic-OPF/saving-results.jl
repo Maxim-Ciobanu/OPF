@@ -5,7 +5,7 @@ using Distributions
 import MathOptInterface as MOI
 using CSV, DataFrames
 
-include("new-probabilistic-OPF.jl")
+include("probabilistic-OPF.jl")
 
 function run_parameter_sweep(
     file_path::String, 

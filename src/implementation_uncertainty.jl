@@ -2,7 +2,7 @@
     generate_load_scenarios(num_scenarios::Int, num_buses::Int)
 
 Generate load scenarios for a given number of scenarios and buses.
-This method is outdated and depricated.
+This method is outdated and deprecated.
 
 # Arguments
 - `num_scenarios::Int`: The number of scenarios to generate.
@@ -147,7 +147,7 @@ function generate_correlated_scenarios(file_path::String, num_scenarios::Int64, 
         end
     end
     
-    return scenarios
+    return scenarios, correlation_matrix, covariance_matrix
 end
 
 """
