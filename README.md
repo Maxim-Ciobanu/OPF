@@ -21,7 +21,7 @@ Clone the repository (example uses ssh). We make sure to switch to the Probabili
 $ git clone git@github.com:Maxim-Ciobanu/OPF.git
 $ cd OPF
 $ git checkout Probabilistic-OPF
-$ cd ~
+$ cd ..
 ```
 Install the MPOPF package:
 First run Julia in the terminal
